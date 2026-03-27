@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}IPSD – Mi Portal | Empleado {{ empleado }}{% endblock %}
+
+{% block nav %}
+<nav class="ipsd-nav">
+  <div class="container">
+    <a href="/" class="brand">
+      <div class="brand-icon">🎓</div>
+      Portal de Capacitaciones
+    </a>
+    <div class="nav-actions">
+      <span class="nav-badge">👤 Empleado #{{ empleado }}</span>
+      <a href="/" class="btn-ghost">Cerrar Sesión</a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <div class="card-ipsd mb-4 animate-fade-up">
+    <div class="card-header">
+      <div class="flex gap-2" style="align-items:center;">
+        <span style="font-size:1.2rem;">📋</span>
+        <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
+      </div>
+      <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
+    </div>
+    <div class="card-body">
+      {% if matriculados %}
+        <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
+          {% for curso in matriculados %}
+            <div class="enrolled-pill">
+              <span>✓</span>
+              <span>
+                <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
+                <br>
+                <span style="font-weight:400; font-size:.78rem; opacity:.85;">🕒 {{ curso['horario_elegido'] }}</span>
+              </span>
+              <form action="/cancelar_matricula" method="POST" style="margin: 0; padding: 0; display: flex;" onsubmit="return confirm('¿Seguro que deseas cancelar tu inscripción en {{ curso['nombre'] }}?');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+                <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                <button type="submit" class="cancel-btn" title="Cancelar matrícula">✕</button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert-ipsd info">
+          <span>ℹ️</span>
+          <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="flex-between mb-3 animate-fade-up-1">
+    <h3 style="margin:0; font-size:1.3rem;">📚 Acciones Formativas Disponibles</h3>
+    <span class="badge-pill secondary">{{ cursos|length }} disponible(s)</span>
+  </div>
+
+  {% if cursos %}
+  <div class="grid-3 animate-fade-up-2">
+    {% for curso in cursos %}
+    <div class="curso-card">
+      <div class="curso-header"></div>
+      <div class="curso-body">
+        <div class="curso-id">{{ curso['id'] }}</div>
+        <div class="curso-title">{{ curso['nombre'] }}</div>
+        <div class="curso-period">📅 {{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
+        <div class="curso-footer">
+          <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+            <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+
+            <div class="form-group" style="margin-bottom:.8rem;">
+              <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
+              <select class="form-select" name="horario_elegido" required>
+                <option value="" disabled selected>Selecciona un horario...</option>
+                {% for horario in curso['horarios'] %}
+                  <option value="{{ horario }}">{{ horario }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
+              Matricularme
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="animate-fade-up-2">
+    <div class="alert-ipsd success" style="max-width:500px;">
+      <span>✅</span>
+      <span><strong>¡Estás al día!</strong> No hay nuevas capacitaciones disponibles por el momento.</span>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="modal-overlay" id="cancel-modal" style="display: none;">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <div class="modal-title">¿Cancelar matrícula?</div>
+    <div class="modal-desc" id="modal-desc">
+      Se cancelará tu inscripción en este curso.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
+        onclick="cerrarModal()" type="button">Volver</button>
+
+      <form id="cancel-form" action="/cancelar_matricula" method="POST" style="flex:1; margin:0;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="cancel-empleado" name="numero_empleado" value="">
+        <input type="hidden" id="cancel-curso" name="id_capacitacion" value="">
+        <button type="submit" class="btn-danger-ipsd w-full" style="justify-content:center; width:100%;">
+          Sí, cancelar
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function abrirModalCancelacion(empleado, idCurso, nombreCurso) {
+    // Rellenamos los datos del curso seleccionado
+    document.getElementById('cancel-empleado').value = empleado;
+    document.getElementById('cancel-curso').value = idCurso;
+    document.getElementById('modal-desc').innerHTML = 'Se cancelará tu inscripción en el curso:<br><strong style="color: #2563eb; margin-top: 5px; display: block;">' + nombreCurso + '</strong>';
+
+    // Mostramos la ventana en pantalla
+    document.getElementById('cancel-modal').style.display = 'flex';
+  }
+
+  function cerrarModal() {
+    // Ocultamos la ventana
+    document.getElementById('cancel-modal').style.display = 'none';
+  }
+</script>
+
+{% endblock %}

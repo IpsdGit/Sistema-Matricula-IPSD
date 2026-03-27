@@ -1,0 +1,43 @@
+# Base de Datos
+*.db
+matricula.db
+maestro.db
+
+# Entorno Python
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+
+# IDE y Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.sublime-project
+.sublime-workspace
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Sistema
+.DS_Store
+.AppleDouble
+.LSOverride
+*.log
+
+# Caché
+.cache/
+*.cache
