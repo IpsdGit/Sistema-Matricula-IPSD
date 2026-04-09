@@ -4,10 +4,19 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .admin-screen {
+    display: none;
+  }
+
+  .admin-screen.active {
+    display: block;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-layout">
+<div class="admin-layout" data-es-superadmin="{{ '1' if es_superadmin else '0' }}">
 
   <!-- SIDEBAR -->
   <aside class="admin-sidebar">
@@ -17,20 +26,27 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a href="#section-stats"   class="sidebar-link active" onclick="scrollTo('section-stats')">
+      <a href="#" class="sidebar-link" data-view="dashboard">
         <span class="link-icon">📊</span> Dashboard
       </a>
-      <a href="#section-cursos"  class="sidebar-link" onclick="scrollTo('section-cursos')">
+      <a href="#" class="sidebar-link" data-view="cursos">
         <span class="link-icon">📚</span> Gestión de Cursos
       </a>
-      <a href="#section-matriculas" class="sidebar-link" onclick="scrollTo('section-matriculas')">
+      <a href="#" class="sidebar-link" data-view="matriculas">
         <span class="link-icon">📋</span> Matrículas
       </a>
+      {% if es_superadmin %}
+      <a href="#" class="sidebar-link" data-view="usuarios">
+        <span class="link-icon">🛡️</span> Usuarios Admin
+      </a>
+      {% endif %}
     </nav>
 
     <div class="sidebar-footer">
       <div style="font-size:.78rem; color:#475569; margin-bottom:.7rem; padding:.5rem;">
-        👤 {{ admin_user }}
+        👤 {{ admin_user }}<br>
+        <span style="font-size:.72rem; color:#64748b;">Rol: {{ 'Superadmin' if es_superadmin else 'Admin' }}</span><br>
+        <span style="font-size:.72rem; color:#64748b;">Dirección: {{ admin_direccion }}</span>
       </div>
       <a href="/logout_admin" class="sidebar-link" style="color:#ef4444;">
         <span class="link-icon">🚪</span> Cerrar Sesión
@@ -45,7 +61,9 @@
     <div class="admin-topbar">
       <div>
         <h4 style="margin:0; font-size:1.1rem; font-weight:700;">Panel de Control</h4>
-        <p style="margin:0; font-size:.8rem; color:var(--text-muted);">Registro Docente · IPSD UNAH</p>
+        <p style="margin:0; font-size:.8rem; color:var(--text-muted);">
+          Registro Docente · IPSD UNAH · {{ 'Superadmin' if es_superadmin else ('Admin ' ~ admin_direccion) }}
+        </p>
       </div>
       <div class="flex gap-2">
         <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}"
@@ -60,6 +78,7 @@
 
     <div class="admin-content">
 
+      <section class="admin-screen" data-screen="dashboard">
       <!-- STATS CARDS -->
       <section id="section-stats">
         <div class="grid-3 mb-4 animate-fade-up">
@@ -106,9 +125,10 @@
           </div>
         </div>
       </div>
+      </section>
 
       <!-- GESTIÓN DE CURSOS -->
-      <section id="section-cursos">
+      <section id="section-cursos" class="admin-screen" data-screen="cursos">
         <div class="grid-2 mb-4 animate-fade-up-2">
 
           <!-- Formulario Crear Curso -->
@@ -121,10 +141,11 @@
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-group">
-                  <label class="form-label">Código (ID Único)</label>
-                  <input type="text" class="form-input" name="id_curso"
-                    placeholder="Ej. CAP-001" required maxlength="20"
-                    style="text-transform:uppercase;">
+                  <label class="form-label">Código (ID Autogenerado)</label>
+                  {% set codigo_preview = (direcciones[0]['codigo'] if direcciones else 'IPSD') if es_superadmin else admin_direccion %}
+                  <div class="form-input" style="background:#f8fafc; color:#334155;">
+                    Se generará automáticamente con formato <strong id="preview-codigo">AF-{{ codigo_preview }}-V-001</strong>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -133,7 +154,7 @@
                     placeholder="Ej. Uso de Webex" required maxlength="150">
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;" class="mb-2">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Año</label>
                     <select class="form-select" name="anio" required>
@@ -158,6 +179,48 @@
                         <option value="{{ m }}" {% if m == 'Marzo' %}selected{% endif %}>{{ m }}</option>
                       {% endfor %}
                     </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Día</label>
+                    <select class="form-select" name="dia" required>
+                      {% for d in range(1, 32) %}
+                        <option value="{{ d }}" {% if d == 1 %}selected{% endif %}>{{ d }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
+                  {% if es_superadmin %}
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Dirección del Curso</label>
+                    <select class="form-select" name="direccion_curso" id="direccion_curso" required>
+                      {% for d in direcciones %}
+                        <option value="{{ d['codigo'] }}" {% if d['codigo'] == codigo_preview %}selected{% endif %}>
+                          {{ d['codigo'] }} · {{ d['nombre'] }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  {% else %}
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Dirección del Curso</label>
+                    <input type="text" class="form-input" value="{{ admin_direccion }}" readonly>
+                  </div>
+                  {% endif %}
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Modalidad</label>
+                    <select class="form-select" name="modalidad" id="modalidad" required>
+                      <option value="Virtual" selected>Virtual</option>
+                      <option value="Presencial">Presencial</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Cupos Máximos</label>
+                    <input type="number" class="form-input" name="cupos_maximos" min="0" step="1" value="0" required>
                   </div>
                 </div>
 
@@ -212,7 +275,10 @@
                     <td>
                       <strong style="font-size:.88rem;">{{ curso['nombre'] }}</strong><br>
                       <span style="font-size:.75rem; color:var(--text-muted);">
-                        {{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}
+                        {{ curso['dia'] }}/{{ curso['mes'] }}/{{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}
+                      </span><br>
+                      <span style="font-size:.73rem; color:var(--text-muted);">
+                        {{ curso['modalidad'] }} · Cupos: {{ curso['cupos_maximos'] }}
                       </span>
                     </td>
                     <td style="text-align:center;">
@@ -247,8 +313,192 @@
         </div>
       </section>
 
+      {% if es_superadmin %}
+      <section id="section-usuarios" class="admin-screen" data-screen="usuarios">
+        <div class="grid-2 mb-4 animate-fade-up-3">
+          <div class="card-ipsd">
+            <div class="card-header" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);">
+              <span style="font-weight:700; font-size:.95rem; color:#3730a3;">🧑‍💼 Crear Administrador por Dirección</span>
+            </div>
+            <div class="card-body">
+              <form action="/admin/crear_admin" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                  <label class="form-label">Usuario</label>
+                  <input type="text" class="form-input" name="username" required maxlength="30" placeholder="Ej. admin_ipsd">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Contraseña temporal</label>
+                  <input type="password" class="form-input" name="password" required minlength="8" placeholder="Mínimo 8 caracteres">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Dirección</label>
+                  <select class="form-select" name="direccion" required>
+                    {% for d in direcciones %}
+                      <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
+                  Crear Usuario Admin
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card-ipsd">
+            <div class="card-header">
+              <span style="font-weight:700; font-size:.95rem;">👥 Usuarios Administrativos</span>
+              <span class="badge-pill secondary text-xs">{{ usuarios_admin|length }}</span>
+            </div>
+            <div style="overflow-x:auto; max-height:360px; overflow-y:auto;">
+              <table class="table-ipsd">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Dirección</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for u in usuarios_admin %}
+                  <tr>
+                    <td><strong>{{ u['username'] }}</strong></td>
+                    <td>
+                      <span class="badge-pill {% if u['rol'] == 'superadmin' %}primary{% else %}secondary{% endif %} text-xs">
+                        {{ u['rol'] }}
+                      </span>
+                    </td>
+                    <td style="font-size:.82rem; color:var(--text-muted);">{{ u['direccion'] }}</td>
+                    <td>
+                      {% if u['rol'] == 'superadmin' %}
+                        <span class="badge-pill primary text-xs">Protegido</span>
+                      {% else %}
+                        <form action="/admin/actualizar_admin" method="POST" style="display:grid; grid-template-columns:1fr 1fr auto; gap:.4rem; align-items:center; margin-bottom:.35rem;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="username" value="{{ u['username'] }}">
+                          <select class="form-select" name="direccion" style="font-size:.75rem; padding:.35rem .5rem;">
+                            {% for d in direcciones %}
+                              <option value="{{ d['codigo'] }}" {% if d['codigo'] == u['direccion'] %}selected{% endif %}>{{ d['codigo'] }}</option>
+                            {% endfor %}
+                          </select>
+                          <input type="password" class="form-input" name="new_password" placeholder="Nueva clave (opcional)" style="font-size:.75rem; padding:.35rem .5rem;">
+                          <button type="submit" class="btn-primary-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">Guardar</button>
+                        </form>
+                        <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="username" value="{{ u['username'] }}">
+                          <button type="submit" class="btn-danger-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">
+                            Eliminar
+                          </button>
+                        </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                      Sin usuarios registrados.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2 mb-4 animate-fade-up-4">
+          <div class="card-ipsd">
+            <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
+              <span style="font-weight:700; font-size:.95rem; color:#166534;">🏢 Crear Dirección</span>
+            </div>
+            <div class="card-body">
+              <form action="/admin/crear_direccion" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                  <label class="form-label">Código</label>
+                  <input type="text" class="form-input" name="codigo" required maxlength="12" placeholder="Ej. DEGT" style="text-transform:uppercase;">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Nombre de Dirección</label>
+                  <input type="text" class="form-input" name="nombre" required maxlength="80" placeholder="Ej. Dirección de Educación General">
+                </div>
+
+                <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
+                  Crear Dirección
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card-ipsd">
+            <div class="card-header">
+              <span style="font-weight:700; font-size:.95rem;">🧭 Catálogo de Direcciones</span>
+              <span class="badge-pill secondary text-xs">{{ direcciones_gestion|length }}</span>
+            </div>
+            <div style="overflow-x:auto; max-height:420px; overflow-y:auto;">
+              <table class="table-ipsd">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Uso</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in direcciones_gestion %}
+                  <tr>
+                    <td><strong>{{ d['codigo'] }}</strong></td>
+                    <td>
+                      <form action="/admin/actualizar_direccion" method="POST" style="display:grid; grid-template-columns:1fr 1.4fr auto; gap:.35rem; align-items:center;">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="codigo_actual" value="{{ d['codigo'] }}">
+                        <input type="text" class="form-input" name="codigo_nuevo" value="{{ d['codigo'] }}" maxlength="12" style="font-size:.75rem; padding:.35rem .5rem; text-transform:uppercase;">
+                        <input type="text" class="form-input" name="nombre_nuevo" value="{{ d['nombre'] }}" maxlength="80" style="font-size:.75rem; padding:.35rem .5rem;">
+                        <button type="submit" class="btn-primary-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">Guardar</button>
+                      </form>
+                    </td>
+                    <td style="font-size:.75rem; color:var(--text-muted);">
+                      Admins: {{ d['total_admins'] }}<br>
+                      Cursos: {{ d['total_cursos'] }}
+                    </td>
+                    <td>
+                      <form action="/admin/eliminar_direccion" method="POST" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="codigo" value="{{ d['codigo'] }}">
+                        <button type="submit" class="btn-danger-ipsd" style="font-size:.72rem; padding:.3rem .55rem;"
+                          {% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}disabled title="No se puede eliminar: tiene datos asociados"{% endif %}>
+                          Eliminar
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                      Sin direcciones registradas.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
       <!-- MATRÍCULAS -->
-      <section id="section-matriculas">
+      <section id="section-matriculas" class="admin-screen" data-screen="matriculas">
         <!-- Barra de filtros -->
         <div class="filter-bar animate-fade-up-3">
           <div class="filter-title">🔍 Filtrar Matrículas</div>
@@ -298,7 +548,7 @@
               <span style="font-weight:700; font-size:.95rem;">📋 Listado de Matrículas</span>
               <span class="badge-pill secondary text-xs">{{ registros|length }} registro(s)</span>
             </div>
-            {% if registros %}
+            {% if registros and es_superadmin %}
             <form action="/admin/vaciar_matriculas" method="POST" id="vaciar-form">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="confirmacion" id="vaciar-confirmacion" value="">
@@ -414,9 +664,32 @@
 <script>
 // Variables para modales
 let currentFormId = null;
+let chartsInitialized = false;
+const adminLayout = document.querySelector('.admin-layout');
+const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
 
-function scrollTo(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+function setActiveScreen(view) {
+  const vistasPermitidas = ['dashboard', 'cursos', 'matriculas', 'usuarios'];
+  let vistaFinal = vistasPermitidas.includes(view) ? view : 'dashboard';
+
+  if (vistaFinal === 'usuarios' && !esSuperadmin) {
+    vistaFinal = 'dashboard';
+  }
+
+  document.querySelectorAll('.admin-screen').forEach(section => {
+    section.classList.toggle('active', section.dataset.screen === vistaFinal);
+  });
+
+  document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+    link.classList.toggle('active', link.dataset.view === vistaFinal);
+  });
+
+  localStorage.setItem('admin_active_view', vistaFinal);
+
+  if (vistaFinal === 'dashboard' && !chartsInitialized) {
+    initCharts();
+    chartsInitialized = true;
+  }
 }
 
 function confirmarEliminarCurso(formId, nombre) {
@@ -470,6 +743,25 @@ function submitModal(modalId) {
 
 // Delegated click handlers for delete buttons
 document.addEventListener('DOMContentLoaded', function() {
+  const savedView = localStorage.getItem('admin_active_view') || 'dashboard';
+  setActiveScreen(savedView);
+
+  document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      setActiveScreen(this.dataset.view);
+    });
+  });
+
+  document.querySelectorAll('.admin-screen form').forEach(form => {
+    form.addEventListener('submit', function() {
+      const section = this.closest('.admin-screen');
+      if (section && section.dataset.screen) {
+        localStorage.setItem('admin_active_view', section.dataset.screen);
+      }
+    });
+  });
+
   document.querySelectorAll('.btn-del-curso').forEach(btn => {
     btn.addEventListener('click', function() {
       confirmarEliminarCurso(this.dataset.formId, this.dataset.nombre);
@@ -487,6 +779,25 @@ document.addEventListener('DOMContentLoaded', function() {
       if (e.target === this) cerrarModal(this.id);
     });
   });
+
+  const direccionCurso = document.getElementById('direccion_curso');
+  const modalidad = document.getElementById('modalidad');
+  const previewCodigo = document.getElementById('preview-codigo');
+
+  function actualizarPreviewCodigo() {
+    if (!previewCodigo || !modalidad) return;
+    const direccion = direccionCurso ? direccionCurso.value : '{{ admin_direccion }}';
+    const mod = modalidad.value === 'Presencial' ? 'P' : 'V';
+    previewCodigo.textContent = `AF-${direccion}-${mod}-001`;
+  }
+
+  if (direccionCurso) {
+    direccionCurso.addEventListener('change', actualizarPreviewCodigo);
+  }
+  if (modalidad) {
+    modalidad.addEventListener('change', actualizarPreviewCodigo);
+  }
+  actualizarPreviewCodigo();
 });
 
 // Inicializar gráficos con Chart.js
@@ -558,7 +869,5 @@ async function initCharts() {
     console.warn('No se pudieron cargar los datos de los gráficos:', e);
   }
 }
-
-document.addEventListener('DOMContentLoaded', initCharts);
 </script>
 {% endblock %}

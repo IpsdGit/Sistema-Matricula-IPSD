@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from werkzeug.security import generate_password_hash
 
 if os.path.exists('matricula.db'):
     os.remove('matricula.db')
@@ -15,7 +16,10 @@ def inicializar_bd():
             nombre TEXT NOT NULL,
             anio TEXT NOT NULL,
             trimestre TEXT NOT NULL,
-            mes TEXT NOT NULL
+            mes TEXT NOT NULL,
+            dia TEXT NOT NULL DEFAULT '1',
+            modalidad TEXT NOT NULL DEFAULT 'Virtual',
+            cupos_maximos INTEGER NOT NULL DEFAULT 0
         )
     ''')
 
@@ -38,9 +42,43 @@ def inicializar_bd():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            rol TEXT NOT NULL DEFAULT 'admin',
+            direccion TEXT NOT NULL DEFAULT 'IPSD'
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS direcciones (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL
+        )
+    ''')
+
+    superadmin_username = os.environ.get('SUPERADMIN_USERNAME', 'admin').strip() or 'admin'
+    superadmin_password = os.environ.get(
+        'SUPERADMIN_PASSWORD',
+        os.environ.get('ADMIN_PASSWORD', 'IPSD@admin2026')
+    )
+
+    existe_superadmin = cursor.execute(
+        'SELECT 1 FROM admin_users WHERE username = ?',
+        (superadmin_username,)
+    ).fetchone()
+
+    if not existe_superadmin:
+        cursor.execute(
+            'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (?, ?, ?, ?)',
+            (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
+        )
+
     conexion.commit()
     conexion.close()
-    print("¡Base de datos lista con soporte para control de periodos (Año, Trimestre, Mes)!")
+    print("¡Base de datos lista con soporte de roles de administración!")
 
 if __name__ == '__main__':
     inicializar_bd()
