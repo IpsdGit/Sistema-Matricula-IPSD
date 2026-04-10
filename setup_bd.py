@@ -19,7 +19,8 @@ def inicializar_bd():
             mes TEXT NOT NULL,
             dia TEXT NOT NULL DEFAULT '1',
             modalidad TEXT NOT NULL DEFAULT 'Virtual',
-            cupos_maximos INTEGER NOT NULL DEFAULT 0
+            cupos_maximos INTEGER NOT NULL DEFAULT 0,
+            enlace_virtual TEXT
         )
     ''')
 
@@ -38,9 +39,53 @@ def inicializar_bd():
             numero_empleado TEXT NOT NULL,
             id_capacitacion TEXT NOT NULL,
             horario_elegido TEXT NOT NULL,
+            fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
+            aprobado INTEGER,
             FOREIGN KEY (id_capacitacion) REFERENCES capacitaciones (id) ON DELETE CASCADE
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS estado_matricula_catalogo (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            orden INTEGER NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS matricula_historial (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            matricula_id INTEGER,
+            numero_empleado TEXT NOT NULL,
+            id_capacitacion TEXT NOT NULL,
+            nombre_curso TEXT NOT NULL,
+            horario_elegido TEXT,
+            estado_codigo TEXT NOT NULL,
+            detalle TEXT,
+            fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo)
+        )
+    ''')
+
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_empleado_fecha ON matricula_historial (numero_empleado, id DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_matricula_id ON matricula_historial (matricula_id)')
+
+    estados_catalogo = [
+        ('PENDIENTE', 'Pendiente', 'pendientes', 10),
+        ('APROBADA', 'Aprobada', 'aprobadas', 20),
+        ('NO_APROBADA', 'No aprobada', 'no_aprobadas', 30),
+        ('ABANDONO', 'Abandonó', 'no_aprobadas', 40),
+        ('CANCELADA', 'Cancelada', 'canceladas', 50),
+    ]
+    cursor.executemany(
+        '''
+        INSERT OR IGNORE INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
+        VALUES (?, ?, ?, ?)
+        ''',
+        estados_catalogo
+    )
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS admin_users (

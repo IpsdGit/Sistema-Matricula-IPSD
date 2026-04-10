@@ -1,150 +1,338 @@
 {% extends "base.html" %}
 
-{% block title %}IPSD – Mi Portal | Empleado {{ empleado }}{% endblock %}
-
-{% block nav %}
-<nav class="ipsd-nav">
-  <div class="container">
-    <a href="/" class="brand">
-      <div class="brand-icon">🎓</div>
-      Portal de Capacitaciones
-    </a>
-    <div class="nav-actions">
-      <span class="nav-badge">👤 Empleado #{{ empleado }}</span>
-      <a href="/" class="btn-ghost">Cerrar Sesión</a>
-    </div>
-  </div>
-</nav>
-{% endblock %}
+{% block title %}IPSD - Mi Portal | Empleado {{ empleado }}{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
-
-  <div class="card-ipsd mb-4 animate-fade-up">
-    <div class="card-header">
-      <div class="flex gap-2" style="align-items:center;">
-        <span style="font-size:1.2rem;">📋</span>
-        <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
-      </div>
-      <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
+<div class="portal-layout">
+  <aside class="portal-sidebar" id="portal-sidebar">
+    <div class="portal-sidebar-brand">
+      <span class="brand-dot"></span>
+      Portal Docente IPSD
     </div>
-    <div class="card-body">
-      {% if matriculados %}
-        <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
-          {% for curso in matriculados %}
+
+    <nav class="portal-sidebar-nav">
+      <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-sidebar-link {% if seccion_activa == 'historial' %}active{% endif %}">
+        <span class="link-icon">📚</span>
+        <span>Acciones Formativas</span>
+      </a>
+      <a href="/dashboard?seccion=disponibles" class="portal-sidebar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">
+        <span class="link-icon">📝</span>
+        <span>Disponibles para matrícula</span>
+      </a>
+      <a href="/dashboard?seccion=soporte" class="portal-sidebar-link {% if seccion_activa == 'soporte' %}active{% endif %}">
+        <span class="link-icon">💬</span>
+        <span>Chat con soporte IA</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="portal-main">
+    <header class="portal-topbar">
+      <button class="portal-menu-toggle" id="portal-menu-toggle" type="button" aria-label="Abrir menú">☰</button>
+
+      <div class="portal-topbar-title-wrap">
+        {% if seccion_activa == 'historial' %}
+        <h1 class="portal-topbar-title">Acciones Formativas | Historial</h1>
+        <p class="portal-topbar-subtitle">Seguimiento por estado y cierre de ciclos</p>
+        {% elif seccion_activa == 'disponibles' %}
+        <h1 class="portal-topbar-title">Acciones Formativas Disponibles</h1>
+        <p class="portal-topbar-subtitle">Matrícula activa con control de oportunidades</p>
+        {% else %}
+        <h1 class="portal-topbar-title">Chat de Soporte con IA</h1>
+        <p class="portal-topbar-subtitle">Asistencia guiada para trámites docentes</p>
+        {% endif %}
+      </div>
+
+      <div class="portal-topbar-actions">
+        <button type="button" class="portal-alert-btn" aria-label="Notificaciones" title="Notificaciones">🔔</button>
+        <div class="portal-user-menu" id="portal-user-menu">
+          <button
+            type="button"
+            class="portal-user-chip"
+            id="portal-user-menu-trigger"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="portal-user-dropdown"
+          >
+            <span class="portal-user-avatar">{{ ('Docente')[:1] | upper }}</span>
+            <span class="portal-user-meta">
+              <span class="portal-user-name">Docente</span>
+              <span class="portal-user-id">Empleado #{{ empleado }}</span>
+            </span>
+            <span class="portal-user-caret">▾</span>
+          </button>
+          <div class="portal-user-dropdown" id="portal-user-dropdown">
+            <a href="/logout_docente">🚪 Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="portal-content">
+      {% if error %}
+      <div class="alert-ipsd danger mb-3">
+        <span>⛔</span>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {% if seccion_activa == 'historial' %}
+      <div class="card-ipsd mb-3">
+        <div class="card-header" style="gap:1rem; flex-wrap:wrap;">
+          <div>
+            <h5 style="margin:0; font-weight:700;">Mis Actividades</h5>
+            <p style="margin:.2rem 0 0; color:var(--text-muted); font-size:.85rem;">Estados finales y trazabilidad de matrícula</p>
+          </div>
+          <div class="historial-pill-stats">
+            <span class="badge-pill secondary">Total: {{ resumen_historial['todas'] }}</span>
+            <span class="badge-pill success">Aprobadas: {{ resumen_historial['aprobadas'] }}</span>
+            <span class="badge-pill danger">No Aprobadas: {{ resumen_historial['no_aprobadas'] }}</span>
+            <span class="badge-pill secondary">Canceladas: {{ resumen_historial['canceladas'] }}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="historial-tabs">
+            <a href="/dashboard?seccion=historial&filtro_historial=todas" class="historial-tab {% if filtro_historial == 'todas' %}active{% endif %}">Todas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=aprobadas" class="historial-tab {% if filtro_historial == 'aprobadas' %}active{% endif %}">Aprobadas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=no_aprobadas" class="historial-tab {% if filtro_historial == 'no_aprobadas' %}active{% endif %}">No Aprobadas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=canceladas" class="historial-tab {% if filtro_historial == 'canceladas' %}active{% endif %}">Canceladas</a>
+          </div>
+
+          {% if historial_acciones %}
+          <div class="historial-grid">
+            {% for accion in historial_acciones %}
+            <article class="historial-card">
+              <div class="historial-card-head">
+                <span class="historial-course-id">{{ accion['id_capacitacion'] }}</span>
+                {% set estado_class = 'estado-pendiente' %}
+                {% if accion['estado_categoria'] == 'aprobadas' %}
+                  {% set estado_class = 'estado-aprobada' %}
+                {% elif accion['estado_codigo'] == 'ABANDONO' %}
+                  {% set estado_class = 'estado-abandono' %}
+                {% elif accion['estado_categoria'] == 'no_aprobadas' %}
+                  {% set estado_class = 'estado-no-aprobada' %}
+                {% elif accion['estado_categoria'] == 'canceladas' %}
+                  {% set estado_class = 'estado-cancelada' %}
+                {% endif %}
+                <span class="historial-estado {{ estado_class }}">{{ accion['estado_nombre'] }}</span>
+              </div>
+              <h4 class="historial-course-name">{{ accion['nombre_curso'] }}</h4>
+              <p class="historial-meta">Horario: {{ accion['horario_elegido'] or 'No definido' }}</p>
+              <p class="historial-meta">Fecha: {{ accion['fecha_evento'][:16] if accion['fecha_evento'] else 'Sin fecha' }}</p>
+            </article>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="alert-ipsd info" style="margin-top:1rem;">
+            <span>ℹ️</span>
+            <span>No hay elementos para mostrar con este filtro.</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% elif seccion_activa == 'disponibles' %}
+
+      {% if avisos_oportunidades %}
+      <div class="card-ipsd mb-3">
+        <div class="card-header">
+          <div class="flex gap-2" style="align-items:center;">
+            <span style="font-size:1rem;">⚠️</span>
+            <h5 style="margin:0; font-weight:700;">Oportunidades por Curso</h5>
+          </div>
+          <span style="font-size:.8rem; color:var(--text-muted);">Control de re-matrícula</span>
+        </div>
+        <div class="card-body" style="display:grid; gap:.55rem;">
+          {% for aviso in avisos_oportunidades %}
+          <div class="alert-ipsd {% if aviso['bloqueado'] %}danger{% else %}warning{% endif %}" style="margin:0;">
+            <span>{% if aviso['bloqueado'] %}⛔{% else %}ℹ️{% endif %}</span>
+            <span><strong>{{ aviso['curso'] }}:</strong> {{ aviso['mensaje'] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card-ipsd mb-3">
+        <div class="card-header">
+          <div class="flex gap-2" style="align-items:center;">
+            <span style="font-size:1rem;">📋</span>
+            <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
+          </div>
+          <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
+        </div>
+        <div class="card-body">
+          {% if matriculados %}
+          <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
+            {% for curso in matriculados %}
             <div class="enrolled-pill">
               <span>✓</span>
               <span>
                 <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
                 <br>
-                <span style="font-weight:400; font-size:.78rem; opacity:.85;">🕒 {{ curso['horario_elegido'] }}</span>
+                <span style="font-weight:400; font-size:.78rem; opacity:.85;">{{ curso['horario_elegido'] }}</span>
+                {% if curso['aprobado'] == 1 %}
+                <br>
+                <span style="font-weight:600; font-size:.75rem; color:#16a34a;">Aprobado</span>
+                {% elif curso['aprobado'] == 0 %}
+                <br>
+                <span style="font-weight:600; font-size:.75rem; color:#dc2626;">No aprobado</span>
+                {% elif curso['aprobado'] == 2 %}
+                <br>
+                <span style="font-weight:600; font-size:.75rem; color:#ea580c;">Abandonó</span>
+                {% else %}
+                <br>
+                <span style="font-weight:600; font-size:.75rem; color:#64748b;">Pendiente</span>
+                {% endif %}
               </span>
-              <form action="/cancelar_matricula" method="POST" style="margin: 0; padding: 0; display: flex;" onsubmit="return confirm('¿Seguro que deseas cancelar tu inscripción en {{ curso['nombre'] }}?');">
+              {% if curso['aprobado'] is none %}
+              <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar tu inscripción en {{ curso['nombre'] }}?');">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="numero_empleado" value="{{ empleado }}">
                 <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
                 <button type="submit" class="cancel-btn" title="Cancelar matrícula">✕</button>
               </form>
+              {% else %}
+              <span title="Matrícula cerrada" style="opacity:.55; font-size:1rem;">🔒</span>
+              {% endif %}
             </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="alert-ipsd info">
-          <span>ℹ️</span>
-          <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="flex-between mb-3 animate-fade-up-1">
-    <h3 style="margin:0; font-size:1.3rem;">📚 Acciones Formativas Disponibles</h3>
-    <span class="badge-pill secondary">{{ cursos|length }} disponible(s)</span>
-  </div>
-
-  {% if cursos %}
-  <div class="grid-3 animate-fade-up-2">
-    {% for curso in cursos %}
-    <div class="curso-card">
-      <div class="curso-header"></div>
-      <div class="curso-body">
-        <div class="curso-id">{{ curso['id'] }}</div>
-        <div class="curso-title">{{ curso['nombre'] }}</div>
-        <div class="curso-period">📅 {{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
-        <div class="curso-footer">
-          <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-            <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
-
-            <div class="form-group" style="margin-bottom:.8rem;">
-              <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
-              <select class="form-select" name="horario_elegido" required>
-                <option value="" disabled selected>Selecciona un horario...</option>
-                {% for horario in curso['horarios'] %}
-                  <option value="{{ horario }}">{{ horario }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
-              Matricularme
-            </button>
-          </form>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="alert-ipsd info">
+            <span>ℹ️</span>
+            <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
+          </div>
+          {% endif %}
         </div>
       </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="animate-fade-up-2">
-    <div class="alert-ipsd success" style="max-width:500px;">
-      <span>✅</span>
-      <span><strong>¡Estás al día!</strong> No hay nuevas capacitaciones disponibles por el momento.</span>
-    </div>
-  </div>
-  {% endif %}
 
+      <div class="flex-between mb-3">
+        <h3 style="margin:0; font-size:1.2rem;">Acciones Formativas Disponibles</h3>
+        <span class="badge-pill secondary">{{ cursos|length }} disponible(s)</span>
+      </div>
+
+      {% if cursos %}
+      <div class="grid-3">
+        {% for curso in cursos %}
+        <div class="curso-card">
+          <div class="curso-header"></div>
+          <div class="curso-body">
+            <div class="curso-id">{{ curso['id'] }}</div>
+            <div class="curso-title">{{ curso['nombre'] }}</div>
+            <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
+            {% if curso['mensaje_oportunidades'] %}
+            <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
+            {% endif %}
+            <div class="curso-footer">
+              <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+                <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+
+                <div class="form-group" style="margin-bottom:.8rem;">
+                  <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
+                  <select class="form-select" name="horario_elegido" required>
+                    <option value="" disabled selected>Selecciona un horario...</option>
+                    {% for horario in curso['horarios'] %}
+                    <option value="{{ horario }}">{{ horario }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
+                  Matricularme
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert-ipsd success" style="max-width:560px;">
+        <span>✅</span>
+        <span><strong>Sin cursos habilitados por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
+      </div>
+      {% endif %}
+
+      {% else %}
+      <div class="card-ipsd">
+        <div class="card-header">
+          <h5 style="margin:0; font-weight:700;">Chat con Soporte IA</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert-ipsd info">
+            <span>ℹ️</span>
+            <span>Esta vista quedará activa en el paso 3. Mientras tanto, puedes usar Historial y Disponibles desde el menú lateral.</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </section>
+  </main>
 </div>
 
-<div class="modal-overlay" id="cancel-modal" style="display: none;">
-  <div class="modal-box">
-    <div class="modal-icon">⚠️</div>
-    <div class="modal-title">¿Cancelar matrícula?</div>
-    <div class="modal-desc" id="modal-desc">
-      Se cancelará tu inscripción en este curso.
-    </div>
-    <div class="modal-actions">
-      <button class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
-        onclick="cerrarModal()" type="button">Volver</button>
-
-      <form id="cancel-form" action="/cancelar_matricula" method="POST" style="flex:1; margin:0;">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" id="cancel-empleado" name="numero_empleado" value="">
-        <input type="hidden" id="cancel-curso" name="id_capacitacion" value="">
-        <button type="submit" class="btn-danger-ipsd w-full" style="justify-content:center; width:100%;">
-          Sí, cancelar
-        </button>
-      </form>
-    </div>
-  </div>
-</div>
+<div class="portal-overlay" id="portal-overlay"></div>
 
 <script>
-  function abrirModalCancelacion(empleado, idCurso, nombreCurso) {
-    // Rellenamos los datos del curso seleccionado
-    document.getElementById('cancel-empleado').value = empleado;
-    document.getElementById('cancel-curso').value = idCurso;
-    document.getElementById('modal-desc').innerHTML = 'Se cancelará tu inscripción en el curso:<br><strong style="color: #2563eb; margin-top: 5px; display: block;">' + nombreCurso + '</strong>';
+  (function () {
+    const sidebar = document.getElementById('portal-sidebar');
+    const overlay = document.getElementById('portal-overlay');
+    const toggle = document.getElementById('portal-menu-toggle');
+    const userMenu = document.getElementById('portal-user-menu');
+    const userTrigger = document.getElementById('portal-user-menu-trigger');
+    const userDropdown = document.getElementById('portal-user-dropdown');
 
-    // Mostramos la ventana en pantalla
-    document.getElementById('cancel-modal').style.display = 'flex';
-  }
+    function abrirMenu() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+    }
 
-  function cerrarModal() {
-    // Ocultamos la ventana
-    document.getElementById('cancel-modal').style.display = 'none';
-  }
+    function cerrarMenu() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    }
+
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        if (sidebar.classList.contains('open')) {
+          cerrarMenu();
+        } else {
+          abrirMenu();
+        }
+      });
+    }
+
+    if (userMenu && userTrigger && userDropdown) {
+      userTrigger.addEventListener('click', function (event) {
+        event.stopPropagation();
+        const abierto = userDropdown.classList.toggle('active');
+        userTrigger.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+      });
+
+      document.addEventListener('click', function (event) {
+        if (!userMenu.contains(event.target)) {
+          userDropdown.classList.remove('active');
+          userTrigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    if (overlay) {
+      overlay.addEventListener('click', cerrarMenu);
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        cerrarMenu();
+        if (userDropdown && userTrigger) {
+          userDropdown.classList.remove('active');
+          userTrigger.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  })();
 </script>
-
 {% endblock %}

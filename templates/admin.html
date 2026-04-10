@@ -12,46 +12,195 @@
   .admin-screen.active {
     display: block;
   }
+
+  .btn-icon-action {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    font-size: 0.72rem;
+    border-radius: 7px;
+    box-shadow: none;
+  }
+
+  .top-user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .45rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    color: #0f172a;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  .top-user-chip:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+  }
+
+  .top-user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    font-size: 1rem;
+  }
+
+  .top-user-meta {
+    line-height: 1.15;
+  }
+
+  .top-user-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .top-user-role {
+    margin: 0;
+    color: #475569;
+    font-size: .78rem;
+  }
+
+  .top-alert-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+  }
+
+  .top-user-menu {
+    position: relative;
+  }
+
+  .top-user-menu-trigger {
+    border: none;
+  }
+
+  .top-user-caret {
+    color: #64748b;
+    font-size: .78rem;
+    margin-left: .1rem;
+  }
+
+  .top-user-dropdown {
+    position: absolute;
+    top: calc(100% + .4rem);
+    right: 0;
+    min-width: 170px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    padding: .35rem;
+    display: none;
+    z-index: 120;
+  }
+
+  .top-user-dropdown.active {
+    display: block;
+  }
+
+  .top-user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    text-decoration: none;
+    color: #ef4444;
+    border-radius: 8px;
+    padding: .5rem .55rem;
+    font-size: .82rem;
+    font-weight: 600;
+  }
+
+  .top-user-dropdown a:hover {
+    background: #fee2e2;
+  }
+
+  .select-resultado-matricula.estado-pendiente {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+  }
+
+  .select-resultado-matricula.estado-aprobado {
+    border-color: #86efac;
+    background: #ecfdf5;
+    color: #166534;
+    font-weight: 600;
+  }
+
+  .select-resultado-matricula.estado-reprobado {
+    border-color: #fca5a5;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-weight: 600;
+  }
+
+  .select-resultado-matricula.estado-abandono {
+    border-color: #fdba74;
+    background: #fff7ed;
+    color: #c2410c;
+    font-weight: 600;
+  }
+
+  .resultado-sync-status {
+    font-size: .72rem;
+    color: var(--text-muted);
+    min-width: 62px;
+    text-align: left;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-layout" data-es-superadmin="{{ '1' if es_superadmin else '0' }}">
+<div class="admin-layout" data-es-superadmin="{{ '1' if es_superadmin else '0' }}" data-vista-inicial="{{ vista_inicial }}">
 
   <!-- SIDEBAR -->
   <aside class="admin-sidebar">
     <div class="sidebar-brand">
       <div class="brand-dot"></div>
-      IPSD Control
+      Sistema de Registro
     </div>
 
     <nav class="sidebar-nav">
-      <a href="#" class="sidebar-link" data-view="dashboard">
+      <a href="/admin?view=dashboard" class="sidebar-link" data-view="dashboard">
         <span class="link-icon">📊</span> Dashboard
       </a>
-      <a href="#" class="sidebar-link" data-view="cursos">
+      <a href="/admin?view=cursos" class="sidebar-link" data-view="cursos">
         <span class="link-icon">📚</span> Gestión de Cursos
       </a>
-      <a href="#" class="sidebar-link" data-view="matriculas">
+      <a href="/admin?view=matriculas" class="sidebar-link" data-view="matriculas">
         <span class="link-icon">📋</span> Matrículas
       </a>
       {% if es_superadmin %}
-      <a href="#" class="sidebar-link" data-view="usuarios">
+      <a href="/admin?view=usuarios" class="sidebar-link" data-view="usuarios">
         <span class="link-icon">🛡️</span> Usuarios Admin
       </a>
       {% endif %}
     </nav>
 
-    <div class="sidebar-footer">
-      <div style="font-size:.78rem; color:#475569; margin-bottom:.7rem; padding:.5rem;">
-        👤 {{ admin_user }}<br>
-        <span style="font-size:.72rem; color:#64748b;">Rol: {{ 'Superadmin' if es_superadmin else 'Admin' }}</span><br>
-        <span style="font-size:.72rem; color:#64748b;">Dirección: {{ admin_direccion }}</span>
-      </div>
-      <a href="/logout_admin" class="sidebar-link" style="color:#ef4444;">
-        <span class="link-icon">🚪</span> Cerrar Sesión
-      </a>
-    </div>
+    <div class="sidebar-footer"></div>
   </aside>
 
   <!-- MAIN CONTENT -->
@@ -60,19 +209,28 @@
     <!-- TOP BAR -->
     <div class="admin-topbar">
       <div>
-        <h4 style="margin:0; font-size:1.1rem; font-weight:700;">Panel de Control</h4>
-        <p style="margin:0; font-size:.8rem; color:var(--text-muted);">
-          Registro Docente · IPSD UNAH · {{ 'Superadmin' if es_superadmin else ('Admin ' ~ admin_direccion) }}
-        </p>
+        <h4 style="margin:0; font-size:1.1rem; font-weight:700;">Panel de Administración</h4>
+      
       </div>
-      <div class="flex gap-2">
-        <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}"
+      <div class="flex gap-2" style="align-items:center;">
+        <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
            class="btn-success-ipsd" style="font-size:.85rem; padding:.5rem 1rem;">
           📥 Exportar CSV
         </a>
-        <a href="/logout_admin" class="btn-danger-ipsd" style="font-size:.85rem; padding:.5rem 1rem;">
-          Salir
-        </a>
+        <button type="button" class="top-alert-btn" aria-label="Notificaciones" title="Notificaciones">🔔</button>
+        <div class="top-user-menu" id="top-user-menu">
+          <button type="button" class="top-user-chip top-user-menu-trigger" id="top-user-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="top-user-dropdown">
+            <span class="top-user-avatar">{{ (admin_user or 'A')[:1] | upper }}</span>
+            <div class="top-user-meta">
+              <p class="top-user-name">{{ admin_user }}</p>
+              <p class="top-user-role">{{ 'Super Admin' if es_superadmin else ('Admin · ' ~ admin_direccion) }}</p>
+            </div>
+            <span class="top-user-caret">▾</span>
+          </button>
+          <div class="top-user-dropdown" id="top-user-dropdown">
+            <a href="/logout_admin">🚪 Cerrar sesión</a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -139,6 +297,7 @@
             <div class="card-body">
               <form action="/admin/crear_curso" method="POST">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="cursos">
 
                 <div class="form-group">
                   <label class="form-label">Código (ID Autogenerado)</label>
@@ -154,14 +313,10 @@
                     placeholder="Ej. Uso de Webex" required maxlength="150">
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:.75rem;" class="mb-2">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Año</label>
-                    <select class="form-select" name="anio" required>
-                      <option value="2026" selected>2026</option>
-                      <option value="2027">2027</option>
-                      <option value="2028">2028</option>
-                    </select>
+                    <label class="form-label">Fecha del Curso</label>
+                    <input type="date" class="form-input" name="fecha_curso" id="fecha_curso" value="{{ fecha_hoy }}" required>
                   </div>
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Trimestre</label>
@@ -172,21 +327,18 @@
                       <option value="IV">IV</option>
                     </select>
                   </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Mes</label>
-                    <select class="form-select" name="mes" required>
-                      {% for m in ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] %}
-                        <option value="{{ m }}" {% if m == 'Marzo' %}selected{% endif %}>{{ m }}</option>
-                      {% endfor %}
-                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:.9rem;">
+                  <label class="form-label">Fechas Adicionales (Opcional)</label>
+                  <div id="fechas-adicionales-contenedor" style="display:grid; gap:.45rem;"></div>
+                  <div style="display:flex; gap:.5rem; margin-top:.45rem;">
+                    <button type="button" id="btn-add-fecha-adicional" class="btn-ghost" style="color:var(--primary); border-color:#bfdbfe; background:#eff6ff; font-size:.8rem; padding:.38rem .7rem;">
+                      + Agregar otra fecha
+                    </button>
                   </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Día</label>
-                    <select class="form-select" name="dia" required>
-                      {% for d in range(1, 32) %}
-                        <option value="{{ d }}" {% if d == 1 %}selected{% endif %}>{{ d }}</option>
-                      {% endfor %}
-                    </select>
+                  <div id="fechas-adicionales-ayuda" style="font-size:.74rem; color:var(--text-muted); margin-top:.35rem;">
+                    Puedes habilitar la misma acción formativa en varias fechas del calendario.
                   </div>
                 </div>
 
@@ -217,6 +369,21 @@
                   </div>
                 </div>
 
+                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2" id="enlace_virtual_group">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Enlace de Acceso (solo Virtual)</label>
+                    <input
+                      type="url"
+                      class="form-input"
+                      name="enlace_virtual"
+                      id="enlace_virtual"
+                      placeholder="https://..."
+                      pattern="https?://.*"
+                      required
+                    >
+                  </div>
+                </div>
+
                 <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Cupos Máximos</label>
@@ -227,21 +394,11 @@
                 <div class="form-group mt-2">
                   <label class="form-label">Horarios Disponibles</label>
                   <div style="border:1.5px solid var(--border); border-radius:var(--radius); padding:1rem; max-height:230px; overflow-y:auto; background:#f8fafc;">
-                    {% set dias  = ['Lunes','Martes','Miércoles','Jueves','Viernes'] %}
-                    {% set horas = ['08:00 AM - 10:00 AM','10:00 AM - 12:00 PM','12:00 PM - 02:00 PM','02:00 PM - 04:00 PM','04:00 PM - 06:00 PM','06:00 PM - 08:00 PM'] %}
-                    {% for dia in dias %}
-                      <div style="margin-bottom:.7rem;">
-                        <span style="display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--primary); margin-bottom:.35rem;">{{ dia }}</span>
-                        <div style="display:flex; flex-wrap:wrap; gap:.4rem;">
-                          {% for hora in horas %}
-                            <label style="display:inline-flex; align-items:center; gap:.3rem; font-size:.78rem; cursor:pointer; background:#fff; border:1px solid var(--border); border-radius:6px; padding:.25rem .5rem; transition:all .15s;">
-                              <input type="checkbox" name="horarios" value="{{ dia }} {{ hora }}" style="accent-color:var(--primary);">
-                              {{ hora }}
-                            </label>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    {% endfor %}
+                    <div id="horarios-dia-label" style="display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--primary); margin-bottom:.35rem;"></div>
+                    <div id="horarios-dia-contenedor" style="display:flex; flex-wrap:wrap; gap:.4rem;"></div>
+                    <div id="horarios-dia-vacio" style="display:none; font-size:.8rem; color:var(--text-muted);">
+                      Selecciona una fecha válida para mostrar los horarios.
+                    </div>
                   </div>
                 </div>
 
@@ -280,6 +437,12 @@
                       <span style="font-size:.73rem; color:var(--text-muted);">
                         {{ curso['modalidad'] }} · Cupos: {{ curso['cupos_maximos'] }}
                       </span>
+                      {% if curso['modalidad'] == 'Virtual' and curso['enlace_virtual'] %}
+                      <br>
+                      <a href="{{ curso['enlace_virtual'] }}" target="_blank" rel="noopener noreferrer" style="font-size:.73rem; color:var(--primary); font-weight:600;">
+                        Abrir enlace de la sesión
+                      </a>
+                      {% endif %}
                     </td>
                     <td style="text-align:center;">
                       <span class="badge-pill {% if curso['total_inscritos'] > 0 %}success{% else %}secondary{% endif %} text-xs">
@@ -287,16 +450,38 @@
                       </span>
                     </td>
                     <td style="text-align:right;">
-                      <form action="/admin/eliminar_curso" method="POST" style="display:inline;" id="del-curso-{{ loop.index }}">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="id_curso" value="{{ curso['id'] }}">
-                        <button type="button" class="btn-danger-ipsd btn-del-curso"
-                          style="font-size:.75rem; padding:.35rem .7rem;"
-                          data-form-id="del-curso-{{ loop.index }}"
-                          data-nombre="{{ curso['nombre'] }}">
-                          Eliminar
+                      <div style="display:flex; justify-content:flex-end; gap:.35rem;">
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-edit-curso"
+                          title="Editar curso"
+                          aria-label="Editar curso"
+                          data-id="{{ curso['id'] }}"
+                          data-nombre="{{ curso['nombre'] }}"
+                          data-anio="{{ curso['anio'] }}"
+                          data-mes="{{ curso['mes'] }}"
+                          data-dia="{{ curso['dia'] }}"
+                          data-trimestre="{{ curso['trimestre'] }}"
+                          data-modalidad="{{ curso['modalidad'] }}"
+                          data-enlace="{{ curso['enlace_virtual'] or '' }}"
+                          data-cupos="{{ curso['cupos_maximos'] }}">
+                          ✏️
                         </button>
-                      </form>
+                        <form action="/admin/eliminar_curso" method="POST" style="display:inline; margin:0;" id="del-curso-{{ loop.index }}">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="view" value="cursos">
+                          <input type="hidden" name="id_curso" value="{{ curso['id'] }}">
+                          <button
+                            type="button"
+                            class="btn-danger-ipsd btn-icon-action btn-del-curso"
+                            title="Eliminar curso"
+                            aria-label="Eliminar curso"
+                            data-form-id="del-curso-{{ loop.index }}"
+                            data-nombre="{{ curso['nombre'] }}">
+                            🗑️
+                          </button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                   {% else %}
@@ -323,6 +508,7 @@
             <div class="card-body">
               <form action="/admin/crear_admin" method="POST">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="usuarios">
 
                 <div class="form-group">
                   <label class="form-label">Usuario</label>
@@ -375,26 +561,30 @@
                       </span>
                     </td>
                     <td style="font-size:.82rem; color:var(--text-muted);">{{ u['direccion'] }}</td>
-                    <td>
+                    <td style="display:flex; gap:.35rem; align-items:center;">
                       {% if u['rol'] == 'superadmin' %}
                         <span class="badge-pill primary text-xs">Protegido</span>
                       {% else %}
-                        <form action="/admin/actualizar_admin" method="POST" style="display:grid; grid-template-columns:1fr 1fr auto; gap:.4rem; align-items:center; margin-bottom:.35rem;">
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-edit-usuario"
+                          title="Editar usuario"
+                          aria-label="Editar usuario"
+                          data-username="{{ u['username'] }}"
+                          data-direccion="{{ u['direccion'] }}"
+                          data-rol="{{ u['rol'] }}">
+                          ✏️
+                        </button>
+                        <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');" style="margin:0;">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="view" value="usuarios">
                           <input type="hidden" name="username" value="{{ u['username'] }}">
-                          <select class="form-select" name="direccion" style="font-size:.75rem; padding:.35rem .5rem;">
-                            {% for d in direcciones %}
-                              <option value="{{ d['codigo'] }}" {% if d['codigo'] == u['direccion'] %}selected{% endif %}>{{ d['codigo'] }}</option>
-                            {% endfor %}
-                          </select>
-                          <input type="password" class="form-input" name="new_password" placeholder="Nueva clave (opcional)" style="font-size:.75rem; padding:.35rem .5rem;">
-                          <button type="submit" class="btn-primary-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">Guardar</button>
-                        </form>
-                        <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');">
-                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="username" value="{{ u['username'] }}">
-                          <button type="submit" class="btn-danger-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">
-                            Eliminar
+                          <button
+                            type="submit"
+                            class="btn-danger-ipsd btn-icon-action"
+                            title="Eliminar usuario"
+                            aria-label="Eliminar usuario">
+                            🗑️
                           </button>
                         </form>
                       {% endif %}
@@ -421,6 +611,7 @@
             <div class="card-body">
               <form action="/admin/crear_direccion" method="POST">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="usuarios">
 
                 <div class="form-group">
                   <label class="form-label">Código</label>
@@ -458,26 +649,32 @@
                   {% for d in direcciones_gestion %}
                   <tr>
                     <td><strong>{{ d['codigo'] }}</strong></td>
-                    <td>
-                      <form action="/admin/actualizar_direccion" method="POST" style="display:grid; grid-template-columns:1fr 1.4fr auto; gap:.35rem; align-items:center;">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="codigo_actual" value="{{ d['codigo'] }}">
-                        <input type="text" class="form-input" name="codigo_nuevo" value="{{ d['codigo'] }}" maxlength="12" style="font-size:.75rem; padding:.35rem .5rem; text-transform:uppercase;">
-                        <input type="text" class="form-input" name="nombre_nuevo" value="{{ d['nombre'] }}" maxlength="80" style="font-size:.75rem; padding:.35rem .5rem;">
-                        <button type="submit" class="btn-primary-ipsd" style="font-size:.72rem; padding:.3rem .55rem;">Guardar</button>
-                      </form>
-                    </td>
+                    <td style="font-size:.85rem;">{{ d['nombre'] }}</td>
                     <td style="font-size:.75rem; color:var(--text-muted);">
                       Admins: {{ d['total_admins'] }}<br>
                       Cursos: {{ d['total_cursos'] }}
                     </td>
-                    <td>
-                      <form action="/admin/eliminar_direccion" method="POST" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
+                    <td style="display:flex; gap:.35rem; flex-wrap:wrap;">
+                      <button
+                        type="button"
+                        class="btn-primary-ipsd btn-icon-action btn-edit-direccion"
+                        title="Editar dirección"
+                        aria-label="Editar dirección"
+                        data-codigo="{{ d['codigo'] }}"
+                        data-nombre="{{ d['nombre'] }}">
+                        ✏️
+                      </button>
+                      <form action="/admin/eliminar_direccion" method="POST" style="margin:0;" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="view" value="usuarios">
                         <input type="hidden" name="codigo" value="{{ d['codigo'] }}">
-                        <button type="submit" class="btn-danger-ipsd" style="font-size:.72rem; padding:.3rem .55rem;"
-                          {% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}disabled title="No se puede eliminar: tiene datos asociados"{% endif %}>
-                          Eliminar
+                        <button
+                          type="submit"
+                          class="btn-danger-ipsd btn-icon-action"
+                          aria-label="Eliminar dirección"
+                          title="{% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}No se puede eliminar: tiene datos asociados{% else %}Eliminar dirección{% endif %}"
+                          {% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}disabled{% endif %}>
+                          🗑️
                         </button>
                       </form>
                     </td>
@@ -502,7 +699,8 @@
         <!-- Barra de filtros -->
         <div class="filter-bar animate-fade-up-3">
           <div class="filter-title">🔍 Filtrar Matrículas</div>
-          <form action="/admin" method="GET" style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:.75rem; align-items:end;">
+          <form action="/admin" method="GET" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:.75rem; align-items:end;">
+            <input type="hidden" name="view" value="matriculas">
             <div>
               <label class="form-label" style="font-size:.72rem;">Año</label>
               <select class="form-select" name="anio">
@@ -530,11 +728,21 @@
                 {% endfor %}
               </select>
             </div>
+            <div>
+              <label class="form-label" style="font-size:.72rem;">Resultado</label>
+              <select class="form-select" name="resultado">
+                <option value="" {% if not filtros.resultado %}selected{% endif %}>Todos</option>
+                <option value="aprobado" {% if filtros.resultado == 'aprobado' %}selected{% endif %}>Aprobado</option>
+                <option value="reprobado" {% if filtros.resultado == 'reprobado' %}selected{% endif %}>No aprobado</option>
+                <option value="abandono" {% if filtros.resultado == 'abandono' %}selected{% endif %}>Abandonó</option>
+                <option value="pendiente" {% if filtros.resultado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+              </select>
+            </div>
             <div class="flex gap-1">
               <button type="submit" class="btn-primary-ipsd" style="font-size:.85rem; padding:.6rem 1rem; white-space:nowrap;">
                 Buscar
               </button>
-              <a href="/admin" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius); font-size:.85rem; padding:.6rem 1rem; white-space:nowrap;">
+              <a href="/admin?view=matriculas" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius); font-size:.85rem; padding:.6rem 1rem; white-space:nowrap;">
                 Limpiar
               </a>
             </div>
@@ -551,6 +759,7 @@
             {% if registros and es_superadmin %}
             <form action="/admin/vaciar_matriculas" method="POST" id="vaciar-form">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="view" value="matriculas">
               <input type="hidden" name="confirmacion" id="vaciar-confirmacion" value="">
               <button type="button" class="btn-danger-ipsd" style="font-size:.8rem; padding:.4rem .8rem;"
                 onclick="abrirModalVaciar()">
@@ -568,6 +777,7 @@
                   <th>Capacitación</th>
                   <th>Periodo</th>
                   <th>Jornada</th>
+                  <th>Resultado</th>
                   <th>Fecha Matrícula</th>
                   <th style="text-align:center;">Acción</th>
                 </tr>
@@ -580,12 +790,31 @@
                   <td style="font-size:.88rem;">{{ fila['nombre'] }}</td>
                   <td style="font-size:.82rem; color:var(--text-muted);">{{ fila['mes'] }} {{ fila['anio'] }}</td>
                   <td style="font-size:.82rem; color:var(--primary); font-weight:600;">{{ fila['horario_elegido'] }}</td>
+                  <td>
+                    <form action="/admin/actualizar_resultado_matricula" method="POST" class="form-resultado-matricula" style="display:flex; align-items:center; gap:.35rem; margin:0;">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="view" value="matriculas">
+                      <input type="hidden" name="ajax" value="1">
+                      <input type="hidden" name="matricula_id" value="{{ fila['matricula_id'] }}">
+                      <input type="hidden" name="numero_empleado" value="{{ fila['numero_empleado'] }}">
+                      <input type="hidden" name="id_capacitacion" value="{{ fila['id'] }}">
+                      <select class="form-select select-resultado-matricula" name="aprobado" style="font-size:.75rem; padding:.3rem .45rem; min-width:120px;">
+                        <option value="" {% if fila['aprobado'] is none %}selected{% endif %}>Pendiente</option>
+                        <option value="1" {% if fila['aprobado'] == 1 %}selected{% endif %}>Aprobado</option>
+                        <option value="0" {% if fila['aprobado'] == 0 %}selected{% endif %}>No aprobado</option>
+                        <option value="2" {% if fila['aprobado'] == 2 %}selected{% endif %}>Abandonó</option>
+                      </select>
+                      <span class="resultado-sync-status">Listo</span>
+                    </form>
+                  </td>
                   <td style="font-size:.78rem; color:var(--text-muted);">
                     {{ fila['fecha_matricula'][:16] if fila['fecha_matricula'] else '—' }}
                   </td>
                   <td style="text-align:center;">
                     <form action="/admin/eliminar_matricula" method="POST" style="display:inline;" id="del-m-{{ loop.index }}">
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="view" value="matriculas">
+                      <input type="hidden" name="matricula_id" value="{{ fila['matricula_id'] }}">
                       <input type="hidden" name="numero_empleado" value="{{ fila['numero_empleado'] }}">
                       <input type="hidden" name="id_capacitacion" value="{{ fila['id'] }}">
                       <button type="button" class="btn-del-matricula"
@@ -603,7 +832,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="7" style="text-align:center; color:var(--text-muted); padding:3rem;">
+                  <td colspan="8" style="text-align:center; color:var(--text-muted); padding:3rem;">
                     No se encontraron matrículas con los filtros aplicados.
                   </td>
                 </tr>
@@ -658,6 +887,141 @@
     </div>
   </div>
 </div>
+
+<!-- Modal editar dirección -->
+<div class="modal-overlay" id="modal-editar-direccion">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-icon">✏️</div>
+    <div class="modal-title">Editar Dirección</div>
+    <form action="/admin/actualizar_direccion" method="POST" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="view" value="usuarios">
+      <input type="hidden" name="codigo_actual" id="edit-codigo-actual">
+      
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Código (Siglas)</label>
+        <input type="text" class="form-input" id="edit-codigo-nuevo" name="codigo_nuevo" maxlength="12" required style="text-transform:uppercase;">
+      </div>
+      
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Nombre de la Dirección</label>
+        <input type="text" class="form-input" id="edit-nombre-nuevo" name="nombre_nuevo" maxlength="80" required>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-direccion')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar usuario admin -->
+<div class="modal-overlay" id="modal-editar-usuario">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-icon">🛡️</div>
+    <div class="modal-title">Editar Usuario Admin</div>
+    <form action="/admin/actualizar_admin" method="POST" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="view" value="usuarios">
+      <input type="hidden" name="username" id="edit-admin-username">
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Usuario</label>
+        <input type="text" class="form-input" id="edit-admin-username-text" readonly>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Rol</label>
+        <input type="text" class="form-input" id="edit-admin-rol" readonly>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Dirección</label>
+        <select class="form-select" name="direccion" id="edit-admin-direccion" required>
+          {% for d in direcciones %}
+            <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Nueva contraseña (opcional)</label>
+        <input type="password" class="form-input" name="new_password" id="edit-admin-password" minlength="8" placeholder="Mínimo 8 caracteres">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-usuario')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar curso -->
+<div class="modal-overlay" id="modal-editar-curso">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-icon">✏️</div>
+    <div class="modal-title">Editar Curso</div>
+    <form action="/admin/actualizar_curso" method="POST" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="view" value="cursos">
+      <input type="hidden" name="id_curso" id="edit-curso-id">
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Nombre del Curso</label>
+        <input type="text" class="form-input" id="edit-curso-nombre" name="nombre_curso" maxlength="150" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Fecha del Curso</label>
+          <input type="date" class="form-input" id="edit-curso-fecha" name="fecha_curso" required>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Trimestre</label>
+          <select class="form-select" id="edit-curso-trimestre" name="trimestre" required>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+            <option value="IV">IV</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Modalidad</label>
+          <select class="form-select" id="edit-curso-modalidad" name="modalidad" required>
+            <option value="Virtual">Virtual</option>
+            <option value="Presencial">Presencial</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Cupos Máximos</label>
+          <input type="number" class="form-input" id="edit-curso-cupos" name="cupos_maximos" min="0" step="1" required>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Enlace de Acceso (solo Virtual)</label>
+        <input
+          type="url"
+          class="form-input"
+          id="edit-curso-enlace"
+          name="enlace_virtual"
+          placeholder="https://..."
+          pattern="https?://.*"
+        >
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-curso')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -667,14 +1031,46 @@ let currentFormId = null;
 let chartsInitialized = false;
 const adminLayout = document.querySelector('.admin-layout');
 const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
+const vistaInicialServidor = adminLayout?.dataset.vistaInicial || 'dashboard';
+const vistasPermitidas = ['dashboard', 'cursos', 'matriculas', 'usuarios'];
+const horariosBase = [
+  '08:00 AM - 10:00 AM',
+  '10:00 AM - 12:00 PM',
+  '12:00 PM - 02:00 PM',
+  '02:00 PM - 04:00 PM',
+  '04:00 PM - 06:00 PM',
+  '06:00 PM - 08:00 PM'
+];
 
-function setActiveScreen(view) {
-  const vistasPermitidas = ['dashboard', 'cursos', 'matriculas', 'usuarios'];
+function normalizarVista(view) {
   let vistaFinal = vistasPermitidas.includes(view) ? view : 'dashboard';
 
   if (vistaFinal === 'usuarios' && !esSuperadmin) {
     vistaFinal = 'dashboard';
   }
+
+  return vistaFinal;
+}
+
+function obtenerVistaDesdeURL() {
+  const vista = new URLSearchParams(window.location.search).get('view');
+  return vista ? vista.trim().toLowerCase() : '';
+}
+
+function actualizarVistaEnURL(vista, pushHistory = false) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('view', vista);
+
+  if (pushHistory) {
+    window.history.pushState({}, '', url);
+  } else {
+    window.history.replaceState({}, '', url);
+  }
+}
+
+function setActiveScreen(view, options = {}) {
+  const { pushHistory = false, syncUrl = true } = options;
+  const vistaFinal = normalizarVista(view);
 
   document.querySelectorAll('.admin-screen').forEach(section => {
     section.classList.toggle('active', section.dataset.screen === vistaFinal);
@@ -685,6 +1081,10 @@ function setActiveScreen(view) {
   });
 
   localStorage.setItem('admin_active_view', vistaFinal);
+
+  if (syncUrl) {
+    actualizarVistaEnURL(vistaFinal, pushHistory);
+  }
 
   if (vistaFinal === 'dashboard' && !chartsInitialized) {
     initCharts();
@@ -709,6 +1109,81 @@ function confirmarEliminarMatricula(formId, empleado, curso) {
 function abrirModalVaciar() {
   document.getElementById('vaciar-input').value = '';
   abrirModal('modal-vaciar');
+}
+
+function abrirModalEditarDireccion(codigo, nombre) {
+  document.getElementById('edit-codigo-actual').value = codigo;
+  document.getElementById('edit-codigo-nuevo').value = codigo;
+  document.getElementById('edit-nombre-nuevo').value = nombre;
+  abrirModal('modal-editar-direccion');
+}
+
+function abrirModalEditarUsuario(username, direccion, rol) {
+  const usernameInput = document.getElementById('edit-admin-username');
+  const usernameText = document.getElementById('edit-admin-username-text');
+  const rolInput = document.getElementById('edit-admin-rol');
+  const direccionSelect = document.getElementById('edit-admin-direccion');
+  const passwordInput = document.getElementById('edit-admin-password');
+
+  if (!usernameInput || !usernameText || !rolInput || !direccionSelect || !passwordInput) {
+    return;
+  }
+
+  usernameInput.value = username;
+  usernameText.value = username;
+  rolInput.value = rol;
+  direccionSelect.value = direccion;
+  passwordInput.value = '';
+  abrirModal('modal-editar-usuario');
+}
+
+function numeroMesDesdeNombre(nombreMes) {
+  const meses = {
+    'Enero': '01',
+    'Febrero': '02',
+    'Marzo': '03',
+    'Abril': '04',
+    'Mayo': '05',
+    'Junio': '06',
+    'Julio': '07',
+    'Agosto': '08',
+    'Septiembre': '09',
+    'Octubre': '10',
+    'Noviembre': '11',
+    'Diciembre': '12'
+  };
+  return meses[nombreMes] || '01';
+}
+
+function actualizarEstadoEnlaceVirtualEdicion() {
+  const modalidadEdit = document.getElementById('edit-curso-modalidad');
+  const enlaceEdit = document.getElementById('edit-curso-enlace');
+  if (!modalidadEdit || !enlaceEdit) return;
+
+  const esVirtual = modalidadEdit.value === 'Virtual';
+  enlaceEdit.disabled = !esVirtual;
+  enlaceEdit.required = esVirtual;
+  if (!esVirtual) {
+    enlaceEdit.value = '';
+  }
+}
+
+function abrirModalEditarCurso(data) {
+  const anio = String(data.anio || '').padStart(4, '0');
+  const mesNum = numeroMesDesdeNombre(data.mes || '');
+  const dia = String(data.dia || '1').padStart(2, '0');
+  const fechaIso = `${anio}-${mesNum}-${dia}`;
+
+  document.getElementById('edit-curso-id').value = data.id || '';
+  document.getElementById('edit-curso-nombre').value = data.nombre || '';
+  document.getElementById('edit-curso-fecha').value = fechaIso;
+  document.getElementById('edit-curso-trimestre').value = data.trimestre || 'I';
+  document.getElementById('edit-curso-modalidad').value = data.modalidad || 'Virtual';
+  document.getElementById('edit-curso-cupos').value = data.cupos || '0';
+  document.getElementById('edit-curso-enlace').value = data.enlace || '';
+
+  actualizarEstadoEnlaceVirtualEdicion();
+  abrirModal('modal-editar-curso');
 }
 
 function confirmarVaciar() {
@@ -741,25 +1216,136 @@ function submitModal(modalId) {
   cerrarModal(modalId);
 }
 
+async function guardarResultadoMatricula(form) {
+  const statusEl = form.querySelector('.resultado-sync-status');
+  const selectEl = form.querySelector('.select-resultado-matricula');
+  if (statusEl) {
+    statusEl.textContent = 'Guardando...';
+    statusEl.style.color = '#64748b';
+  }
+
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      credentials: 'same-origin',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      }
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    const respuestaJsonValida = typeof payload === 'object' && payload !== null;
+    const okExplicito = respuestaJsonValida && payload.ok === true;
+    const okPorFallback = response.ok && !respuestaJsonValida;
+
+    if ((!response.ok || (!okExplicito && !okPorFallback)) && !(response.ok && payload.ok !== false)) {
+      const detalle = payload.error || `HTTP ${response.status}`;
+      throw new Error(detalle);
+    }
+
+    if (selectEl) {
+      aplicarColorResultadoSelect(selectEl);
+    }
+
+    if (statusEl) {
+      statusEl.textContent = 'Guardado';
+      statusEl.style.color = '#16a34a';
+      setTimeout(() => {
+        statusEl.textContent = 'Listo';
+        statusEl.style.color = '#64748b';
+      }, 1200);
+    }
+  } catch (err) {
+    if (statusEl) {
+      const msg = (err && err.message ? err.message : 'Error').toString();
+      statusEl.textContent = msg.length > 26 ? `${msg.slice(0, 26)}...` : msg;
+      statusEl.style.color = '#dc2626';
+    }
+  }
+}
+
+function aplicarColorResultadoSelect(selectEl) {
+  if (!selectEl) return;
+
+  selectEl.classList.remove('estado-pendiente', 'estado-aprobado', 'estado-reprobado', 'estado-abandono');
+  if (selectEl.value === '1') {
+    selectEl.classList.add('estado-aprobado');
+  } else if (selectEl.value === '0') {
+    selectEl.classList.add('estado-reprobado');
+  } else if (selectEl.value === '2') {
+    selectEl.classList.add('estado-abandono');
+  } else {
+    selectEl.classList.add('estado-pendiente');
+  }
+}
+
 // Delegated click handlers for delete buttons
 document.addEventListener('DOMContentLoaded', function() {
-  const savedView = localStorage.getItem('admin_active_view') || 'dashboard';
-  setActiveScreen(savedView);
+  const topUserMenu = document.getElementById('top-user-menu');
+  const topUserMenuTrigger = document.getElementById('top-user-menu-trigger');
+  const topUserDropdown = document.getElementById('top-user-dropdown');
+
+  if (topUserMenu && topUserMenuTrigger && topUserDropdown) {
+    topUserMenuTrigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const abierto = topUserDropdown.classList.toggle('active');
+      topUserMenuTrigger.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!topUserMenu.contains(e.target)) {
+        topUserDropdown.classList.remove('active');
+        topUserMenuTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  const vistaUrl = obtenerVistaDesdeURL();
+  const vistaGuardada = localStorage.getItem('admin_active_view') || 'dashboard';
+  const vistaInicial = vistaUrl || vistaInicialServidor || vistaGuardada;
+  setActiveScreen(vistaInicial, { syncUrl: true });
 
   document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
-      setActiveScreen(this.dataset.view);
+      setActiveScreen(this.dataset.view, { pushHistory: true, syncUrl: true });
     });
+  });
+
+  window.addEventListener('popstate', function() {
+    const vista = obtenerVistaDesdeURL() || 'dashboard';
+    setActiveScreen(vista, { syncUrl: false });
   });
 
   document.querySelectorAll('.admin-screen form').forEach(form => {
     form.addEventListener('submit', function() {
       const section = this.closest('.admin-screen');
       if (section && section.dataset.screen) {
-        localStorage.setItem('admin_active_view', section.dataset.screen);
+        const vistaFormulario = normalizarVista(section.dataset.screen);
+        localStorage.setItem('admin_active_view', vistaFormulario);
+        const viewInput = this.querySelector('input[name="view"]');
+        if (viewInput) {
+          viewInput.value = vistaFormulario;
+        }
       }
     });
+  });
+
+  document.querySelectorAll('.form-resultado-matricula').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      guardarResultadoMatricula(this);
+    });
+
+    const selectResultado = form.querySelector('.select-resultado-matricula');
+    if (selectResultado) {
+      aplicarColorResultadoSelect(selectResultado);
+      selectResultado.addEventListener('change', function() {
+        guardarResultadoMatricula(form);
+      });
+    }
   });
 
   document.querySelectorAll('.btn-del-curso').forEach(btn => {
@@ -767,9 +1353,39 @@ document.addEventListener('DOMContentLoaded', function() {
       confirmarEliminarCurso(this.dataset.formId, this.dataset.nombre);
     });
   });
+  document.querySelectorAll('.btn-edit-curso').forEach(btn => {
+    btn.addEventListener('click', function() {
+      abrirModalEditarCurso({
+        id: this.dataset.id,
+        nombre: this.dataset.nombre,
+        anio: this.dataset.anio,
+        mes: this.dataset.mes,
+        dia: this.dataset.dia,
+        trimestre: this.dataset.trimestre,
+        modalidad: this.dataset.modalidad,
+        enlace: this.dataset.enlace,
+        cupos: this.dataset.cupos
+      });
+    });
+  });
   document.querySelectorAll('.btn-del-matricula').forEach(btn => {
     btn.addEventListener('click', function() {
       confirmarEliminarMatricula(this.dataset.formId, this.dataset.empleado, this.dataset.nombre);
+    });
+  });
+
+  document.querySelectorAll('.btn-edit-direccion').forEach(btn => {
+    btn.addEventListener('click', function() {
+      abrirModalEditarDireccion(this.dataset.codigo, this.dataset.nombre);
+    });
+  });
+  document.querySelectorAll('.btn-edit-usuario').forEach(btn => {
+    btn.addEventListener('click', function() {
+      abrirModalEditarUsuario(
+        this.dataset.username,
+        this.dataset.direccion,
+        this.dataset.rol
+      );
     });
   });
 
@@ -781,8 +1397,59 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const direccionCurso = document.getElementById('direccion_curso');
+  const fechaCurso = document.getElementById('fecha_curso');
   const modalidad = document.getElementById('modalidad');
+  const enlaceVirtual = document.getElementById('enlace_virtual');
+  const enlaceVirtualGroup = document.getElementById('enlace_virtual_group');
+  const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
   const previewCodigo = document.getElementById('preview-codigo');
+  const horariosLabel = document.getElementById('horarios-dia-label');
+  const horariosContenedor = document.getElementById('horarios-dia-contenedor');
+  const horariosVacio = document.getElementById('horarios-dia-vacio');
+  const fechasAdicionalesContenedor = document.getElementById('fechas-adicionales-contenedor');
+  const addFechaAdicionalBtn = document.getElementById('btn-add-fecha-adicional');
+  const fechasAdicionalesAyuda = document.getElementById('fechas-adicionales-ayuda');
+
+  function actualizarTextoFechasAdicionales() {
+    if (!fechasAdicionalesAyuda || !fechasAdicionalesContenedor) return;
+    const total = fechasAdicionalesContenedor.querySelectorAll('input[name="fechas_adicionales"]').length;
+    if (total === 0) {
+      fechasAdicionalesAyuda.textContent = 'Puedes habilitar la misma acción formativa en varias fechas del calendario.';
+    } else {
+      fechasAdicionalesAyuda.textContent = `Se crearán ${total + 1} fecha(s) para este curso.`;
+    }
+  }
+
+  function agregarCampoFechaAdicional(valor = '') {
+    if (!fechasAdicionalesContenedor) return;
+
+    const fila = document.createElement('div');
+    fila.style.display = 'grid';
+    fila.style.gridTemplateColumns = '1fr auto';
+    fila.style.gap = '.45rem';
+
+    const input = document.createElement('input');
+    input.type = 'date';
+    input.className = 'form-input';
+    input.name = 'fechas_adicionales';
+    input.value = valor;
+
+    const btnQuitar = document.createElement('button');
+    btnQuitar.type = 'button';
+    btnQuitar.className = 'btn-danger-ipsd';
+    btnQuitar.style.fontSize = '.78rem';
+    btnQuitar.style.padding = '.45rem .65rem';
+    btnQuitar.textContent = 'Quitar';
+    btnQuitar.addEventListener('click', function() {
+      fila.remove();
+      actualizarTextoFechasAdicionales();
+    });
+
+    fila.appendChild(input);
+    fila.appendChild(btnQuitar);
+    fechasAdicionalesContenedor.appendChild(fila);
+    actualizarTextoFechasAdicionales();
+  }
 
   function actualizarPreviewCodigo() {
     if (!previewCodigo || !modalidad) return;
@@ -791,13 +1458,104 @@ document.addEventListener('DOMContentLoaded', function() {
     previewCodigo.textContent = `AF-${direccion}-${mod}-001`;
   }
 
+  function actualizarEstadoEnlaceVirtual() {
+    if (!modalidad || !enlaceVirtual) return;
+    const habilitado = modalidad.value === 'Virtual';
+    if (enlaceVirtualGroup) {
+      enlaceVirtualGroup.style.display = habilitado ? 'grid' : 'none';
+    }
+    enlaceVirtual.disabled = !habilitado;
+    enlaceVirtual.required = habilitado;
+    if (!habilitado) {
+      enlaceVirtual.value = '';
+    }
+  }
+
+  function obtenerDiaSemana(fechaIso) {
+    if (!fechaIso) return '';
+    const partes = fechaIso.split('-').map(Number);
+    if (partes.length !== 3 || partes.some(Number.isNaN)) return '';
+
+    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+    const dia = fecha.getDay();
+    const mapaDias = {
+      0: 'Domingo',
+      1: 'Lunes',
+      2: 'Martes',
+      3: 'Miércoles',
+      4: 'Jueves',
+      5: 'Viernes',
+      6: 'Sábado'
+    };
+    return mapaDias[dia] || '';
+  }
+
+  function renderizarHorariosPorFecha() {
+    if (!horariosContenedor || !horariosLabel || !horariosVacio || !fechaCurso) return;
+
+    const diaSemana = obtenerDiaSemana(fechaCurso.value);
+    horariosContenedor.innerHTML = '';
+
+    if (!diaSemana) {
+      horariosLabel.textContent = 'Sin horarios para fin de semana';
+      horariosVacio.style.display = 'block';
+      return;
+    }
+
+    horariosLabel.textContent = `Horarios disponibles para ${diaSemana}`;
+    horariosVacio.style.display = 'none';
+
+    horariosBase.forEach(hora => {
+      const label = document.createElement('label');
+      label.style.display = 'inline-flex';
+      label.style.alignItems = 'center';
+      label.style.gap = '.3rem';
+      label.style.fontSize = '.78rem';
+      label.style.cursor = 'pointer';
+      label.style.background = '#fff';
+      label.style.border = '1px solid var(--border)';
+      label.style.borderRadius = '6px';
+      label.style.padding = '.25rem .5rem';
+      label.style.transition = 'all .15s';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'horarios';
+      checkbox.value = `${diaSemana} ${hora}`;
+      checkbox.style.accentColor = 'var(--primary)';
+
+      label.appendChild(checkbox);
+      label.append(document.createTextNode(hora));
+      horariosContenedor.appendChild(label);
+    });
+  }
+
   if (direccionCurso) {
     direccionCurso.addEventListener('change', actualizarPreviewCodigo);
   }
   if (modalidad) {
-    modalidad.addEventListener('change', actualizarPreviewCodigo);
+    modalidad.addEventListener('change', function() {
+      actualizarPreviewCodigo();
+      actualizarEstadoEnlaceVirtual();
+    });
   }
+  if (fechaCurso) {
+    fechaCurso.addEventListener('change', renderizarHorariosPorFecha);
+  }
+  if (modalidadEditCurso) {
+    modalidadEditCurso.addEventListener('change', actualizarEstadoEnlaceVirtualEdicion);
+  }
+  if (addFechaAdicionalBtn) {
+    addFechaAdicionalBtn.addEventListener('click', function() {
+      agregarCampoFechaAdicional('');
+    });
+  }
+
   actualizarPreviewCodigo();
+  actualizarEstadoEnlaceVirtual();
+  actualizarEstadoEnlaceVirtualEdicion();
+  renderizarHorariosPorFecha();
+  actualizarTextoFechasAdicionales();
 });
 
 // Inicializar gráficos con Chart.js

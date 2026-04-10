@@ -32,6 +32,55 @@ def aplicar_parche():
     except Exception as e:
         print("- La columna de fecha ya estaba lista.")
 
+    try:
+        cursor.execute('ALTER TABLE matriculas ADD COLUMN aprobado INTEGER')
+        print("✓ Columna 'aprobado' agregada en matriculas.")
+    except Exception:
+        print("- La columna 'aprobado' ya estaba lista.")
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS estado_matricula_catalogo (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            orden INTEGER NOT NULL
+        )
+    ''')
+    print("✓ Catálogo de estados de matrícula preparado.")
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS matricula_historial (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            matricula_id INTEGER,
+            numero_empleado TEXT NOT NULL,
+            id_capacitacion TEXT NOT NULL,
+            nombre_curso TEXT NOT NULL,
+            horario_elegido TEXT,
+            estado_codigo TEXT NOT NULL,
+            detalle TEXT,
+            fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo)
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_empleado_fecha ON matricula_historial (numero_empleado, id DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_matricula_id ON matricula_historial (matricula_id)')
+    print("✓ Historial normalizado de matrículas preparado.")
+
+    estados_catalogo = [
+        ('PENDIENTE', 'Pendiente', 'pendientes', 10),
+        ('APROBADA', 'Aprobada', 'aprobadas', 20),
+        ('NO_APROBADA', 'No aprobada', 'no_aprobadas', 30),
+        ('ABANDONO', 'Abandonó', 'no_aprobadas', 40),
+        ('CANCELADA', 'Cancelada', 'canceladas', 50),
+    ]
+    cursor.executemany(
+        '''
+        INSERT OR IGNORE INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
+        VALUES (?, ?, ?, ?)
+        ''',
+        estados_catalogo
+    )
+
     # 2. Crear tabla de administradores segura
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS admin_users (
@@ -83,6 +132,12 @@ def aplicar_parche():
         print("✓ Columna 'cupos_maximos' agregada en capacitaciones.")
     except Exception:
         print("- La columna 'cupos_maximos' ya estaba lista.")
+
+    try:
+        cursor.execute("ALTER TABLE capacitaciones ADD COLUMN enlace_virtual TEXT")
+        print("✓ Columna 'enlace_virtual' agregada en capacitaciones.")
+    except Exception:
+        print("- La columna 'enlace_virtual' ya estaba lista.")
 
     # 3. Crear/asegurar superadmin desde variable de entorno
     try:
