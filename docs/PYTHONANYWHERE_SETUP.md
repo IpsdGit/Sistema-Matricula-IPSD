@@ -48,8 +48,9 @@ En PythonAnywhere, la estructura debe ser:
 /home/IPSDUNAH/mysite/
 ├── application.py        # Punto de entrada para PythonAnywhere
 ├── app.py               # Tu aplicación Flask
-├── setup_bd.py          # Script de inicialización
-├── parche.py            # Script de actualización
+├── scripts/
+│   ├── setup_bd.py      # Script de inicialización
+│   └── parche.py        # Script de actualización
 ├── matricula.db         # Base de datos (se crea automáticamente)
 ├── static/              # Archivos estáticos (CSS, JS)
 ├── templates/           # Templates HTML
@@ -95,10 +96,10 @@ Ejecuta los scripts de inicialización en **Consoles** de PythonAnywhere:
 cd /home/IPSDUNAH/mysite
 
 # 2. Inicializar la BD
-python3 setup_bd.py
+python3 scripts/setup_bd.py
 
 # 3. Aplicar el parche de seguridad
-python3 parche.py
+python3 scripts/parche.py
 ```
 
 **Importante**: Después de ejecutar estos scripts, la BD estará en:
@@ -134,7 +135,7 @@ Es recomendable hacer backups regulares. Puedes:
 
 ### Cambiar Contraseña de Admin Después de Desplegar
 
-Si necesitas cambiar la contraseña sin re-ejecutar `parche.py`:
+Si necesitas cambiar la contraseña sin re-ejecutar `scripts/parche.py`:
 
 **En Consola de PythonAnywhere:**
 ```python

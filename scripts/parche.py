@@ -9,8 +9,8 @@ def aplicar_parche():
     if env_db_path:
         db_path = env_db_path
     else:
-        base_dir = os.path.dirname(__file__)
-        local_db = os.path.join(base_dir, 'matricula.db')
+        project_root = os.path.dirname(os.path.dirname(__file__))
+        local_db = os.path.join(project_root, 'matricula.db')
         pythonanywhere_db = '/home/IPSDUNAH/mysite/matricula.db'
 
         if os.path.exists(local_db):

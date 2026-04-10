@@ -25,7 +25,7 @@ Sistema web de gestión de matrículas en capacitaciones para profesores de IPSD
 - Python 3.7+
 - pip (gestor de paquetes Python)
 
-**Nota**: Este proyecto está configurado para ejecutarse en **PythonAnywhere**. Ver [PYTHONANYWHERE_SETUP.md](PYTHONANYWHERE_SETUP.md) para instrucciones específicas.
+**Nota**: Este proyecto está configurado para ejecutarse en **PythonAnywhere**. Ver [docs/PYTHONANYWHERE_SETUP.md](docs/PYTHONANYWHERE_SETUP.md) para instrucciones específicas.
 
 ## 📦 Instalación
 
@@ -53,12 +53,12 @@ pip install -r requirements.txt
 
 ### 4. Inicializar la base de datos
 ```bash
-python setup_bd.py
+python scripts/setup_bd.py
 ```
 
 ### 5. Aplicar actualizaciones (parche de seguridad)
 ```bash
-python parche.py
+python scripts/parche.py
 ```
 
 ### 6. Ejecutar la aplicación
@@ -103,21 +103,35 @@ cp .env.example .env
 
 ```
 Sistema-Matricula-IPSD/
-├── app.py                    # Aplicación principal Flask
-├── setup_bd.py              # Script de inicialización
-├── parche.py                # Script de actualización
+├── app.py                   # Bootstrap de Flask (registro de rutas y handlers)
+├── config.py                # Configuración y constantes globales
+├── database.py              # Conexión y migraciones mínimas
+├── utils.py                 # Validaciones, helpers y utilidades compartidas
 ├── requirements.txt         # Dependencias Python
-├── .gitignore              # Archivos excluidos de Git
-├── README.md               # Este archivo
+├── scripts/
+│   ├── setup_bd.py          # Script de inicialización de BD
+│   └── parche.py            # Script de actualización de BD
+├── routes/
+│   ├── admin.py             # Endpoints HTTP panel admin
+│   └── portal.py            # Endpoints HTTP portal docente
+├── services/
+│   ├── admin_service.py     # Lógica de datos para admin
+│   └── portal_service.py    # Lógica de datos para portal docente
+├── tests/
+│   └── test_smoke.py        # Pruebas de humo de rutas principales
+├── docs/
+│   ├── PYTHONANYWHERE_SETUP.md
+│   ├── ANALISIS_PROYECTO.md
+│   └── HISTORIAL_CAMBIOS.md
 ├── static/
-│   ├── main.js            # JavaScript del cliente
-│   └── style.css          # Estilos CSS
+│   ├── main.js              # JavaScript del cliente
+│   └── style.css            # Estilos CSS
 └── templates/
-    ├── base.html           # Template base
-    ├── index.html          # Portal principal
-    ├── dashboard.html      # Panel profesor
-    ├── admin_login.html    # Login admin
-    ├── admin.html          # Panel admin
+    ├── base.html            # Template base
+    ├── index.html           # Portal principal
+    ├── dashboard.html       # Panel profesor
+    ├── admin_login.html     # Login admin
+    ├── admin.html           # Panel admin
     ├── matricula_exitosa.html
     └── matricula_cancelada.html
 ```
@@ -165,12 +179,12 @@ Sistema-Matricula-IPSD/
 
 Este proyecto está preparado específicamente para ejecutarse en **PythonAnywhere**.
 
-**Instrucciones completas**: Ver [PYTHONANYWHERE_SETUP.md](PYTHONANYWHERE_SETUP.md)
+**Instrucciones completas**: Ver [docs/PYTHONANYWHERE_SETUP.md](docs/PYTHONANYWHERE_SETUP.md)
 
 **Quick Start en PythonAnywhere:**
 1. Configura las variables de entorno en **Web > Environment variables**
 2. Carga el código en `/home/IPSDUNAH/mysite/`
-3. Ejecuta `python3 setup_bd.py` y `python3 parche.py`
+3. Ejecuta `python3 scripts/setup_bd.py` y `python3 scripts/parche.py`
 4. Recarga la app con el botón ⚡
 
 ### Otros Servidores (Heroku, AWS, etc.)

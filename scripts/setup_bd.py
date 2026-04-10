@@ -2,11 +2,30 @@ import sqlite3
 import os
 from werkzeug.security import generate_password_hash
 
-if os.path.exists('matricula.db'):
-    os.remove('matricula.db')
+
+def resolver_db_path():
+    env_db_path = os.environ.get('DATABASE_PATH')
+    if env_db_path:
+        return env_db_path
+
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    local_db = os.path.join(project_root, 'matricula.db')
+    pythonanywhere_db = '/home/IPSDUNAH/mysite/matricula.db'
+
+    if os.path.exists(local_db):
+        return local_db
+    if os.path.exists(pythonanywhere_db):
+        return pythonanywhere_db
+    return local_db
+
+
+DB_PATH = resolver_db_path()
+
+if os.path.exists(DB_PATH):
+    os.remove(DB_PATH)
 
 def inicializar_bd():
-    conexion = sqlite3.connect('matricula.db')
+    conexion = sqlite3.connect(DB_PATH)
     cursor = conexion.cursor()
 
     # Agregamos las 3 columnas nuevas: anio, trimestre, mes

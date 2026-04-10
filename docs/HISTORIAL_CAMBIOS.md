@@ -1149,6 +1149,351 @@ VISTAS_ADMIN_PERMITIDAS = {'dashboard', 'cursos', 'matriculas', 'usuarios'}
 
 ---
 
+# 🏗️ Versión 1.3 - Refactorización Arquitectónica y Modularización
+
+## Cambio 20.1: Creación de módulo de configuración centralizada
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `config.py` (nuevo), `app.py`, `setup_bd.py`, `parche.py`
+
+**QUÉ**:
+- Nuevo archivo `config.py` con centralización de:
+  - `resolve_db_path()`: Función para resolver ruta de BD en múltiples entornos
+  - Constantes: `MESES_ES`, `DIAS_SEMANA`, `HORARIOS_BASE`
+  - Límites: `LIMITE_REPROBADO=3`, `LIMITE_ABANDONO=2`
+  - Listas permitidas: `SECCIONES_DASHBOARD_PERMITIDAS`, `FILTROS_HISTORIAL_PERMITIDOS`, `VISTAS_ADMIN_PERMITIDAS`
+  - Función `configure_app(app)`: Configuración centralizada de Flask
+
+**POR QUÉ**:
+- Configuraciones hardcodeadas dispersas en múltiples archivos
+- Variables de entorno no centralizadas
+- Dificultad para cambiar constantes (requería búsqueda global)
+- Necesidad de DRY principle (Don't Repeat Yourself)
+
+**PARA QUÉ**:
+- Single source of truth para toda la configuración
+- Facilita cambios de valores (ej. LIMITE_REPROBADO) en un solo lugar
+- Preparación para entornos (desarrollo, testing, producción)
+- Mejora mantenibilidad del código
+
+---
+
+## Cambio 20.2: Módulo de conexión y migraciones de BD
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `database.py` (nuevo), `app.py`
+
+**QUÉ**:
+- Nuevo archivo `database.py` con:
+  - `get_db_connection()`: Función única para conexiones a BD
+  - `asegurar_migraciones_minimas()`: Migración automática mejorada
+  - Centralización de lógica de inicialización de tablas
+  - Auto-recuperación ante BD corrupta o parcial
+  - Sincronización de direcciones desde cursos y admins
+
+**POR QUÉ**:
+- Conexiones a BD duplicadas en múltiples funciones
+- `asegurar_migraciones_minimas()` estaba en app.py (mezcla de responsabilidades)
+- Necesidad de abstracción para testing (mock de conexiones)
+- Migraciones automáticas pero sin centralización clara
+
+**PARA QUÉ**:
+- Punto único de conexión a BD (facilita cambios, logging, análisis)
+- Separación de responsabilidades (acceso a datos vs lógica app)
+- Facilita testing con BD en memoria
+- Auto-recuperación robusta en deployments
+
+---
+
+## Cambio 20.3: Módulo de utilidades y funciones auxiliares
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `utils.py` (nuevo), `app.py`, `admin.html`, `main.js`
+
+**QUÉ**:
+Nuevo archivo `utils.py` consolidando 40+ funciones auxiliares:
+- **Validación**: `validar_numero_empleado()`, `validar_username_admin()`, `validar_enlace_virtual()`, etc.
+- **Normalización**: `normalizar_direccion()`, `normalizar_nombre_curso()`, `normalizar_vista_admin()`, etc.
+- **CSRF**: `generar_csrf_token()`, `validar_csrf()`
+- **Decoradores**: `@admin_requerido`, `@superadmin_requerido`
+- **Lógica de negocio**: `obtener_resumen_intentos_por_curso()`, `construir_mensaje_oportunidades()`, `cargar_contexto_dashboard_docente()`
+- **Generación de IDs**: `generar_id_curso()`, `obtener_codigo_modalidad()`
+- **Historial**: `registrar_evento_matricula()`, `obtener_historial_acciones_formativas()`
+
+**POR QUÉ**:
+- Funciones auxiliares dispersas por app.py (>10 funciones)
+- Reutilización de lógica en múltiples rutas
+- Validaciones repetidas en diferentes contextos
+- Decoradores y helpers en archivos template
+- Preparación para testing unitario
+
+**PARA QUÉ**:
+- DRY principle: una función, múltiple uso
+- Facilita testing aislado de funciones
+- Mejora legibilidad de app.py (reduce de 1600+ a ~300 líneas conceptuales)
+- Facilita auditoría de validaciones de seguridad
+
+---
+
+## Cambio 20.4: Separación de rutas en módulos especializados
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `routes/__init__.py`, `routes/admin.py`, `routes/portal.py` (nuevos)
+
+**QUÉ**:
+Nuevo directorio `routes/` con dos módulos:
+- **`routes/admin.py`** (568 líneas): Todas las rutas administrativas
+  - `/login_admin`, `/logout_admin`, `/admin`, `/admin/stats`
+  - `/admin/crear_curso`, `/admin/actualizar_curso`, `/admin/eliminar_curso`
+  - `/admin/crear_admin`, `/admin/actualizar_admin`, `/admin/eliminar_admin`
+  - `/admin/crear_direccion`, `/admin/actualizar_direccion`, `/admin/eliminar_direccion`
+  - `/admin/eliminar_matricula`, `/admin/actualizar_resultado_matricula`, `/admin/vaciar_matriculas`
+  - `/exportar`
+  
+- **`routes/portal.py`** (113 líneas): Todas las rutas de público/profesor
+  - `/`, `/logout_docente`, `/dashboard`, `/matricular`, `/cancelar_matricula`
+
+**POR QUÉ**:
+- `app.py` tenía 1600+ líneas (mezcla de rutas, lógica, configuración)
+- Dificultad de navegación en archivo tan grande
+- Imposible escalabilidad si se agregan más funciones
+- Necesidad de vista clara de qué rutas existen
+
+**PARA QUÉ**:
+- Separación de responsabilidades (Controllers pattern)
+- Cada módulo de ruta solo responsable de parseado de request/response
+- Facilita agregar nuevas rutas sin desorden
+- Mejor organización para equipo de desarrollo
+
+---
+
+## Cambio 20.5: Lógica de negocio en servicios especializados
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `services/__init__.py`, `services/admin_service.py`, `services/portal_service.py` (nuevos)
+
+**QUÉ**:
+Nuevo directorio `services/` con lógica de negocio aislada:
+- **`services/admin_service.py`** (680 líneas): Lógica del panel administrativo
+  - `authenticate_admin()`: Validación de credenciales
+  - `get_admin_dashboard_payload()`: Preparación de contexto para dashboard
+  - `get_admin_stats_payload()`: Cálculos de estadísticas
+  - `fetch_export_records()`: Preparación de datos para exportación
+  - `create_curso_records()`, `update_curso_record()`, `delete_curso_record()`: CRUD cursos
+  - `create_admin_user_record()`, `update_admin_user_record()`, `delete_admin_user_record()`: CRUD admins
+  - `create_direccion_record()`, `update_direccion_record()`, `delete_direccion_record()`: CRUD direcciones
+  - `update_matricula_resultado()`: Actualización de calificaciones
+  - `vaciar_matriculas_records()`: Limpieza de BD
+
+- **`services/portal_service.py`** (203 líneas): Lógica del portal de profesores
+  - `load_dashboard_context()`: Cargar contexto del dashboard
+  - `process_matricula()`: Procesar inscripción con validaciones de límites
+  - `process_cancelar_matricula()`: Procesar cancelación
+
+**POR QUÉ**:
+- Rutas no deben contener lógica de negocio compleja
+- Misma lógica se necesita desde múltiples puntos (ruta normal, API, CLI)
+- Facilita testing: mock de servicios vs mock de respuestas HTTP
+- Patrón MVC: Rutas son Controllers → Services son Models/Business Logic
+
+**PARA QUÉ**:
+- Cleanar separation: Rutas manejan HTTP, Services manejan lógica
+- Testing unitario de lógica sin levantar servidor web
+- Posibilidad de crear CLI o API REST usando con los mismos Services
+- Reutilización de lógica entre distintas interfaces
+
+---
+
+## Cambio 20.6: Reorganización de scripts de administración
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `scripts/setup_bd.py`, `scripts/parche.py` (movidos de raíz)
+
+**QUÉ**:
+- Scripts de inicialización movidos a directorio `scripts/`
+- Actualización de rutas para resolver BD correctamente desde nuevo ubicación
+- Función `resolver_db_path()` mejorada en `setup_bd.py`
+
+**POR QUÉ**:
+- Scripts mezclados con código de aplicación en raíz
+- No es evidente que sean scripts de configuración única
+- Directorios de proyecto desorganizado
+
+**PARA QUÉ**:
+- Mejor organización de proyecto (scripts separados de app)
+- Facilita documentación: "Lee scripts/ para setup"
+- Preparación para agregar más scripts (backup.py, cleanup.py, etc)
+
+---
+
+## Cambio 20.7: Documentación técnica mejorada
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `docs/ANALISIS_PROYECTO.md`, `docs/PYTHONANYWHERE_SETUP.md`, `docs/HISTORIAL_CAMBIOS.md` (movidos/creados)
+
+**QUÉ**:
+- Creación de directorio `docs/` con documentación:
+  - `ANALISIS_PROYECTO.md` (320 líneas): Descripción técnica completa del proyecto
+    - Stack tecnológico
+    - Modelo de datos (E-R)
+    - Rutas de la aplicación
+    - Características de seguridad
+    - Diagrama de directorios
+    - Problemas identificados y recomendaciones
+  
+  - `PYTHONANYWHERE_SETUP.md` (277 líneas): Guía de deployment
+    - Configuración de variables de entorno
+    - Estructura de carpetas en servidor
+    - Archivo WSGI (application.py)
+    - Inicialización de BD
+    - Seguridad en producción
+    - Troubleshooting
+    - Workflow de actualización
+  
+  - `HISTORIAL_CAMBIOS.md`: Movido a docs/
+
+**POR QUÉ**:
+- Documentación dispersa o en README
+- Nuevos desarrolladores sin referencia clara de arquitectura
+- Deployment a PythonAnywhere requiere instrucciones específicas
+- Necesidad de guía de troubleshooting
+
+**PARA QUÉ**:
+- Onboarding de nuevos desarrolladores
+- Referencia técnica centralizada
+- Guía de deployment con menos errores
+- Documentación de decisiones de diseño
+
+---
+
+## Cambio 20.8: Testing con pruebas smoke
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `tests/test_smoke.py` (nuevo)
+
+**QUÉ**:
+- Nuevo archivo de pruebas `tests/test_smoke.py` (84 líneas)
+- Tests de rutas principales:
+  - GET `/`: Portal principal retorna 200
+  - GET `/login_admin`: Login retorna 200
+  - GET `/dashboard`: Dashboard retorna 200
+  - GET `/logout_docente`: Logout redirige (302)
+  - GET `/admin`: Sin sesión redirige a login (302)
+  - GET `/admin`: Con sesión retorna 200
+  - POST operaciones requieren CSRF token válido (403 sin token)
+  - Vaciar matrículas (solo superadmin) con CSRF válido redirige (302)
+
+**POR QUÉ**:
+- Cambios arquitectónicos requieren validar que no se rompieron rutas
+- Sin tests, regresos accidentales no se detectan
+- Refactorización de modularización requiere confianza de cobertura
+
+**PARA QUÉ**:
+- Prevenir regresos en refactorización
+- Base para agregar tests más complejos
+- CI/CD foundation (si se implementa Travis/GitHub Actions)
+- Confianza en cambios futuros
+
+---
+
+## Nueva Estructura de Directorios (v1.3)
+```
+Sistema-Matricula-IPSD/
+├── app.py                           # App Flask main (~300 líneas, solo setup)
+├── config.py                        # Configuración centralizada
+├── database.py                      # Conexión y migraciones de BD
+├── utils.py                         # Funciones auxiliares (-407 líneas)
+│
+├── routes/
+│   ├── __init__.py
+│   ├── admin.py                     # Rutas administrativas (568 líneas)
+│   └── portal.py                    # Rutas de portal de profesores (113 líneas)
+│
+├── services/
+│   ├── __init__.py
+│   ├── admin_service.py             # Lógica de negocio admin (680 líneas)
+│   └── portal_service.py            # Lógica de negocio portal (203 líneas)
+│
+├── scripts/
+│   ├── setup_bd.py                  # Inicialización de BD
+│   └── parche.py                    # Migraciones de BD
+│
+├── templates/                       # Templates HTML
+│   ├── base.html
+│   ├── index.html
+│   ├── dashboard.html
+│   ├── admin_login.html
+│   ├── admin.html
+│   ├── matricula_exitosa.html
+│   └── matricula_cancelada.html
+│
+├── static/                          # Assets frontend
+│   ├── main.js
+│   └── style.css
+│
+├── tests/
+│   ├── __init__.py
+│   └── test_smoke.py               # Pruebas de rutas básicas (84 líneas)
+│
+├── docs/                            # Documentación
+│   ├── ANALISIS_PROYECTO.md        # Análisis técnico del proyecto
+│   ├── PYTHONANYWHERE_SETUP.md     # Guía de deployment
+│   ├── HISTORIAL_CAMBIOS.md        # Este archivo (ahora en docs/)
+│   └── README.md                    # Guía de inicio rápido
+│
+└── matricula.db                     # BD SQLite [NO SUBIR a git]
+```
+
+---
+
+## Cambio 20.9: Mejora de app.py con inyección de rutas y servicios
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `app.py` (refactorizado)
+
+**QUÉ**:
+- `app.py` pasó de 1600+ líneas a ~300 líneas
+- Solo contiene:
+  - Inicialización de Flask
+  - Configuración de seguridad (headers CORS, CSRF)
+  - Función error handlers (404, 500)
+  - Inyección de contexto Jinja2 (generar_csrf_token)
+  - `@app.before_request`: Ejecutar migraciones
+  - Inyección de rutas: `from routes import register_admin_routes, register_portal_routes`
+  - Entry point: `if __name__ == '__main__'`
+
+**POR QUÉ**:
+- app.py era god object (hacía todo: rutas, servicios, BD, validaciones)
+- Imposible de testear de forma aislada
+- Cambios en una ruta afectaban a todo el archivo
+
+**PARA QUÉ**:
+- `app.py` es solo configurador de la aplicación
+- Fácil de leer y mantener
+- Preparación para testing (mock de rutas/servicios)
+
+---
+
+## Cambio 20.10: Integración de módulos en app.py
+**Fecha**: Abril 10, 2026  
+**Archivos afectados**: `app.py`, importaciones de módulos
+
+**QUÉ**:
+- Importaciones centralizadas en app.py:
+  - `from config import configure_app`
+  - `from database import asegurar_migraciones_minimas`
+  - `from routes.admin import register_admin_routes`
+  - `from routes.portal import register_portal_routes`
+  - `from utils import generar_csrf_token`
+
+- Ejecución en orden:
+  1. `configure_app(app)`: Configurar Flask
+  2. `asegurar_migraciones_minimas()`: En `@app.before_request`
+  3. `register_admin_routes(app)`: Inyectar rutas admin
+  4. `register_portal_routes(app)`: Inyectar rutas portal
+
+**POR QUÉ**:
+- Antes: Todo estaba en app.py
+- Ahora: Cada módulo se auto-registra
+
+**PARA QUÉ**:
+- Facilita agregar nuevos módulos (ej. routes/api.py)
+- Order of operations claro
+- Facilita testing: mock de módulos completos
+
+---
+
 **Última actualización**: Abril 10, 2026  
-**Versión actual**: 1.2 (Sistema de Evaluación y UX Mejorada)  
-**Estado**: Development - Testing de evaluaciones
+**Versión actual**: 1.3 (Refactorización Arquitectónica)  
+**Estado**: Development - Arquitectura modulada, testing base implementado
