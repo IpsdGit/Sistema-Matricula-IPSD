@@ -18,7 +18,7 @@
           IPSD · UNAH
         </h1>
         <p class="animate-fade-up-2">
-          Accede con tu número de empleado para consultar y registrarte en
+          Accede con tu correo institucional y número de empleado para consultar y registrarte en
           las acciones formativas disponibles para este período.
         </p>
 
@@ -46,7 +46,7 @@
           <div style="text-align:center; margin-bottom:1.8rem;">
             <div style="width:64px; height:64px; background:linear-gradient(135deg,#2563eb,#7c3aed); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto .9rem;">🎓</div>
             <h2 style="color:#fff; font-size:1.3rem; margin:0 0 .3rem;">Acceso Docente</h2>
-            <p style="color:#94a3b8; font-size:.875rem; margin:0;">Ingresa tu número de empleado</p>
+            <p style="color:#94a3b8; font-size:.875rem; margin:0;">Ingresa tu correo institucional y número de empleado</p>
           </div>
 
           {% if error %}
@@ -58,6 +58,21 @@
 
           <form action="/dashboard" method="POST" id="login-form" novalidate>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+              <label class="form-label" for="correo_institucional">Correo Institucional</label>
+              <input
+                type="email"
+                class="form-input"
+                id="correo_institucional"
+                name="correo_institucional"
+                placeholder="tu.correo@dominio.edu"
+                autocomplete="username"
+                maxlength="160"
+                required
+              >
+              <div class="form-error" id="email-error">Ingresa un correo válido.</div>
+            </div>
+
             <div class="form-group">
               <label class="form-label" for="numero_empleado">Número de Empleado</label>
               <input
@@ -100,8 +115,8 @@
     <div class="grid-3" style="max-width:700px; margin:0 auto;">
       <div class="step-item animate-fade-up">
         <div class="step-num">1</div>
-        <div class="step-title">Ingresa tu número</div>
-        <div class="step-desc">Usa tu número de empleado institucional para acceder a tu perfil.</div>
+        <div class="step-title">Ingresa tus credenciales</div>
+        <div class="step-desc">Usa tu correo institucional y tu número de empleado para acceder a tu perfil.</div>
       </div>
       <div class="step-item animate-fade-up-1">
         <div class="step-num">2</div>

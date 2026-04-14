@@ -3,18 +3,41 @@
  * Funcionalidades generales del portal docente y admin
  */
 
-// ─── VALIDACIÓN EN TIEMPO REAL DEL NÚMERO DE EMPLEADO ───
+// ─── VALIDACIÓN EN TIEMPO REAL DEL LOGIN DOCENTE ───
 (function() {
+  const emailInput = document.getElementById('correo_institucional');
+  const emailError = document.getElementById('email-error');
   const empInput = document.getElementById('numero_empleado');
   const empError = document.getElementById('emp-error');
-  const submitBtn = document.getElementById('submit-btn');
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (emailInput) {
+    emailInput.addEventListener('input', function() {
+      const val = this.value.trim();
+      const valido = emailRegex.test(val.toLowerCase());
+      const vacio = val.length === 0;
+
+      if (vacio) {
+        this.classList.remove('is-valid', 'is-invalid');
+        if (emailError) emailError.classList.remove('show');
+      } else if (valido) {
+        this.classList.add('is-valid');
+        this.classList.remove('is-invalid');
+        if (emailError) emailError.classList.remove('show');
+      } else {
+        this.classList.add('is-invalid');
+        this.classList.remove('is-valid');
+        if (emailError) emailError.classList.add('show');
+      }
+    });
+  }
 
   if (!empInput) return;
 
   empInput.addEventListener('input', function() {
     const val = this.value.trim();
     const valido = /^\d{4,12}$/.test(val);
-    const vacio   = val.length === 0;
+    const vacio = val.length === 0;
 
     // Solo dígitos
     this.value = this.value.replace(/\D/g, '');

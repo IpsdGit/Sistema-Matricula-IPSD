@@ -40,8 +40,16 @@ HORARIOS_BASE = [
 LIMITE_REPROBADO = 3
 LIMITE_ABANDONO = 2
 
-SECCIONES_DASHBOARD_PERMITIDAS = {'historial', 'disponibles'}
+SECCIONES_DASHBOARD_PERMITIDAS = {'historial', 'disponibles', 'notificaciones'}
 FILTROS_HISTORIAL_PERMITIDOS = {'todas', 'aprobadas', 'no_aprobadas', 'canceladas'}
+FILTROS_NOTIFICACION_PERMITIDOS = {
+    'todas',
+    'nuevas',
+    'asistencia',
+    'resultados',
+    'oportunidades',
+    'certificados',
+}
 VISTAS_ADMIN_PERMITIDAS = {'dashboard', 'cursos', 'matriculas', 'usuarios'}
 
 

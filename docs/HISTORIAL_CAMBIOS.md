@@ -1830,6 +1830,677 @@ Justificación: Sección "soporte" reemplazada por widget flotante global
 
 ---
 
+# 👥 Versión 1.5 - Catalogo de Docentes y Autenticación Mejorada
+
+## Cambio 22.1: Tabla de catálogo de docentes
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `database.py`, `scripts/setup_bd.py`, `scripts/parche.py`
+
+**QUÉ**:
+- Nueva tabla `docentes` en BD:
+  ```sql
+  CREATE TABLE docentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    numero_empleado TEXT UNIQUE NOT NULL,
+    nombre_completo TEXT NOT NULL,
+    correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+    activo INTEGER NOT NULL DEFAULT 1,
+    fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+  ```
+- Índices para búsqueda rápida: `idx_docentes_numero`, `idx_docentes_correo`
+- Actualización de scripts de inicialización y parches
+
+**POR QUÉ**:
+- Actualmente el sistema no tiene catálogo interno de docentes
+- Se requiere fuente de verdad para validación de acceso
+- Sin esto no se puede auditar quién accede al portal
+- Permite activar/desactivar docentes sin eliminar referencias históricas
+
+**PARA QUÉ**:
+- Control de acceso basado en catálogo institucional
+- Validación de docentes válidos antes de permitir login
+- Sincronización con sistemas administrativos externos (Excel, LDAP)
+- Auditoría de accesos por docente
+
+---
+
+## Cambio 22.2: Script de sincronización desde Excel
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `scripts/sync_docentes_excel.py` (nuevo), `requirements.txt`
+
+**QUÉ**:
+- Nuevo script `sync_docentes_excel.py` (243 líneas) que:
+  - Lee archivo Excel con datos de docentes
+  - Valida columnas: numero_empleado, nombre_completo, correo_institucional
+  - Normaliza datos (espacios, mayúsculas, acentos en cabeceras)
+  - Detecta automáticamente columnas por alias (flexible con nombres)
+  - Ejecuta UPSERT: INSERT si no existe, UPDATE si existe
+  - Opcionalmente desactiva docentes ausentes en el Excel
+  - Reporta estadísticas de sincronización
+
+- Uso:
+  ```bash
+  python scripts/sync_docentes_excel.py --excel "ruta/archivo.xlsx"
+  python scripts/sync_docentes_excel.py --excel "ruta/archivo.xlsx" --sheet "Hoja2"
+  python scripts/sync_docentes_excel.py --excel "ruta/archivo.xlsx" --no-desactivar-ausentes
+  ```
+
+- Nueva dependencia: `openpyxl==3.1.5` (lectura de Excel)
+
+**POR QUÉ**:
+- Datos de docentes existen en sistemas administrativos (SAP, Excel, etc.)
+- Importarlos manualmente es tedioso y propenso a errores
+- Script automatiza ingesta periódica sin participación manual
+
+**PARA QUÉ**:
+- Sincronización automática de personal autorizado
+- Facilita onboarding de nuevos periodos académicos
+- Base para futura integración con LDAP/Active Directory
+
+---
+
+## Cambio 22.3: Autenticación mejorada con correo institucional
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `utils.py`
+
+**QUÉ**:
+- Nuevo flujo de login docente con 2 campos:
+  - Correo institucional (validado con regex)
+  - Número de empleado (4-12 dígitos)
+  
+- Función en `routes/portal.py`: `autenticar_docente(correo, numero)`
+  - Valida ambos campos contra tabla `docentes`
+  - Verifica que docente esté activo
+  - Retorna registro completo (nombre, estado)
+
+- Nuevas funciones en `utils.py`:
+  - `validar_correo(correo)`: Valida formato email básico
+  - `normalizar_correo(correo)`: Conversión a minúsculas y trim
+
+**POR QUÉ**:
+- Antes: login con solo número de empleado (ambiguo, sin auditoría)
+- Ahora: login dual (correo + número) con validación en catálogo
+- Correo es identificador único más confiable
+- Posibilita futuras integraciones de email (notificaciones, recuperación)
+
+**PARA QUÉ**:
+- Acceso únicamente para docentes en catálogo activo
+- Auditoría: saber quién (correo) y cuándo accedió
+- Refuerzo de seguridad: 2 campos (difícil de adivinar)
+- Preparación para sistema de notificaciones por email
+
+---
+
+## Cambio 22.4: Sesión mejorada con datos del docente
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `templates/dashboard.html`, `templates/index.html`
+
+**QUÉ**:
+- Session ahora almacena:
+  - `empleado_portal`: número de empleado
+  - `correo_docente`: correo institucional (NUEVO)
+  - `nombre_docente`: nombre completo (NUEVO)
+
+- Dashboard ahora muestra:
+  - Nombre del docente en topbar
+  - Correo en metadata del usuario
+  - Título dinámico con nombre en lugar de "Empleado #"
+
+- Login valida:
+  - Existencia en table `docentes`
+  - Estado `activo = 1`
+  - Si sesión caduca pero usuario sigue sin f5, revalida al cargar
+
+**POR QUÉ**:
+- Mejor UX: usuario ve su nombre, no solo número
+- Auditoría: correo persistente en logs/historial
+- Seguridad: revalidación en cada request de dashboard
+
+**PARA QUÉ**:
+- Experiencia personalizada
+- Trazabilidad mejorada
+- Protección contra sesiones hijacked (docente desactivado)
+
+---
+
+## Cambio 22.5: Validación de correo en JavaScript
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `static/main.js`, `templates/index.html`
+
+**QUÉ**:
+- Nuevo código en `main.js` para validación en tiempo real:
+  - Regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+  - Clases CSS: `.is-valid` (verde), `.is-invalid` (rojo)
+  - Muestra/oculta error `#email-error` dinámicamente
+  - Valida mientras el usuario escribe (no al enviar)
+
+- Form ahora tiene dos campos:
+  1. Correo institucional (type="email")
+  2. Número de empleado (type="text", filtro numérico)
+
+**POR QUÉ**:
+- Feedback inmediato: usuario sabe si correo es válido antes de enviar
+- Reduce rechazos innecesarios
+- UX mejorada (no wait+error)
+
+**PARA QUÉ**:
+- Mejor experiencia de usuario
+- Menos solicitudes/errores innecesarios al servidor
+
+---
+
+## Cambio 22.6: Descripción de login actualizada
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `templates/index.html`
+
+**QUÉ**:
+- Textos actualizados:
+  - "Ingresa tu número de empleado" → "Ingresa tu correo institucional y número de empleado"
+  - Paso 1: "Ingresa tu número" → "Ingresa tus credenciales"
+  - Descripción: Ahora menciona correo + número de empleado
+
+**PARA QUÉ**:
+- Claridad: nuevos usuarios saben que necesitan 2 datos
+- Alineación entre UI e instrucciones
+
+---
+
+## Cambio 22.7: Testing de autenticación docente
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `tests/test_docente_login.py` (nuevo)
+
+**QUÉ**:
+- Nuevos tests (103 líneas):
+  - Test: Aceptación con correo y número válidos
+  - Test: Rechazo de credenciales inválidas
+  - Test: Validación de sesión (nombre y correo almacenados)
+  - Mock de `load_dashboard_context`
+  - Setup: inserta docente de prueba en test DB
+
+**PARA QUÉ**:
+- Asegurar que login solo funciona con credenciales válidas
+- Validación de datos guardados en sesión
+- Prevenir regresiones en flujo de autenticación
+
+---
+
+## Cambio 22.8: Validadores expandidos en utils.py
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py`
+
+**QUÉ**:
+- Nuevas funciones:
+  - `validar_correo(correo)`: Regex para email válido
+  - `normalizar_correo(correo)`: trim + lowercase
+
+- Reutilizable en:
+  - Validación de formularios (portal)
+  - Scripts de sincronización (Excel)
+  - Posibles futuras APIs de email
+
+**PARA QUÉ**:
+- Consistencia: mismo validador en todos lados
+- Facilita cambios de política (ej. dominios permitidos)
+
+---
+
+## Cambio 22.9: Catálogo como fuente de verdad
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `database.py`
+
+**QUÉ**:
+- Tabla `docentes` es única fuente de verdad para:
+  - Quién puede acceder al portal
+  - Nombre completo a mostrar (no ingresa usuario)
+  - Correo de contacto
+
+- Desactivación de docentes:
+  - Script sincronización: desactiva si ausentes en Excel
+  - Manual: UPDATE `activo=0` por admin (futuro)
+  - Sin eliminar: preserva historial
+
+**PARA QUÉ**:
+- Control centralizado de acceso
+- No requiere contraseña (sorprised auth)
+- Facilita auditoría: quién estuvo activo cuándo
+
+---
+
+## Cambio 22.10: Estructura nueva de datos
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: Toda la BD
+
+**QUÉ**:
+```
+docentes (NUEVO - Catálogo maestro)
+├── numero_empleado (UNIQUE)
+├── nombre_completo
+├── correo_institucional (UNIQUE)
+├── activo (flag)
+└── fecha_sincronizacion
+
+matriculas (existente, ahora referencia docentes implícitamente)
+└── numero_empleado → FK docentes.numero_empleado (soft-reference)
+```
+
+**PARA QUÉ**:
+- Modelo datos más realista (catálogo docentes existe)
+- Integridad referencial lógica
+- Preparación para future normalization (docentes.id FK en matriculas)
+
+---
+
+# 🔔 Versión 1.6 - Centro de Notificaciones para Docentes
+
+## Cambio 23.1: Extensión configuración para nuevos filtros
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `config.py`
+
+**QUÉ**:
+- Nueva sección en `config.py` para filtros de notificación:
+  ```python
+  SECCIONES_DASHBOARD_PERMITIDAS = {'historial', 'disponibles', 'notificaciones'}
+  FILTROS_NOTIFICACION_PERMITIDOS = {
+      'todas',
+      'nuevas',
+      'asistencia',
+      'resultados',
+      'oportunidades',
+      'certificados',
+  }
+  ```
+- Categorización de notificaciones por tipo
+
+**POR QUÉ**:
+- Sistema anterior no tiene forma de controlar acceso a secciones
+- Sin filtros, centro de notificaciones mostrarla todo sin categorizar
+- Necesita validación server-side de filtros
+
+**PARA QUÉ**:
+- Control centralizado de secciones permitidas
+- Validación de filtros antes de usarlos en BD
+- Preparación para agregar más secciones/filtros en futuro
+
+---
+
+## Cambio 23.2: Nueva tabla de notificaciones y configuración
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `database.py`, sin cambios en estructura
+
+**QUÉ**:
+- Las notificaciones son **construidas dinámicamente** en memoria (no persistidas en BD)
+- Se generan a partir de:
+  - Historial de matriculas (cambios de estado: aprobado, rechazado, abandono)
+  - Cursos disponibles (ofertas nuevas)
+  - Matriculas activas (seguimiento de asistencia)
+  - Avisos de oportunidades (límites de reprobados/abandonos)
+
+**POR QUÉ**:
+- Análisis en tiempo real más preciso
+- Menos costo de almacenamiento
+- Historial existente contiene toda info necesaria
+
+**PARA QUÉ**:
+- Centro de notificaciones funciona sin cambios en BD
+- Escalable: nuevos tipos basados en lógica
+
+---
+
+## Cambio 23.3: Funciones construtor de notificaciones
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (160+ líneas nuevas)
+
+**QUÉ**:
+- Nueva función: `construir_notificaciones_docente()` (140 líneas)
+  - Lee historial de matriculas y extrae eventos (aprobado, no aprobado, abandono)
+  - Lee cursos disponibles y ofertas nuevas
+  - Lee cursos pendientes y genera avisos de asistencia
+  - Lee límites de oportunidades
+  - Genera lista de ~18 notificaciones categorizadas
+
+- Nueva función: `filtrar_notificaciones(notificaciones, filtro)`
+  - Filtra por tipo: nuevas, asistencia, resultados, oportunidades, certificados
+  - Preserva todas si filtro es 'todas'
+
+- Nueva función: `resumir_notificaciones(notificaciones)`
+  - Cuenta por categoría (para badges)
+  - Retorna dict: {todas: N, nuevas: N, asistencia: N, ...}
+
+**POR QUÉ**:
+- Centraliza lógica de generación de notificaciones
+- Reutilizable en API, tasks, reportes
+
+**PARA QUÉ**:
+- Código modular y testeable
+- Facilita cambios en reglas de notificaciones
+
+---
+
+## Cambio 23.4: Notificaciones por estado de matrícula
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (construir_notificaciones_docente)
+
+**QUÉ**:
+- Cuando estado de matricula cambia:
+  - **APROBADA**: Genera 2 notificaciones
+    - Resultado publicado (✅ nivel success)
+    - Certificado disponible (🎓 nivel success)
+  - **NO_APROBADA**: Genera 1 notificación
+    - Resultado publicado (❌ nivel danger)
+  - **ABANDONO**: Genera 1 notificación
+    - Estado actualizado (⚠️ nivel warning)
+
+**POR QUÉ**:
+- Docentes necesitan saber cambios críticos en sus matriculas
+- Certificado ligado a aprobación (flujo claro)
+
+**PARA QUÉ**:
+- Alertas automáticas sin revisión manual
+- Claridad sobre qué pasó en cada curso
+
+---
+
+## Cambio 23.5: Notificaciones de nuevas ofertas
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (construir_notificaciones_docente)
+
+**QUÉ**:
+- Genera notificaciones para primeros 4 cursos disponibles (🆕 nivel info)
+- Si hay más de 4, resumen adicional (📚 nivel info)
+- Cada notificación incluye:
+  - Título, mensaje, ícono
+  - Link directo a curso en dashboard (#curso-{id})
+  - "Ir a la acción formativa" label
+
+**POR QUÉ**:
+- Docentes descubren nuevas oportunidades formativas
+- Limit a 4: evita spam (demasiadas notificaciones)
+- Links directos: menor fricción para acceder
+
+**PARA QUÉ**:
+- Mayor engagement en nuevas ofertas
+- Vía clara para inscripción
+
+---
+
+## Cambio 23.6: Notificaciones de asistencia
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (construir_notificaciones_docente)
+
+**QUÉ**:
+- Genera notificaciones para cursos pendientes (activos, sin calificación final)
+- Mensaje: "Marcado de asistencia habilitado en {curso}"
+- Ícono: 🗓️ (calendario)
+- Nivel: warning (acción requerida)
+- Limit a 4 (primeros)
+
+**POR QUÉ**:
+- Docentes recordatorio de marcar asistencia
+- Avisos de acción requerida vs informativos
+
+**PARA QUÉ**:
+- Mejor cumplimiento de asistencia
+- Central de recordatorios
+
+---
+
+## Cambio 23.7: Notificaciones de oportunidades limitadas
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (construir_notificaciones_docente)
+
+**QUÉ**:
+- Genera notificaciones para avisos_oportunidades (límites)
+- Para cada limit (reprobados, abandonos):
+  - Si bloqueado: ⛔ nivel danger
+  - Si por bloquear (próximo): 📌 nivel warning
+- Mensaje incluye límite y curso
+
+**POR QUÉ**:
+- Docentes saben cuándo acercándose límite
+- Alerta antes de quedar sin oportunidades
+
+**PARA QUÉ**:
+- Transparencia en límites de matrícula
+- Prevención de sorpresas
+
+---
+
+## Cambio 23.8: Filtro y resumen de notificaciones
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `utils.py` (funciones nuevas)
+
+**QUÉ**:
+- `normalizar_filtro_notificacion(filtro)`: Valida filtro contra FILTROS_NOTIFICACION_PERMITIDOS
+- `filtrar_notificaciones(notificaciones, filtro_notificacion)`: Filtra lista por tipo
+- `resumir_notificaciones(notificaciones)`: Cuenta de cada tipo para badges
+
+**PARA QUÉ**:
+- Consistencia: mismo validador para todos (config + utils)
+- Seguridad: rechaza filtros inválidos
+- Performance: precalcula conteos
+
+---
+
+## Cambio 23.9: Nueva sección dashboard notificaciones
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `templates/dashboard.html` (150+ líneas nuevas)
+
+**QUÉ**:
+- Nueva sección completa: Centro de Notificaciones
+  - Header con título, descripción, botón volver
+  - Toolbar con:
+    - Filtros: todas, nuevas, asistencia, resultados, certificados
+    - Botón "Marcar todas como leídas"
+  - Lista de notificaciones con:
+    - Ícono por tipo/nivel
+    - Título, mensaje, fecha
+    - Estado leída (visual distinction)
+    - Links a acciones (ej. ir a curso)
+  - Empty state si no hay
+
+- Dropdown de notifications en topbar:
+  - Botón 🔔 con contador de no leídas
+  - Muestra últimas 10 (preview)
+  - Link a Centro completo
+
+**PARA QUÉ**:
+- Interfaz dedicada para notificaciones
+- Acceso rápido desde topbar
+- Mejor UX con filtros y state management
+
+---
+
+## Cambio 23.10: Estilos CSS para notificaciones
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `static/style.css` (300+ líneas nuevas)
+
+**QUÉ**:
+- Portal alert button y dropdown
+  - `.portal-alert-btn`: Botón 🔔 con badge counter
+  - `.portal-alert-dropdown`: Panel flotante con notificaciones
+  - `.portal-alert-item`: Tarjeta individual categoriazada (info, success, warning, danger)
+  - Colores por nivel, bordes distintos
+
+- Sección notificaciones completa
+  - `.notificaciones-center`: Layout principal
+  - `.notificaciones-toolbar`: Barra de filtros
+  - `.notificacion-item`: Tarjetas con modalidad de lectura
+  - Toast overlay para confirmar acciones
+
+- Usuario chip mejorado
+  - Avatar con gradient
+  - Nombre y email en contextoseparado
+  - Responsive en mobile
+
+- Curso card mejorado
+  - `.curso-modalidad-badge`: Badge V/P (Virtual/Presencial)
+  - Grid layout moderno
+
+- Toast notification overlay
+  - Modal para confirmar acciones (ej. matricula exitosa)
+  - Cerrable con ×, ESC, click outside
+  - Fade animation
+
+**PARA QUÉ**:
+- Interfaz moderna y accesible
+- Categorización visual clara
+- Experiencia mobile optimizada
+
+---
+
+## Cambio 23.11: JavaScript para toast notifications
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `static/main.js` (actualización), `templates/dashboard.html`
+
+**QUÉ**:
+- Evento en dashboard.html:
+  ```javascript
+  if (toastOverlay && toastClose) {
+    toastClose.addEventListener('click', cerrarToast);
+    toastOverlay.addEventListener('click', cerrarToast);
+    document.addEventListener('keydown', cerrarToast on ESC);
+  }
+  ```
+
+- Mostrado después de matricula exitosa (redirect + session feedback)
+
+**PARA QUÉ**:
+- Feedback visual post-acciones
+- No interrumpe flujo (es cerrable)
+
+---
+
+## Cambio 23.12: Session management de notificaciones
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `templates/dashboard.html`
+
+**QUÉ**:
+- Session nuevo campo: `docente_notificaciones_leidas` (lista de IDs de notificaciones)
+- Cuando usuario en sección notificaciones + click "Marcar todas como leídas":
+  - Actualiza session con IDs de todas las notificaciones actuales
+- Al cargar dashboard: recupera lista de session, marca esas notificaciones como leídas
+
+**POR QUÉ**:
+- Persistencia local (no guarda en BD)
+- State reseteará cuando session caduque (OK: son transitorias)
+
+**PARA QUÉ**:
+- No mostrar "nuevo contador" si ya vistas
+- UX: feedback visual de lectura
+
+---
+
+## Cambio 23.13: Integración en portal_service
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `services/portal_service.py`
+
+**QUÉ**:
+- `load_dashboard_context()` ahora acepta parámetros:
+  - `filtro_notificacion` (default 'todas')
+  - `ids_notificaciones_leidas` (default None)
+
+- Retorna nuevo contexto:
+  - `notificaciones`: Notificaciones filtradas
+  - `notificaciones_todas`: Lista completa (para counts)
+  - `resumen_notificaciones`: Dict con conteos por tipo
+  - `notificaciones_total`: Número no leídas (para badge)
+  - `notificaciones_filtradas`: Mostradas en tabla
+
+**PARA QUÉ**:
+- Service layer completo
+- Tests fácil de mockear
+
+---
+
+## Cambio 23.14: Feedback de matrícula exitosa
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`, `templates/dashboard.html`
+
+**QUÉ**:
+- Cambio flujo POST /matricular:
+  - Antes: Redirige a /matricula_exitosa.html (nueva página)
+  - Ahora: Guarda feedback en session, redirige a /dashboard
+  - Dashboard muestra toast con confirmación
+
+- Session.matricula_feedback contiene:
+  ```python
+  {
+      'tipo': 'success',
+      'titulo': 'Matricula exitosa',
+      'mensaje': 'Te inscribiste en {curso}',
+      'curso': ..., 'codigo': ..., 'horario': ...
+  }
+  ```
+
+**POR QUÉ**:
+- Menos fragmentación (una page dashboard)
+- Feedback en contexto donde usuario actúa
+
+**PARA QUÉ**:
+- Mejor UX: volver completamente a dashboard
+- Más integración: ver nuevos cursos inmediatamente
+
+---
+
+## Cambio 23.15: Modalidad de cursos mejorada
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `utils.py`
+
+**QUÉ**:
+- Cursos ahora muestran badge modal:
+  - Virtual (V): azul claro
+  - Presencial (P): amarillo claro
+- En historial también muestra modalidad
+- Lógica deducción:
+  - Primero: valor en BD capacitaciones.modalidad
+  - Si vacío: deducir de ID_CAPACITACION pattern (-V- o -P-)
+  - Si no: "No definida"
+
+**PARA QUÉ**:
+- Claridad: docentes saben formato antes de inscribirse
+- Filtrable (futuro)
+
+---
+
+## Cambio 23.16: Logout mejorado
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`
+
+**QUÉ**:
+- Logout now limpia:
+  - `empleado_portal`
+  - `correo_docente` (NEW)
+  - `nombre_docente` (NEW)
+  - `docente_notificaciones_leidas` (NEW)
+  - `_csrf_token`
+
+**PARA QUÉ**:
+- Limpieza completa de datos de sesión
+- Seguridad: sin rastros de usuario anterior
+
+---
+
+## Cambio 23.17: Validación reauth docente activo
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/portal.py`
+
+**QUÉ**:
+- GET /dashboard ahora revalida docente en BD:
+  - Verifica que siga en tabla docentes
+  - Verifica que activo = 1
+  - Si no: logout automático + mensaje
+
+**POR QUÉ**:
+- Admin puede desactivar docente en medio de sesión
+- Evita acceso si persona despedida
+
+**PARA QUÉ**:
+- Security: respeta estado real en BD
+- Auditoría: quién estuvo activo cuándo
+
+---
+
 **Última actualización**: Abril 14, 2026  
-**Versión actual**: 1.4 (Chat IA asistente)  
-**Estado**: Development - Chat IA funcional, Gemini integrado, fallbacks implementados
+**Versión actual**: 1.6 (Centro de Notificaciones para Docentes)  
+**Estado**: Development - Sistema completo de notificaciones, modal feedback post-matricula

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}IPSD - Mi Portal | Empleado {{ empleado }}{% endblock %}
+{% block title %}IPSD - Mi Portal | {{ nombre_docente or ('Empleado ' ~ empleado) }}{% endblock %}
 
 {% block content %}
 <div class="portal-layout">
@@ -30,6 +30,9 @@
         {% if seccion_activa == 'historial' %}
         <h1 class="portal-topbar-title">Historial | Acciones Formativas</h1>
         <p class="portal-topbar-subtitle">Seguimiento por estado</p>
+        {% elif seccion_activa == 'notificaciones' %}
+        <h1 class="portal-topbar-title">Centro de Notificaciones</h1>
+        <p class="portal-topbar-subtitle">Alertas y avisos importantes del sistema</p>
         {% else %}
         <h1 class="portal-topbar-title">Acciones Formativas Disponibles</h1>
         <p class="portal-topbar-subtitle">Matrícula activa</p>
@@ -37,7 +40,17 @@
       </div>
 
       <div class="portal-topbar-actions">
-        <button type="button" class="portal-alert-btn" aria-label="Notificaciones" title="Notificaciones">🔔</button>
+        <a
+          href="/dashboard?seccion=notificaciones&filtro_notificacion=todas"
+          class="portal-alert-btn {% if seccion_activa == 'notificaciones' %}active{% endif %}"
+          aria-label="Notificaciones"
+          title="Notificaciones"
+        >
+          <span>🔔</span>
+          {% if notificaciones_total %}
+          <span class="portal-alert-count">{{ notificaciones_total if notificaciones_total < 100 else '99+' }}</span>
+          {% endif %}
+        </a>
         <div class="portal-user-menu" id="portal-user-menu">
           <button
             type="button"
@@ -49,8 +62,8 @@
           >
             <span class="portal-user-avatar">{{ ('Docente')[:1] | upper }}</span>
             <span class="portal-user-meta">
-              <span class="portal-user-name">Docente</span>
-              <span class="portal-user-id">Empleado #{{ empleado }}</span>
+              <span class="portal-user-name">{{ nombre_docente or 'Docente' }}</span>
+              <span class="portal-user-id">Empleado: {{ empleado }}</span>
             </span>
             <span class="portal-user-caret">▾</span>
           </button>
@@ -69,7 +82,92 @@
       </div>
       {% endif %}
 
-      {% if seccion_activa == 'historial' %}
+      {% if matricula_feedback %}
+      <div class="portal-toast-overlay" id="portal-toast-overlay">
+        <article class="portal-toast-card" role="status" aria-live="polite">
+          <div class="portal-toast-icon">✅</div>
+          <div class="portal-toast-content">
+            <h4>{{ matricula_feedback['titulo'] }}</h4>
+            <p>{{ matricula_feedback['mensaje'] }}</p>
+            <p class="portal-toast-meta">Jornada: {{ matricula_feedback['horario'] }}</p>
+          </div>
+          <button type="button" class="portal-toast-close" id="portal-toast-close" aria-label="Cerrar aviso">×</button>
+        </article>
+      </div>
+      {% endif %}
+
+      {% if seccion_activa == 'notificaciones' %}
+      <section class="notificaciones-center">
+        <div class="notificaciones-header-row">
+          <div>
+            <h2>Centro de Notificaciones</h2>
+            <p>Alertas y avisos importantes del sistema.</p>
+          </div>
+          <a href="/dashboard?seccion=disponibles" class="btn-ghost notificaciones-back-btn">← Volver al Dashboard</a>
+        </div>
+
+        <div class="notificaciones-toolbar">
+          <div class="notificaciones-filtros">
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas" class="notificacion-filtro {% if filtro_notificacion == 'todas' %}active{% endif %}">Todas</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=nuevas" class="notificacion-filtro {% if filtro_notificacion == 'nuevas' %}active{% endif %}">Nuevas ofertas</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=asistencia" class="notificacion-filtro {% if filtro_notificacion == 'asistencia' %}active{% endif %}">Asistencia</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=resultados" class="notificacion-filtro {% if filtro_notificacion == 'resultados' %}active{% endif %}">Resultados</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=certificados" class="notificacion-filtro {% if filtro_notificacion == 'certificados' %}active{% endif %}">Certificados</a>
+          </div>
+          <a
+            href="/dashboard?seccion=notificaciones&filtro_notificacion={{ filtro_notificacion }}&marcar_leidas=1"
+            class="btn-primary-ipsd notificaciones-mark-read"
+          >
+            Marcar todas como leídas
+          </a>
+        </div>
+
+        <div class="card-ipsd">
+          <div class="card-header">
+            <div>
+              <h5 style="margin:0; font-weight:700;">Notificaciones Recientes</h5>
+              <p style="margin:.2rem 0 0; color:var(--text-muted); font-size:.82rem;">Mostrando: {{ filtro_notificacion }}</p>
+            </div>
+            <span class="badge-pill secondary">{{ notificaciones|length }} elemento(s)</span>
+          </div>
+          <div class="card-body">
+            {% if notificaciones %}
+            <div class="notificaciones-lista">
+              {% for item in notificaciones %}
+              {% if item['accion_url'] %}
+              <a href="{{ item['accion_url'] }}" class="notificacion-item-link" title="{{ item['accion_label'] or 'Abrir acción' }}">
+                <article class="notificacion-item {{ item['nivel'] }} {% if item['leida'] %}leida{% endif %}">
+                  <span class="notificacion-item-icon">{{ item['icono'] }}</span>
+                  <div class="notificacion-item-body">
+                    <p class="notificacion-item-title">{{ item['titulo'] }}</p>
+                    <p class="notificacion-item-text">{{ item['mensaje'] }}</p>
+                    <p class="notificacion-item-time">{{ item['fecha'] }}</p>
+                  </div>
+                </article>
+              </a>
+              {% else %}
+              <article class="notificacion-item {{ item['nivel'] }} {% if item['leida'] %}leida{% endif %}">
+                <span class="notificacion-item-icon">{{ item['icono'] }}</span>
+                <div class="notificacion-item-body">
+                  <p class="notificacion-item-title">{{ item['titulo'] }}</p>
+                  <p class="notificacion-item-text">{{ item['mensaje'] }}</p>
+                  <p class="notificacion-item-time">{{ item['fecha'] }}</p>
+                </div>
+              </article>
+              {% endif %}
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert-ipsd info">
+              <span>ℹ️</span>
+              <span>No hay notificaciones disponibles para este filtro.</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      {% elif seccion_activa == 'historial' %}
       <div class="card-ipsd mb-3">
         <div class="card-header" style="gap:1rem; flex-wrap:wrap;">
           <div>
@@ -110,6 +208,12 @@
                 <span class="historial-estado {{ estado_class }}">{{ accion['estado_nombre'] }}</span>
               </div>
               <h4 class="historial-course-name">{{ accion['nombre_curso'] }}</h4>
+              <div class="historial-modalidad-row">
+                <span class="curso-modalidad-badge {{ 'virtual' if accion['modalidad_icono'] == 'V' else 'presencial' }}">
+                  <span class="curso-modalidad-token">{{ accion['modalidad_icono'] }}</span>
+                  {{ accion['modalidad'] }}
+                </span>
+              </div>
               <p class="historial-meta">Horario: {{ accion['horario_elegido'] or 'No definido' }}</p>
               <p class="historial-meta">Fecha: {{ accion['fecha_evento'][:16] if accion['fecha_evento'] else 'Sin fecha' }}</p>
             </article>
@@ -207,13 +311,19 @@
       </div>
 
       {% if cursos %}
-      <div class="grid-3">
+      <div class="curso-grid">
         {% for curso in cursos %}
-        <div class="curso-card">
+        <div class="curso-card" id="curso-{{ curso['id'] }}">
           <div class="curso-header"></div>
           <div class="curso-body">
             <div class="curso-id">{{ curso['id'] }}</div>
             <div class="curso-title">{{ curso['nombre'] }}</div>
+            <div class="curso-meta-row">
+              <span class="curso-modalidad-badge {{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
+                <span class="curso-modalidad-token">{{ curso['modalidad_icono'] }}</span>
+                {{ curso['modalidad'] }}
+              </span>
+            </div>
             <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
             {% if curso['mensaje_oportunidades'] %}
             <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
@@ -265,6 +375,8 @@
     const userMenu = document.getElementById('portal-user-menu');
     const userTrigger = document.getElementById('portal-user-menu-trigger');
     const userDropdown = document.getElementById('portal-user-dropdown');
+    const toastOverlay = document.getElementById('portal-toast-overlay');
+    const toastClose = document.getElementById('portal-toast-close');
 
     function abrirMenu() {
       sidebar.classList.add('open');
@@ -305,12 +417,27 @@
       overlay.addEventListener('click', cerrarMenu);
     }
 
+    if (toastOverlay && toastClose) {
+      const cerrarToast = function () {
+        toastOverlay.classList.add('hidden');
+      };
+      toastClose.addEventListener('click', cerrarToast);
+      toastOverlay.addEventListener('click', function (event) {
+        if (event.target === toastOverlay) {
+          cerrarToast();
+        }
+      });
+    }
+
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
         cerrarMenu();
         if (userDropdown && userTrigger) {
           userDropdown.classList.remove('active');
           userTrigger.setAttribute('aria-expanded', 'false');
+        }
+        if (toastOverlay) {
+          toastOverlay.classList.add('hidden');
         }
       }
     });

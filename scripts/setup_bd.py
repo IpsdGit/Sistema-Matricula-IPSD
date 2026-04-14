@@ -123,6 +123,19 @@ def inicializar_bd():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS docentes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_empleado TEXT UNIQUE NOT NULL,
+            nombre_completo TEXT NOT NULL,
+            correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+            activo INTEGER NOT NULL DEFAULT 1,
+            fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_numero ON docentes (numero_empleado)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)')
+
     superadmin_username = os.environ.get('SUPERADMIN_USERNAME', 'admin').strip() or 'admin'
     superadmin_password = os.environ.get(
         'SUPERADMIN_PASSWORD',

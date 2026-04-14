@@ -6,6 +6,7 @@ from flask import abort, redirect, request, session, url_for
 
 from config import (
     FILTROS_HISTORIAL_PERMITIDOS,
+    FILTROS_NOTIFICACION_PERMITIDOS,
     LIMITE_ABANDONO,
     LIMITE_REPROBADO,
     SECCIONES_DASHBOARD_PERMITIDAS,
@@ -48,6 +49,15 @@ def superadmin_requerido(f):
 
 def validar_numero_empleado(numero):
     return numero and re.match(r'^\d{4,12}$', numero.strip())
+
+
+def normalizar_correo(correo):
+    return (correo or '').strip().lower()
+
+
+def validar_correo(correo):
+    correo_normalizado = normalizar_correo(correo)
+    return bool(re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', correo_normalizado))
 
 
 def validar_id_curso(id_curso):
@@ -184,6 +194,13 @@ def normalizar_filtro_historial(filtro):
     return filtro_final
 
 
+def normalizar_filtro_notificacion(filtro):
+    filtro_final = (filtro or 'todas').strip().lower()
+    if filtro_final not in FILTROS_NOTIFICACION_PERMITIDOS:
+        return 'todas'
+    return filtro_final
+
+
 def normalizar_vista_admin(vista, es_superadmin=False):
     vista_final = (vista or 'dashboard').strip().lower()
     if vista_final not in VISTAS_ADMIN_PERMITIDAS:
@@ -233,7 +250,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
 
     query_disponibles = '''
-        SELECT id, nombre, mes, anio, trimestre FROM capacitaciones
+        SELECT id, nombre, mes, anio, trimestre, modalidad FROM capacitaciones
         ORDER BY anio DESC, mes
     '''
     cursos_raw = conn.execute(query_disponibles).fetchall()
@@ -267,6 +284,10 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         ).fetchall()
 
         mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
+        modalidad = (c['modalidad'] or '').strip()
+        if modalidad not in {'Virtual', 'Presencial'}:
+            modalidad = 'Virtual' if '-V-' in (c['id'] or '').upper() else 'Presencial'
+
         cursos_disponibles.append(
             {
                 'id': c['id'],
@@ -274,6 +295,8 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'mes': c['mes'],
                 'anio': c['anio'],
                 'trimestre': c['trimestre'],
+                'modalidad': modalidad,
+                'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
                 'horarios': [h['horario'] for h in horarios],
                 'mensaje_oportunidades': mensaje_oportunidades,
             }
@@ -300,6 +323,182 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         )
 
     return cursos_disponibles, cursos_matriculados, avisos_oportunidades
+
+
+def construir_notificaciones_docente(
+    cursos_disponibles,
+    cursos_matriculados,
+    avisos_oportunidades,
+    historial_todas,
+    ids_notificaciones_leidas=None,
+):
+    notificaciones = []
+    claves = set()
+    ids_leidas = set(ids_notificaciones_leidas or [])
+
+    def agregar(
+        tipo,
+        titulo,
+        mensaje,
+        nivel='info',
+        icono='ℹ️',
+        fecha='Ahora',
+        clave=None,
+        accion_url=None,
+        accion_label=None,
+    ):
+        id_unico = clave or f'{tipo}:{titulo}:{mensaje}'
+        if id_unico in claves:
+            return
+        claves.add(id_unico)
+        notificaciones.append(
+            {
+                'id': id_unico,
+                'tipo': tipo,
+                'titulo': titulo,
+                'mensaje': mensaje,
+                'nivel': nivel,
+                'icono': icono,
+                'fecha': fecha,
+                'leida': id_unico in ids_leidas,
+                'accion_url': accion_url,
+                'accion_label': accion_label,
+            }
+        )
+
+    for fila in historial_todas:
+        estado = fila['estado_codigo']
+        fecha = fila['fecha_evento'][:16] if fila['fecha_evento'] else 'Reciente'
+
+        if estado == 'APROBADA':
+            agregar(
+                tipo='resultado',
+                titulo='Resultado publicado: Aprobado',
+                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                nivel='success',
+                icono='✅',
+                fecha=fecha,
+                clave=f"res-apr-{fila['id']}",
+            )
+            agregar(
+                tipo='certificado',
+                titulo='Certificado disponible',
+                mensaje=f"Tu certificado de {fila['nombre_curso']} está disponible.",
+                nivel='success',
+                icono='🎓',
+                fecha=fecha,
+                clave=f"cert-{fila['id_capacitacion']}-{fila['matricula_id']}",
+            )
+        elif estado == 'NO_APROBADA':
+            agregar(
+                tipo='resultado',
+                titulo='Resultado publicado: No aprobado',
+                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                nivel='danger',
+                icono='❌',
+                fecha=fecha,
+                clave=f"res-noapr-{fila['id']}",
+            )
+        elif estado == 'ABANDONO':
+            agregar(
+                tipo='resultado',
+                titulo='Estado actualizado: Abandono',
+                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                nivel='warning',
+                icono='⚠️',
+                fecha=fecha,
+                clave=f"res-ab-{fila['id']}",
+            )
+
+    for curso in cursos_disponibles[:4]:
+        agregar(
+            tipo='nueva_oferta',
+            titulo='Nueva acción formativa disponible',
+            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['id']})",
+            nivel='info',
+            icono='🆕',
+            fecha='Disponible ahora',
+            clave=f"oferta-{curso['id']}",
+            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+            accion_label='Ir a la acción formativa',
+        )
+    if len(cursos_disponibles) > 4:
+        agregar(
+            tipo='nueva_oferta',
+            titulo='Más acciones formativas disponibles',
+            mensaje=f"Tienes {len(cursos_disponibles)} acciones activas en oferta.",
+            nivel='info',
+            icono='📚',
+            fecha='Disponible ahora',
+            clave='oferta-resumen',
+        )
+
+    cursos_pendientes = [c for c in cursos_matriculados if c['aprobado'] is None]
+    for curso in cursos_pendientes[:4]:
+        agregar(
+            tipo='asistencia',
+            titulo='Marcado de asistencia habilitado',
+            mensaje=f"Puedes registrar asistencia en {curso['nombre']} ({curso['id']}).",
+            nivel='warning',
+            icono='🗓️',
+            fecha='Acción requerida',
+            clave=f"asis-{curso['matricula_id']}",
+        )
+
+    for aviso in avisos_oportunidades[:6]:
+        agregar(
+            tipo='oportunidades',
+            titulo='Oportunidades de matrícula',
+            mensaje=f"{aviso['curso']}: {aviso['mensaje']}",
+            nivel='danger' if aviso['bloqueado'] else 'warning',
+            icono='⛔' if aviso['bloqueado'] else '📌',
+            fecha='Control activo',
+            clave=f"opp-{aviso['curso']}-{aviso['bloqueado']}",
+        )
+
+    return notificaciones[:18]
+
+
+def filtrar_notificaciones(notificaciones, filtro_notificacion):
+    filtro_notificacion = normalizar_filtro_notificacion(filtro_notificacion)
+    if filtro_notificacion == 'todas':
+        return notificaciones
+
+    mapa_tipo = {
+        'nuevas': {'nueva_oferta'},
+        'asistencia': {'asistencia'},
+        'resultados': {'resultado'},
+        'oportunidades': {'oportunidades'},
+        'certificados': {'certificado'},
+    }
+    tipos = mapa_tipo.get(filtro_notificacion, set())
+    return [n for n in notificaciones if n['tipo'] in tipos]
+
+
+def resumir_notificaciones(notificaciones):
+    resumen = {
+        'todas': len(notificaciones),
+        'nuevas': 0,
+        'asistencia': 0,
+        'resultados': 0,
+        'oportunidades': 0,
+        'certificados': 0,
+    }
+
+    for item in notificaciones:
+        tipo = item['tipo']
+        if tipo == 'nueva_oferta':
+            resumen['nuevas'] += 1
+        elif tipo == 'asistencia':
+            resumen['asistencia'] += 1
+        elif tipo == 'resultado':
+            resumen['resultados'] += 1
+        elif tipo == 'oportunidades':
+            resumen['oportunidades'] += 1
+        elif tipo == 'certificado':
+            resumen['certificados'] += 1
+
+    return resumen
 
 
 def registrar_evento_matricula(
@@ -334,7 +533,7 @@ def registrar_evento_matricula(
 
 def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historial='todas'):
     filtro_historial = normalizar_filtro_historial(filtro_historial)
-    filas = conn.execute(
+    filas_raw = conn.execute(
         '''
         SELECT
             h.id,
@@ -345,9 +544,13 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
             h.estado_codigo,
             h.fecha_evento,
             c.nombre AS estado_nombre,
-            c.categoria AS estado_categoria
+            c.categoria AS estado_categoria,
+            m_act.id AS matricula_activa_id,
+            cap.modalidad AS modalidad_actual
         FROM matricula_historial h
         JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
+        LEFT JOIN matriculas m_act ON m_act.id = h.matricula_id
+        LEFT JOIN capacitaciones cap ON cap.id = h.id_capacitacion
         JOIN (
             SELECT COALESCE(matricula_id, -id) AS agrupador, MAX(id) AS max_id
             FROM matricula_historial
@@ -359,6 +562,47 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
         ''',
         (numero_empleado, numero_empleado),
     ).fetchall()
+
+    filas = []
+    for fila in filas_raw:
+        estado_codigo = fila['estado_codigo']
+        estado_nombre = fila['estado_nombre']
+        estado_categoria = fila['estado_categoria']
+
+        # Si la matrícula ya no existe y el último estado quedó pendiente,
+        # se interpreta como cancelada por limpieza/eliminación administrativa.
+        if estado_codigo == 'PENDIENTE' and fila['matricula_activa_id'] is None:
+            estado_codigo = 'CANCELADA'
+            estado_nombre = 'Cancelada'
+            estado_categoria = 'canceladas'
+
+        modalidad = (fila['modalidad_actual'] or '').strip()
+        if modalidad not in {'Virtual', 'Presencial'}:
+            curso_id = (fila['id_capacitacion'] or '').upper()
+            if '-V-' in curso_id:
+                modalidad = 'Virtual'
+            elif '-P-' in curso_id:
+                modalidad = 'Presencial'
+            else:
+                modalidad = 'No definida'
+
+        modalidad_icono = 'V' if modalidad == 'Virtual' else 'P' if modalidad == 'Presencial' else '?'
+
+        filas.append(
+            {
+                'id': fila['id'],
+                'matricula_id': fila['matricula_id'],
+                'id_capacitacion': fila['id_capacitacion'],
+                'nombre_curso': fila['nombre_curso'],
+                'horario_elegido': fila['horario_elegido'],
+                'estado_codigo': estado_codigo,
+                'estado_nombre': estado_nombre,
+                'estado_categoria': estado_categoria,
+                'fecha_evento': fila['fecha_evento'],
+                'modalidad': modalidad,
+                'modalidad_icono': modalidad_icono,
+            }
+        )
 
     resumen = {
         'todas': len(filas),
@@ -381,19 +625,43 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
     return historial_filtrado, resumen
 
 
-def construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles', filtro_historial='todas'):
+def construir_contexto_dashboard(
+    conn,
+    numero_empleado,
+    seccion_activa='disponibles',
+    filtro_historial='todas',
+    filtro_notificacion='todas',
+    ids_notificaciones_leidas=None,
+):
     seccion_activa = normalizar_seccion_dashboard(seccion_activa)
     filtro_historial = normalizar_filtro_historial(filtro_historial)
+    filtro_notificacion = normalizar_filtro_notificacion(filtro_notificacion)
 
     cursos_disponibles, cursos_matriculados, avisos_oportunidades = cargar_contexto_dashboard_docente(
         conn,
         numero_empleado,
     )
-    historial_acciones, resumen_historial = obtener_historial_acciones_formativas(
+    historial_todas, resumen_historial = obtener_historial_acciones_formativas(
         conn,
         numero_empleado,
-        filtro_historial=filtro_historial,
+        filtro_historial='todas',
     )
+
+    if filtro_historial == 'todas':
+        historial_acciones = historial_todas
+    else:
+        historial_acciones = [h for h in historial_todas if h['estado_categoria'] == filtro_historial]
+
+    notificaciones = construir_notificaciones_docente(
+        cursos_disponibles,
+        cursos_matriculados,
+        avisos_oportunidades,
+        historial_todas,
+        ids_notificaciones_leidas=ids_notificaciones_leidas,
+    )
+    notificaciones_filtradas = filtrar_notificaciones(notificaciones, filtro_notificacion)
+    resumen_notificaciones = resumir_notificaciones(notificaciones)
+    notificaciones_no_leidas = len([n for n in notificaciones if not n['leida']])
 
     return {
         'empleado': numero_empleado,
@@ -402,6 +670,11 @@ def construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponib
         'avisos_oportunidades': avisos_oportunidades,
         'seccion_activa': seccion_activa,
         'filtro_historial': filtro_historial,
+        'filtro_notificacion': filtro_notificacion,
         'historial_acciones': historial_acciones,
         'resumen_historial': resumen_historial,
+        'notificaciones': notificaciones_filtradas,
+        'notificaciones_todas': notificaciones,
+        'resumen_notificaciones': resumen_notificaciones,
+        'notificaciones_total': notificaciones_no_leidas,
     }

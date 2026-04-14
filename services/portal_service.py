@@ -10,7 +10,13 @@ from utils import (
 )
 
 
-def load_dashboard_context(numero_empleado, seccion_activa, filtro_historial):
+def load_dashboard_context(
+    numero_empleado,
+    seccion_activa,
+    filtro_historial,
+    filtro_notificacion='todas',
+    ids_notificaciones_leidas=None,
+):
     try:
         conn = get_db_connection()
         contexto = construir_contexto_dashboard(
@@ -18,6 +24,8 @@ def load_dashboard_context(numero_empleado, seccion_activa, filtro_historial):
             numero_empleado,
             seccion_activa=seccion_activa,
             filtro_historial=filtro_historial,
+            filtro_notificacion=filtro_notificacion,
+            ids_notificaciones_leidas=ids_notificaciones_leidas,
         )
         conn.close()
         return {'ok': True, 'contexto': contexto}
