@@ -7,21 +7,17 @@
   <aside class="portal-sidebar" id="portal-sidebar">
     <div class="portal-sidebar-brand">
       <span class="brand-dot"></span>
-      Portal Docente IPSD
+      Portal Docente UNAH
     </div>
 
     <nav class="portal-sidebar-nav">
       <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-sidebar-link {% if seccion_activa == 'historial' %}active{% endif %}">
         <span class="link-icon">📚</span>
-        <span>Acciones Formativas</span>
+        <span>Historial Formativo</span>
       </a>
       <a href="/dashboard?seccion=disponibles" class="portal-sidebar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">
         <span class="link-icon">📝</span>
         <span>Disponibles para matrícula</span>
-      </a>
-      <a href="/dashboard?seccion=soporte" class="portal-sidebar-link {% if seccion_activa == 'soporte' %}active{% endif %}">
-        <span class="link-icon">💬</span>
-        <span>Chat con soporte IA</span>
       </a>
     </nav>
   </aside>
@@ -32,14 +28,11 @@
 
       <div class="portal-topbar-title-wrap">
         {% if seccion_activa == 'historial' %}
-        <h1 class="portal-topbar-title">Acciones Formativas | Historial</h1>
-        <p class="portal-topbar-subtitle">Seguimiento por estado y cierre de ciclos</p>
-        {% elif seccion_activa == 'disponibles' %}
-        <h1 class="portal-topbar-title">Acciones Formativas Disponibles</h1>
-        <p class="portal-topbar-subtitle">Matrícula activa con control de oportunidades</p>
+        <h1 class="portal-topbar-title">Historial | Acciones Formativas</h1>
+        <p class="portal-topbar-subtitle">Seguimiento por estado</p>
         {% else %}
-        <h1 class="portal-topbar-title">Chat de Soporte con IA</h1>
-        <p class="portal-topbar-subtitle">Asistencia guiada para trámites docentes</p>
+        <h1 class="portal-topbar-title">Acciones Formativas Disponibles</h1>
+        <p class="portal-topbar-subtitle">Matrícula activa</p>
         {% endif %}
       </div>
 
@@ -186,7 +179,7 @@
                 {% endif %}
               </span>
               {% if curso['aprobado'] is none %}
-              <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar tu inscripción en {{ curso['nombre'] }}?');">
+              <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar esta inscripción?');">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="numero_empleado" value="{{ empleado }}">
                 <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
@@ -257,18 +250,6 @@
       </div>
       {% endif %}
 
-      {% else %}
-      <div class="card-ipsd">
-        <div class="card-header">
-          <h5 style="margin:0; font-weight:700;">Chat con Soporte IA</h5>
-        </div>
-        <div class="card-body">
-          <div class="alert-ipsd info">
-            <span>ℹ️</span>
-            <span>Esta vista quedará activa en el paso 3. Mientras tanto, puedes usar Historial y Disponibles desde el menú lateral.</span>
-          </div>
-        </div>
-      </div>
       {% endif %}
     </section>
   </main>

@@ -123,6 +123,25 @@ def asegurar_migraciones_minimas():
             'CREATE INDEX IF NOT EXISTS idx_historial_matricula_id ON matricula_historial (matricula_id)'
         )
 
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS historial_chat (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_tipo TEXT NOT NULL,
+                usuario_id TEXT NOT NULL,
+                mensaje_usuario TEXT NOT NULL,
+                respuesta_modelo TEXT NOT NULL,
+                fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            '''
+        )
+        cursor.execute(
+            '''
+            CREATE INDEX IF NOT EXISTS idx_historial_chat_usuario
+            ON historial_chat (usuario_tipo, usuario_id, id DESC)
+            '''
+        )
+
         estados_catalogo = [
             ('PENDIENTE', 'Pendiente', 'pendientes', 10),
             ('APROBADA', 'Aprobada', 'aprobadas', 20),

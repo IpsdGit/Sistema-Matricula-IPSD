@@ -3,6 +3,7 @@
 from config import configure_app
 from database import asegurar_migraciones_minimas
 from routes.admin import register_admin_routes
+from routes.chat import register_chat_routes
 from routes.portal import register_portal_routes
 from utils import generar_csrf_token
 
@@ -24,6 +25,7 @@ def add_security_headers(response):
 
 register_portal_routes(app)
 register_admin_routes(app)
+register_chat_routes(app)
 
 
 @app.errorhandler(403)

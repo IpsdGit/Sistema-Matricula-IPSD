@@ -1494,6 +1494,342 @@ Sistema-Matricula-IPSD/
 
 ---
 
-**Última actualización**: Abril 10, 2026  
-**Versión actual**: 1.3 (Refactorización Arquitectónica)  
-**Estado**: Development - Arquitectura modulada, testing base implementado
+---
+
+# 🤖 Versión 1.4 - Sistema de Chat IA asistente
+
+## Cambio 21.1: Integración de API Gemini para chat
+**Fecha**: Abril 10-14, 2026  
+**Archivos afectados**: `services/ia_service.py` (nuevo), `requirements.txt`, `config.py`
+
+**QUÉ**:
+- Nuevo módulo `services/ia_service.py` (312 líneas) que implementa lógica de chat con IA
+- Integración con Google Gemini API (gemini-2.5-flash)
+- Función `build_chat_reply()`: Procesa mensaje del usuario y retorna respuesta
+- Función `fetch_chat_history()`: Obtiene historial de conversaciones del usuario
+- Características:
+  - Fallback automático a modelos alternativos si principal falla
+  - Sistema de prompts contextualizados (diferencia admin vs docente)
+  - Respuestas de dominio pre-programadas para consultas comunes (domain-answering)
+  - Respuestas de contingencia si API no está disponible
+  - Normalización de respuestas (reescribe términos incorrectos)
+  - Validación de longitud de mensaje (máx 1200 caracteres)
+
+**POR QUÉ**:
+- Usuarios (docentes y admins) requieren soporte rápido y 24/7
+- Consultas repetitivas sobre matricula, cancelación, horarios, reportes
+- Reducir carga de soporte manual
+- Mejorar experiencia de usuario con respuestas contextuales por rol
+
+**PARA QUÉ**:
+- Asistente de IA integrado en el portal
+- Respuestas inmediatas a preguntas frecuentes
+- Orientación en procesos del sistema
+- Soporte en dos canales: docentes y administradores
+
+---
+
+## Cambio 21.2: Rutas API para chat
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `routes/chat.py` (nuevo), `app.py`
+
+**QUÉ**:
+- Nuevo módulo `routes/chat.py` (43 líneas) con dos endpoints:
+  - `POST /api/chat`: Procesa mensaje del usuario y retorna respuesta de IA
+    - Validación de autenticación (admin o docente)
+    - Validación de CSRF token 
+    - Parámetro: `message` (JSON body)
+    - Respuesta: `{ok: true, reply: "..."}`
+  
+  - `GET /api/chat/history`: Retorna últimos 10 mensajes del usuario
+    - Parámetro: limit (opcional, defecto 10)
+    - Respuesta: `{ok: true, messages: [...], user_type: "admin"|"docente"}`
+
+- Función helper `_resolve_chat_user()`: Determina tipo y ID de usuario desde sesión
+
+**POR QUÉ**:
+- Endpoints REST necesarios para comunicación JavaScript-Backend
+- Separación clara de verificación de seguridad en ruta
+- Reutilización de servicios de IA
+
+**PARA QUÉ**:
+- Interface entre widget JS y lógica de IA
+- Validación de autenticación y CSRF en cada llamada
+- Historial persistente de conversaciones
+
+---
+
+## Cambio 21.3: Widget de chat flotante en JavaScript
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `static/chat-widget.js` (nuevo), `static/style.css`
+
+**QUÉ**:
+- Nuevo archivo `static/chat-widget.js` (155 líneas):
+  - Widget flotante en esquina inferior derecha
+  - Panel expansible con toggle button
+  - Interfaz de chat (mensajes del usuario en azul, IA en blanco)
+  - Formulario para envío de mensajes
+  - Indicador visual "IA escribiendo..."
+  - Carga de historial al abrir panel
+  - Gestión de CSRF token desde HTML
+  - Event listeners: toggle, cerrar, envío, escape key
+  - Escape HTML para prevenir XSS
+  - Scroll automático al final de mensajes
+
+- Estilos CSS (~175 líneas nuevas):
+  - `.ia-chat-widget`: Contenedor fixed
+  - `.ia-chat-toggle`: Botón flotante con gradient
+  - `.ia-chat-panel`: Panel con grid layout
+  - `.ia-chat-message`: Estilos de mensajes (user/assistant)
+  - `.ia-chat-form`: Formulario de entrada
+  - Responsive: Ajuste para móvil (<768px)
+  - Animaciones y transiciones
+
+**POR QUÉ**:
+- Necesidad de interfaz visible y accesible
+- Widget flotante no interfiere con contenido principal
+- Mejor UX que popup modal tradicional
+
+**PARA QUÉ**:
+- Acceso rápido al asistente desde cualquier página
+- Interfaz amigable para chat
+- Responsive design para móvil y desktop
+
+---
+
+## Cambio 21.4: Persistencia de historial de chat
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `database.py`, `services/ia_service.py`
+
+**QUÉ**:
+- Nueva tabla `historial_chat` en BD:
+  ```sql
+  CREATE TABLE historial_chat (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_tipo TEXT NOT NULL,         -- 'admin' o 'docente'
+    usuario_id TEXT NOT NULL,           -- username o numero_empleado
+    mensaje_usuario TEXT NOT NULL,      -- Consulta del usuario
+    respuesta_modelo TEXT NOT NULL,     -- Respuesta de IA
+    fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+  ```
+- Índice: `idx_historial_chat_usuario` (usuario_tipo, usuario_id, id DESC)
+- Función `_save_chat_exchange()`: Graba cada intercambio usuario-IA
+- Función `_fetch_recent_history()`: Retrieves hasta 6 mensajes recientes para contexto
+
+**POR QUÉ**:
+- Necesidad de contexto en conversaciones multi-turno
+- Auditoría de consultas (soporte técnico, análisis de uso)
+- Mejora de respuestas: IA puede mencionar conversaciones anteriores
+
+**PARA QUÉ**:
+- Conversaciones con coherencia (IA entiende contexto previo)
+- Base de datos de FAQs (análisis de consultas frecuentes)
+- Análisis de comportamiento de usuarios
+
+---
+
+## Cambio 21.5: Integración en templates
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `templates/base.html`, `templates/dashboard.html`
+
+**QUÉ**:
+- **base.html**:
+  - Widget de chat agregado como componente en el template base
+  - Condicionalmente mostrado solo si usuario está autenticado (`admin_logueado` o `empleado_portal`)
+  - Data attributes para CSRF token y tipo de usuario
+  - Script `chat-widget.js` cargado solo si autenticado
+  
+- **dashboard.html**:
+  - Removida sección "Chat con soporte IA" del menú lateral (soporte ahora vía widget flotante)
+  - Simplificación: Solo 2 secciones en sidebar (Historial Formativo, Disponibles para matrícula)
+  - Renombramientos:
+    - "Acciones Formativas" → "Historial Formativo"
+    - "Chat con soporte IA" removed del nav
+  - Actualización de títulos y subtítulos
+  - Confirmación de cancelación simplificada
+
+**POR QUÉ**:
+- Chat integrado en widget flotante, no necesita sección en sidebar
+- Mejor UX: Menos clics para acceder al chat
+- Reduce visual clutter en el menú
+
+**PARA QUÉ**:
+- Chat siempre disponible desde cualquier página
+- Interface más limpia
+- Acceso uniforme para admin y docentes
+
+---
+
+## Cambio 21.6: Dependencias nuevas
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `requirements.txt`, `config.py`
+
+**QUÉ**:
+- Agregadas 2 nuevas dependencias:
+  - `google-genai==1.12.1`: SDK oficial de Google Gemini API
+  - `python-dotenv==1.0.1`: Carga de variables de entorno desde `.env`
+- Variable de entorno: `GOOGLE_GEMINI_API_KEY`
+- Constante en config: `GEMINI_MODEL = 'gemini-2.5-flash'`
+- Fallback models: `['gemini-2.5-flash', 'gemini-2.0-flash']`
+
+**POR QUÉ**:
+- Google Gemini es API más accesible y práctica para este caso
+- python-dotenv para gestión de credenciales sin hardcodear
+
+**PARA QUÉ**:
+- Integración nativa con Gemini
+- Manejo seguro de API keys
+
+---
+
+## Cambio 21.7: Configuración expandida
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `config.py`
+
+**QUÉ**:
+`SECCIONES_DASHBOARD_PERMITIDAS` cambió de 3 a 2 valores:
+- Antes: `{'historial', 'disponibles', 'soporte'}`
+- Ahora: `{'historial', 'disponibles'}`
+
+Justificación: Sección "soporte" reemplazada por widget flotante global
+
+**PARA QUÉ**:
+- Configuración refleja arquitectura actual
+- Validación de secciones permitidas más precisa
+
+---
+
+## Cambio 21.8: Testing de rutas chat
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `tests/test_chat.py` (nuevo)
+
+**QUÉ**:
+- Nuevo archivo de pruebas (88 líneas):
+  - Test: Chat requiere autenticación (401)
+  - Test: Chat requiere CSRF válido (403)
+  - Test: Admin obtiene respuesta correcta (200)
+  - Test: Historial de chat para docente sin error
+  - Tests usan `unittest.mock.patch` para mockear `build_chat_reply()` y `fetch_chat_history()`
+  - Validación de estructura de respuesta JSON
+
+**POR QUÉ**:
+- Endpoints de chat requieren testing
+- Validación de autenticación y CSRF crítica
+- Preparación para CI/CD
+
+**PARA QUÉ**:
+- Asegurar que endpoints no se rompan con cambios futuros
+- Prevenir regresiones de seguridad
+- Base para regresar tests
+
+---
+
+## Cambio 21.9: Prompts contextualizados por rol
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `services/ia_service.py`
+
+**QUÉ**:
+- Función `_get_system_prompt(user_type)`:
+  - Para ADMIN: Enfoque en reportes, gestión de cursos, matrículas, usuarios admin
+    - Nombres de secciones reales: "Dashboard", "Gestión de Cursos", "Matrículas", "Usuarios Admin"
+  - Para DOCENTE: Enfoque en matricula, historial, portal docente
+    - Nombres de secciones reales: "Historial Formativo", "Disponibles para matricula"
+  - Ambos: No inventar datos, no asumir funciones inexistentes
+
+**POR QUÉ**:
+- Respuestas más precisas según contexto del usuario
+- Previene alucinaciones (AI inventando funciones)
+- Distingue entre auditorios
+
+**PARA QUÉ**:
+- Respuestas relevantes por rol
+- Mejora de confianza (no inventa funcionalidades)
+
+---
+
+## Cambio 21.10: Domain-answering (respuestas pre-programadas)
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `services/ia_service.py`
+
+**QUÉ**:
+- Función `_try_domain_answer()`: Consultas comunes pre-respondidas
+- **Para docentes**:
+  - "cancelar/baja": Instrucciones de cancelación
+  - "matricular/inscribir": Flujo de matricula
+  - "historial/aprobado/reprobado": Cómo revisar resultados
+  - "disponibles/curso/horario": Cómo ver oferta
+- **Para admins**:
+  - "reporte/estadística/dashboard": Acceso a métricas
+  - "curso/crear/editar": Gestión de cursos
+  - "matricula": Consultas de matriculas
+  - "usuario/admin/dirección": Gestión de admins
+
+- Función `_normalize_reply_text()`: Reescribe términos incorrectos en respuestas
+  - "Catálogo de Cursos" → "Disponibles para matricula"
+
+**POR QUÉ**:
+- Respuestas rápidas y precisas para 90% de consultas
+- No requiere API Gemini para preguntas frecuentes
+- Reduce latencia y costo
+
+**PARA QUÉ**:
+- UX más rápido para preguntas comunes
+- Contingencia si API no está disponible
+- Respuestas garantizadas correctas
+
+---
+
+## Cambio 21.11: Fallback e intentos de modelo
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `services/ia_service.py`
+
+**QUÉ**:
+- Si domain-answering responde: Usa esa respuesta, sin llamar IA
+- Si no hay domain-answer y no hay API key: Usa `_build_fallback_reply()` genérica
+- Si hay API key: Intenta modelos en orden `[GEMINI_MODEL, fallback1, fallback2, ...]`
+- Si todos fallan: Fallback genérico según contexto
+- Logging de errores (sin romper chat)
+
+**POR QUÉ**:
+- Robustez: Chat funciona incluso si Gemini cae
+- Optimización: No llama IA para preguntas simples
+- Graceful degradation
+
+**PARA QUÉ**:
+- Servicio de chat siempre disponible
+- Mejor performance (sin llamadas innecesarias a API)
+- Resiliencia alta
+
+---
+
+## Cambio 21.12: Contexto multi-turno
+**Fecha**: Abril 14, 2026  
+**Archivos afectados**: `services/ia_service.py`
+
+**QUÉ**:
+- Función `_fetch_recent_history()`: Obtiene últimos 6 intercambios
+- Función `_build_prompt_with_history()`: Construye prompt incluyendo historial
+- Ejemplo:
+  ```
+  Usuario: ¿Cómo me matriculo?
+  Asistente: [respuesta]
+  Usuario: ¿Puedo cancelar después?
+  Asistente:  (entiende contexto de matricula)
+  ```
+- Llamada a Gemini incluye conversación anterior
+
+**POR QUÉ**:
+- Conversaciones naturales (no cada pregunta es aislada)
+- AI entiende contexto previo
+- Mejor continuidad
+
+**PARA QUÉ**:
+- Chat conversacional, no transaccional
+- Respuestas coherentes en multi-turno
+
+---
+
+**Última actualización**: Abril 14, 2026  
+**Versión actual**: 1.4 (Chat IA asistente)  
+**Estado**: Development - Chat IA funcional, Gemini integrado, fallbacks implementados

@@ -19,7 +19,55 @@
 
   {% block modals %}{% endblock %}
 
+  {% if session.get('admin_logueado') or session.get('empleado_portal') %}
+  <div
+    id="ia-chat-widget"
+    class="ia-chat-widget"
+    data-csrf-token="{{ csrf_token() }}"
+    data-user-type="{{ 'admin' if session.get('admin_logueado') else 'docente' }}"
+  >
+    <button id="ia-chat-toggle" type="button" class="ia-chat-toggle" aria-expanded="false" aria-controls="ia-chat-panel">
+      <span class="ia-chat-toggle-icon">AI</span>
+      <span>Asistente</span>
+    </button>
+
+    <section id="ia-chat-panel" class="ia-chat-panel" aria-live="polite">
+      <header class="ia-chat-header">
+        <div>
+          <h3>Soporte</h3>
+          <p>{{ 'Administrador' if session.get('admin_logueado') else 'Docente' }}</p>
+        </div>
+        <button id="ia-chat-close" type="button" class="ia-chat-close" aria-label="Cerrar chat">×</button>
+      </header>
+
+      <div id="ia-chat-messages" class="ia-chat-messages">
+        <div class="ia-chat-message assistant">
+          <div class="ia-chat-bubble">
+            Hola. Soy tu asistente virtual. Puedo orientarte en el uso del sistema y procesos de matricula.
+          </div>
+        </div>
+      </div>
+
+      <form id="ia-chat-form" class="ia-chat-form">
+        <input
+          id="ia-chat-input"
+          name="message"
+          type="text"
+          maxlength="1200"
+          placeholder="Escribe tu consulta..."
+          autocomplete="off"
+          required
+        >
+        <button type="submit" class="ia-chat-send">Enviar</button>
+      </form>
+    </section>
+  </div>
+  {% endif %}
+
   <script src="{{ url_for('static', filename='main.js') }}"></script>
+  {% if session.get('admin_logueado') or session.get('empleado_portal') %}
+  <script src="{{ url_for('static', filename='chat-widget.js') }}"></script>
+  {% endif %}
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
