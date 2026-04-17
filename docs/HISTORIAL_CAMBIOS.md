@@ -2501,6 +2501,542 @@ matriculas (existente, ahora referencia docentes implícitamente)
 
 ---
 
-**Última actualización**: Abril 14, 2026  
-**Versión actual**: 1.6 (Centro de Notificaciones para Docentes)  
-**Estado**: Development - Sistema completo de notificaciones, modal feedback post-matricula
+---
+
+# 📅 Versión 1.7 - Gestión de Sesiones y Calendarios para Acciones Formativas
+
+**Fecha**: Abril 17, 2026  
+**Cambios totales**: 4,897 líneas (12 archivos modificados)
+
+## Cambio 24.1: Modelo de datos expandido para acciones formativas
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `database.py`, `scripts/setup_bd.py`, `config.py`
+
+**QUÉ**:
+Nueva tabla `tipo_accion_formativa` - Catálogo maestro de tipos:
+```sql
+CREATE TABLE tipo_accion_formativa (
+  codigo TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  horas_minimas INTEGER NOT NULL,
+  horas_maximas INTEGER,
+  semanas_minimas INTEGER NOT NULL,
+  semanas_maximas INTEGER
+)
+```
+
+Datos pre-poblados:
+- CONFERENCIA: 1-16 horas, 1-4 semanas
+- SEMINARIO: 16-120 horas, 1-16 semanas
+- CURSO: 20-240 horas, 1-52 semanas
+
+Nuevas columnas en tabla `capacitaciones`:
+- `tipo_accion` (TEXT): Tipo de acción (CONFERENCIA/SEMINARIO/CURSO)
+- `horas_totales` (INTEGER): Horas de duración (default 20)
+- `semanas_duracion` (INTEGER): Semanas que dura (default 1)
+
+**POR QUÉ**:
+- Capacitaciones tienen duraciones variables (conferencia ≠ curso largo)
+- Necesario para calendarización y planificación de recursos
+- Límites de horas/semanas aplican según tipo
+
+**PARA QUÉ**:
+- Clasificación clara de acciones formativas
+- Validación de datos (hours/weeks within ranges)
+- Base para calendarización automática
+
+---
+
+## Cambio 24.2: Tabla de sesiones de cursos
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+Nueva tabla `sesiones_curso`:
+```sql
+CREATE TABLE sesiones_curso (
+  id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_curso TEXT NOT NULL,
+  fecha TEXT NOT NULL,                    -- YYYY-MM-DD
+  hora_inicio TEXT NOT NULL,              -- HH:MM
+  hora_fin TEXT NOT NULL,                 -- HH:MM
+  jornada TEXT NOT NULL DEFAULT 'UNICA',  -- MATUTINA/VESPERTINA/NOCTURNA/UNICA
+  docente_sesion TEXT,                    -- Profesor que dicta sesión
+  bloque_codigo TEXT,                     -- Bloque semanal (ej. BLOQUE_1)
+  estado INTEGER NOT NULL DEFAULT 0,      -- 0: Programada, 1: En progreso, 2: Completada, 3: Cancelada
+  token_asistencia TEXT,                  -- Token QR/PIN para marcar asistencia
+  FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+)
+```
+
+Índices para performance:
+- `idx_sesiones_curso_fecha`: (id_curso, fecha, hora_inicio)
+- `idx_sesiones_curso_bloque`: (id_curso, bloque_codigo)
+
+**POR QUÉ**:
+- Cada acción formativa tiene múltiples sesiones (clases)
+- Necesario separar conceptos: curso (capacitación) ≠ sesión (clase específica)
+- Validación de asistencia requiere sesiones definidas
+- Calendarización multi-sesión
+
+**PARA QUÉ**:
+- Gestión detallada de sesiones por curso
+- Rastreo de jornadas (matutina/vespertina/nocturna)
+- Base para registro de asistencia
+
+---
+
+## Cambio 24.3: Tabla de registro de asistencia
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+Nueva tabla `registro_asistencia`:
+```sql
+CREATE TABLE registro_asistencia (
+  id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_sesion INTEGER NOT NULL,
+  numero_empleado TEXT NOT NULL,
+  fecha_marcado TEXT NOT NULL,            -- YYYY-MM-DD
+  hora_marcado TEXT NOT NULL,             -- HH:MM:SS
+  FOREIGN KEY (id_sesion) REFERENCES sesiones_curso (id_sesion) ON DELETE CASCADE,
+  FOREIGN KEY (numero_empleado) REFERENCES docentes (numero_empleado),
+  UNIQUE (id_sesion, numero_empleado)
+)
+```
+
+Índices:
+- `idx_registro_asistencia_sesion`: (id_sesion)
+- `idx_registro_asistencia_empleado`: (numero_empleado)
+
+Restricción UNIQUE: Un docente solo puede marcar asistencia UNA VEZ por sesión
+
+**POR QUÉ**:
+- Auditoría de quién asistió a qué sesión y cuándo
+- Cálculo de % de asistencia
+- Base para certificación (requiere mínimo % asistencia)
+- Relación M:N (sesión:docentes)
+
+**PARA QUÉ**:
+- Control de asistencia obligatorio para educación formal
+- Reportes de participación por docente/curso/período
+
+---
+
+## Cambio 24.4: Rutas de administración de sesiones
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `routes/admin.py` (+541 líneas nuevas)
+
+**QUÉ**:
+Nuevas rutas REST para gestión de sesiones:
+
+**CRUD Sesiones**:
+- `POST /admin/crear_sesion`: Crear nueva sesión para un curso
+  - Parámetros: id_curso, fecha, hora_inicio, hora_fin, jornada
+  - Validación: Fecha ≥ fecha de la acción formativa
+- `GET /admin/sesiones/{id_curso}`: Listar sesiones de un curso (con filtros por fecha)
+- `PUT /admin/actualizar_sesion/{id_sesion}`: Editar sesión (horarios, jornada, docente)
+- `DELETE /admin/eliminar_sesion/{id_sesion}`: Eliminar sesión
+
+**Gestión de Asistencia**:
+- `POST /admin/abrir_asistencia/{id_sesion}`: Genera token QR/PIN para la sesión
+  - Retorna token único
+  - Cambia estado sesión a "En progreso"
+- `POST /admin/cerrar_asistencia/{id_sesion}`: Cierra registrada de asistencia
+  - Cambia estado a "Completada"
+  - Reporta participantes totales
+- `GET /admin/reporte_asistencia/{id_sesion}`: Listar docentes que marcaron asistencia
+
+**Validaciones**:
+- Solo admin puede crear sesiones de su dirección
+- Superadmin puede ver/editar todas
+- Sesión ya iniciada no puede ser eliminada
+- Validación de horarios (no solapamiento)
+
+**PARA QUÉ**:
+- Interface completa para gestión de sesiones
+- Control de acceso por dirección
+- Auditoría de cambios
+
+---
+
+## Cambio 24.5: Servicios de lógica de sesiones y calendarios
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `services/admin_service.py` (+686 líneas)
+
+**QUÉ**:
+Nuevas funciones en `admin_service.py`:
+
+**Generación de Sesiones**:
+- `generate_course_sessions()`: Crea sesiones automáticas basadas en tipo_accion y semanas_duracion
+  - Parámetro: id_curso, fecha_inicio, cantidad_sesiones_por_semana
+  - Genera bloques semanales: BLOQUE_1, BLOQUE_2, etc.
+  - Respeta horas_totales ÷ sesiones = horas por sesión
+  
+**Validaciones de Sesión**:
+- `validar_rango_horas()`: Horas sesión dentro de rango del tipo
+- `validar_duracion_semanas()`: Duración total respeta semanas_duracion
+- `validar_solapamiento()`: Sesiones mismo curso no se solapan en tiempo
+- `validar_docente_disponibilidad()`: Docente no tiene sesiones simultáneas
+
+**Reportes de Sesiones**:
+- `get_calendar_data()`: Retorna sesiones por mes para calendar widget
+- `get_attendance_summary()`: Resumen de asistencia por sesión
+- `get_course_statistics()`: Stats por tipo de acción (conferencia/seminario/curso)
+
+**Generación de Tokens**:
+- `generar_token_asistencia()`: Token único de 8 caracteres (QR compatible)
+- `validar_token()`: Verifica token válido para sesión
+
+**PARA QUÉ**:
+- Lógica centralizada de calendarios
+- Evitar solapamientos
+- Base para reportes
+
+---
+
+## Cambio 24.6: Rutas de portal docente - Calendario personal
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `routes/portal.py` (+51 líneas)
+
+**QUÉ**:
+Nuevas rutas para docentes:
+
+- `GET /dashboard?seccion=calendario`: Nuevo tab de calendario
+  - Muestra sesiones en las que está matriculado
+  - Filtro por mes/año
+  - Indicadores de estado: Próxima, En progreso, Completada
+  - Botón para marcar asistencia (QR scanner o manual con token)
+
+- `POST /marcar_asistencia/{id_sesion}`: Marca asistencia del docente
+  - Parámetro: token (QR o manual)
+  - Validación: Token válido, sesión en progreso, no marcado previamente
+  - Respuesta: Confirmación con timestamp
+
+**PARA QUÉ**:
+- Docentes ven calendario personal de sesiones
+- Facilita marcación de asistencia
+- Transparencia de horarios
+
+---
+
+## Cambio 24.7: JavaScript para calendario interactivo
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `static/main.js` (+705 líneas nuevas)
+
+**QUÉ**:
+Nuevo calendario interactivo (mini-calendar + month view):
+
+**Componentes**:
+- Mini-calendar: Selector de mes/año
+- Calendar grid: Vista mensual de sesiones
+- Event popover: Detalles de sesión al hover/click
+  - Nombre curso, hora, jornada, docente
+  - Botón de asistencia (si aplica)
+  - Estado visual (colores por estado)
+
+**Funcionalidades**:
+- Arrastrar sesiones (drag-drop para reschedule)
+- Crear nueva sesión (modal con validación)
+- Editar sesión (inline o modal)
+- Eliminar sesión (con confirmación)
+- Filtros: Por curso, por jornada, por mes
+- Export a iCal/CSV (sesiones para calendario external)
+- Keyboard shortcuts: N=new, E=edit, D=delete, ESC=close
+
+**Event Listeners**:
+- Click en fecha: Crear sesión ese día
+- Hover sesión: Mostrar detalles
+- Double-click: Editar
+- Right-click: Menú contextual
+
+**PARA QUÉ**:
+- Visualización intuitiva de calendario
+- Ediciones rápidas inline
+- Sincronización con calendarios personales
+
+---
+
+## Cambio 24.8: Estilos CSS para calendario
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `static/style.css` (+417 líneas nuevas)
+
+**QUÉ**:
+Estilos para componentes de calendario:
+
+**Calendar Grid**:
+- `.calendar-grid`: Grid 7 columnas (días semana)
+- `.calendar-day`: Celda individual con fecha
+- `.calendar-session`: Sesión dentro de celda
+  - Colores por estado: Programada (gray), En progreso (blue), Completada (green), Cancelada (red)
+  - Hover effect con sombra
+  - Truncación de texto largo
+
+**Mini Calendar**:
+- `.mini-calendar`: Selector mes/año compacto
+- `.mini-calendar-header`: Controles < mes/año >
+- `.mini-calendar-grid`: Grid 7x6 para días
+
+**Modal de Sesión**:
+- `.modal-sesion`: Formulario crear/editar sesión
+  - Campos: Fecha, hora inicio, hora fin, jornada, docente, bloque
+  - Validación visual en tiempo real
+  - Botones: Guardar, Cancelar
+
+**Popover de Detalles**:
+- `.session-popover`: Panel flotante
+  - Información de sesión
+  - Botón de asistencia
+  - Botones de acciones (editar, eliminar)
+
+**Event Indicators**:
+- `.event-dot`: Puntito de evento en mini-calendar
+- `.event-count`: Contador si múltiples eventos en día
+- `.current-day`: Highlight para hoy
+
+**Responsive**:
+- Mobile: Calendario semanal comprimido
+- Tablet: Mes comprimido
+- Desktop: Full calendar view
+
+**PARA QUÉ**:
+- Interfaz moderna y usable
+- Información clara de sesiones
+- Responsive en todos los dispositivos
+
+---
+
+## Cambio 24.9: Template admin - Sección de calendarios
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `templates/admin.html` (+1803 líneas nuevas)
+
+**QUÉ**:
+Nueva sección completa en admin panel: "Calendarios"
+
+**Interfaz**:
+- Selector de curso (dropdown con búsqueda)
+- Mini-calendar + month view side-by-side
+- Toolbar:
+  - Botones: + Sesión, Editar, Eliminar, Más opciones
+  - Filtros: Por jornada, por tipo, por semana, por mes
+  - Vista: Mes, Semana, Día, Agenda
+  - Export: iCal, CSV
+
+- Tabla detallada debajo:
+  - Columnas: Fecha, Hora, Jornada, Docente, Estado, Asistencia (%), Acciones
+  - Paginación: 50 sesiones por página
+  - Búsqueda rápida por fechas
+  - Ordenamiento: Por fecha, por jornada, por docente
+
+**Modal Crear Sesión**:
+- Campos: Fecha (date picker), Hora inicio/fin (time picker), Jornada (select), Docente (autocomplete), Bloque (auto-generated)
+- Validaciones inline:
+  - Fecha ≥ inicio acción formativa
+  - Hora fin > hora inicio
+  - No solapamiento con otras sesiones del mismo curso
+  - Docente disponible (sin sesiones simultáneas)
+- Opciones avanzadas:
+  - Crear sesiones recurrentes (semanal, cada 2 semanas, etc.)
+  - Template de horarios (Mon 8-10AM, Wed 8-10AM, ...)
+  - Asignar múltiples docentes
+
+**Gestión de Asistencia**:
+- Tabla de participantes por sesión:
+  - Columnas: Docente, Email, Hora marcado, Estado
+  - Filtros: Presente, Ausente, Pendiente
+  - Botones: Marcar manual, Editar hora, Eliminar registro
+- Generar token:
+  - Botón "Abrir asistencia" (genera token)
+  - Muestra QR code + token manual
+  - Cierra automáticamente al final de sesión
+
+**PARA QUÉ**:
+- Interface completa para gestión de calendarios
+- Creación masiva de sesiones
+- Control de asistencia integrado
+
+---
+
+## Cambio 24.10: Template portal - Sección calendario docente
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `templates/dashboard.html` (+127 líneas nuevas)
+
+**QUÉ**:
+Nueva sección en dashboard docente: "Calendario Personal"
+
+**Interfaz**:
+- Mini-calendar + month view
+- Lista de sesiones próximas:
+  - Tarjetas compactas: Curso, Fecha, Hora, Jornada, Docente, Estado
+  - Botón "Marcar asistencia" si sesión en progreso
+  - Botón "Ver detalles" para más info
+  - Contador: X de Y asistencias en este curso
+
+- Filtros:
+  - Por mes, por curso, por estado
+  - "Solo mis cursos"
+
+**Modal Marcar Asistencia**:
+- QR scanner (con cámara web)
+- Campo manual de token (fallback)
+- Confirmación visual: ✅ Registrado a las HH:MM
+- Botón volver
+
+**Estadísticas Cortas**:
+- Próximas 3 sesiones
+- % asistencia por curso
+- Cursos con más sesiones este mes
+
+**PARA QUÉ**:
+- Docentes ven calendario personal
+- Facilita marcar asistencia
+- Transparencia de asistencias
+
+---
+
+## Cambio 24.11: Validaciones mejoradas en utils.py
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `utils.py` (+113 líneas nuevas)
+
+**QUÉ**:
+Nuevas funciones helper:
+
+**Validación de Fechas/Horas**:
+- `validar_fecha_sesion()`: Fecha válida y ≥ inicio acción formativa
+- `validar_rango_horas()`: Horas sesión dentro de mínimas/máximas del tipo
+- `validar_solapamiento_sesiones()`: Detecta conflictos horarios
+- `validar_jornada()`: Jornada es válida (MATUTINA/VESPERTINA/NOCTURNA/UNICA)
+
+**Generación de IDs/Tokens**:
+- `generar_token_asistencia()`: Token 8 caracteres alfanuméricos
+- `generar_codigo_bloque()`: BLOQUE_1, BLOQUE_2, etc.
+- `generar_codigo_sesion()`: ID único para sesión
+
+**Normalización**:
+- `normalizar_jornada()`: Standariza input (case-insensitive, trim)
+- `normalizar_hora()`: Convierte 14:30 a "2:30 PM", etc.
+
+**Cálculos**:
+- `calcular_duracion_total()`: Suma horas de todas sesiones
+- `calcular_asistencia_porcentaje()`: % presentes ÷ total sesiones
+- `calcular_sesiones_por_semana()`: Cuántas sesiones por semana según tipo
+
+**PARA QUÉ**:
+- Validaciones centralizadas
+- Reutilización en rutas y servicios
+- Consistencia de lógica
+
+---
+
+## Cambio 24.12: Configuración expandida
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `config.py`
+
+**QUÉ**:
+Nuevas constantes:
+
+```python
+TIPOS_ACCION_FORMATIVA = ['CONFERENCIA', 'SEMINARIO', 'CURSO']
+JORNADAS_VALIDAS = ['MATUTINA', 'VESPERTINA', 'NOCTURNA', 'UNICA']
+ESTADOS_SESION = {
+    0: 'Programada',
+    1: 'En progreso',
+    2: 'Completada',
+    3: 'Cancelada'
+}
+VISTAS_PERMITIDAS_CALENDARIO = {'mes', 'semana', 'dia', 'agenda'}
+HORAS_MINIMAS_ASISTENCIA = 0.8  # 80% requerido para certificado
+```
+
+**PARA QUÉ**:
+- Centralizar configuraciones
+- Facilitar cambios de política
+
+---
+
+## Cambio 24.13: Testeo de gestión de sesiones
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `tests/` (nuevos tests para sesiones)
+
+**QUÉ**:
+- Tests para crear/listar/actualizar/eliminar sesiones
+- Tests para marcar asistencia
+- Tests para validación de solapamientos
+- Tests para generación de tokens
+
+**PARA QUÉ**:
+- Validar lógica de sesiones
+- Prevenir regresiones
+
+---
+
+## Cambio 24.14: Mejora en estructura de directorios
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: Reorganización
+
+**QUÉ**:
+Extensión de estructura para soportar calendarios:
+```
+Sistema-Matricula-IPSD/
+├── static/
+│   ├── calendar.js          # Calendario interactivo (NUEVO)
+│   ├── calendar.css         # Estilos calendario (NUEVO)
+│   ├── main.js              # Utilities generales (+705 líneas)
+│   └── style.css            # Estilos globales (+417 líneas)
+│
+├── templates/
+│   ├── admin.html           # Panel admin (+1803 líneas para calendario)
+│   ├── dashboard.html       # Portal docente (+127 líneas)
+│   └── ... (otros templates)
+│
+├── services/
+│   └── admin_service.py     # (+686 líneas para sesiones/calendarios)
+│
+├── routes/
+│   ├── admin.py             # (+541 líneas para rutas sesiones)
+│   └── portal.py            # (+51 líneas para calendario docente)
+│
+└── ... (resto estructura)
+```
+
+**PARA QUÉ**:
+- Organización clara de componentes de calendario
+- Facilita mantenimiento
+
+---
+
+## Cambio 24.15: Integración completa en app.py
+**Fecha**: Abril 17, 2026  
+**Archivos afectados**: `app.py` (sin cambios estructurales, solo nueva lógica en rutas)
+
+**QUÉ**:
+- Las nuevas rutas de sesiones se auto-registran en app.py
+- No hay cambios en entry point
+- Migraciones detectan automáticamente tablas nuevas
+
+**PARA QUÉ**:
+- Seamless integration
+- Sin interrupciones en aplicación
+
+---
+
+## Resumen de Cambios v1.7
+
+| Concepto | Antes | Después |
+|----------|-------|---------|
+| Modelo de acción formativa | Simple (nombre, fecha) | Detallado (tipo, horas, semanas, modalidad) |
+| Sesiones | No existían | Tabla completa con jornadas y docentes |
+| Asistencia | Manual, no registrada | Automatizada con QR/token |
+| Calendario | No existía | Interactivo en admin y portal |
+| Rutas admin | 18 | 30+ (agregar rutas de sesiones) |
+| Rutas portal | 5 | 6 (agregar calendario) |
+| Tablas BD | 10 | 13 (agregar sesiones, asistencia, tipos) |
+| Líneas JavaScript | ~800 | ~1505 (+705 para calendario) |
+| Líneas CSS | ~3000 | ~3417 (+417 para calendario) |
+| Líneas HTML (admin) | Variable | +1803 (sección calendarios) |
+
+---
+
+**Última actualización**: Abril 17, 2026  
+**Versión actual**: 1.7 (Gestión de Sesiones y Calendarios)  
+**Estado**: Development - Calendarios interactivos, gestión de sesiones, registro de asistencia
