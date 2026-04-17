@@ -1,5 +1,6 @@
 import re
 import secrets
+from datetime import datetime
 from functools import wraps
 
 from flask import abort, redirect, request, session, url_for
@@ -9,6 +10,7 @@ from config import (
     FILTROS_NOTIFICACION_PERMITIDOS,
     LIMITE_ABANDONO,
     LIMITE_REPROBADO,
+    MESES_ES,
     SECCIONES_DASHBOARD_PERMITIDAS,
     VISTAS_ADMIN_PERMITIDAS,
 )
@@ -323,6 +325,115 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         )
 
     return cursos_disponibles, cursos_matriculados, avisos_oportunidades
+
+
+def _fecha_iso_desde_partes_curso(anio, mes_nombre, dia):
+    try:
+        anio_int = int(str(anio).strip())
+        dia_int = int(str(dia).strip())
+    except (TypeError, ValueError):
+        return None
+
+    meses_map = {nombre.lower(): idx + 1 for idx, nombre in enumerate(MESES_ES)}
+    mes_int = meses_map.get((mes_nombre or '').strip().lower())
+    if not mes_int:
+        return None
+
+    try:
+        fecha = datetime(anio_int, mes_int, dia_int)
+    except ValueError:
+        return None
+
+    return fecha.strftime('%Y-%m-%d')
+
+
+def construir_eventos_calendario_docente(conn, numero_empleado):
+    cursos_vinculados_query = '''
+        SELECT DISTINCT id_capacitacion AS id_curso
+        FROM matriculas
+        WHERE numero_empleado = ?
+        UNION
+        SELECT DISTINCT id_capacitacion AS id_curso
+        FROM matricula_historial
+        WHERE numero_empleado = ?
+    '''
+
+    params_vinculados = (numero_empleado, numero_empleado)
+
+    cursos_vinculados = conn.execute(
+        f'''
+        SELECT
+            c.id,
+            c.nombre,
+            c.modalidad,
+            c.anio,
+            c.mes,
+            c.dia
+        FROM capacitaciones c
+        JOIN ({cursos_vinculados_query}) cv ON cv.id_curso = c.id
+        ORDER BY c.anio ASC, c.id ASC
+        ''',
+        params_vinculados,
+    ).fetchall()
+
+    sesiones_vinculadas = conn.execute(
+        f'''
+        SELECT
+            s.id_sesion,
+            s.id_curso,
+            s.fecha,
+            s.hora_inicio,
+            s.hora_fin,
+            s.estado,
+            c.nombre,
+            c.modalidad
+        FROM sesiones_curso s
+        JOIN capacitaciones c ON c.id = s.id_curso
+        JOIN ({cursos_vinculados_query}) cv ON cv.id_curso = s.id_curso
+        ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+        ''',
+        params_vinculados,
+    ).fetchall()
+
+    eventos = []
+    for curso in cursos_vinculados:
+        fecha_iso = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+        if not fecha_iso:
+            continue
+
+        eventos.append(
+            {
+                'id_curso': curso['id'],
+                'nombre_curso': curso['nombre'],
+                'fecha_iso': fecha_iso,
+                'hora_inicio': None,
+                'hora_fin': None,
+                'tipo_evento': 'curso',
+                'estado': None,
+                'modalidad': curso['modalidad'] or '',
+            }
+        )
+
+    for sesion in sesiones_vinculadas:
+        fecha_iso = (sesion['fecha'] or '').strip()
+        if not fecha_iso:
+            continue
+
+        eventos.append(
+            {
+                'id_curso': sesion['id_curso'],
+                'nombre_curso': sesion['nombre'],
+                'fecha_iso': fecha_iso,
+                'hora_inicio': sesion['hora_inicio'],
+                'hora_fin': sesion['hora_fin'],
+                'tipo_evento': 'sesion',
+                'estado': sesion['estado'],
+                'modalidad': sesion['modalidad'] or '',
+            }
+        )
+
+    eventos.sort(key=lambda ev: (ev.get('fecha_iso') or '', ev.get('hora_inicio') or '00:00', ev.get('id_curso') or ''))
+    return eventos
 
 
 def construir_notificaciones_docente(
@@ -662,6 +773,7 @@ def construir_contexto_dashboard(
     notificaciones_filtradas = filtrar_notificaciones(notificaciones, filtro_notificacion)
     resumen_notificaciones = resumir_notificaciones(notificaciones)
     notificaciones_no_leidas = len([n for n in notificaciones if not n['leida']])
+    calendario_eventos_docente = construir_eventos_calendario_docente(conn, numero_empleado)
 
     return {
         'empleado': numero_empleado,
@@ -677,4 +789,5 @@ def construir_contexto_dashboard(
         'notificaciones_todas': notificaciones,
         'resumen_notificaciones': resumen_notificaciones,
         'notificaciones_total': notificaciones_no_leidas,
+        'calendario_eventos_docente': calendario_eventos_docente,
     }

@@ -98,6 +98,82 @@ def asegurar_migraciones_minimas():
         }
         if 'enlace_virtual' not in columnas_capacitaciones:
             cursor.execute('ALTER TABLE capacitaciones ADD COLUMN enlace_virtual TEXT')
+        if 'duracion_tipo' not in columnas_capacitaciones:
+            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN duracion_tipo TEXT NOT NULL DEFAULT 'un_dia'")
+        if 'tipo_accion' not in columnas_capacitaciones:
+            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN tipo_accion TEXT NOT NULL DEFAULT 'CURSO'")
+        if 'horas_totales' not in columnas_capacitaciones:
+            cursor.execute('ALTER TABLE capacitaciones ADD COLUMN horas_totales INTEGER NOT NULL DEFAULT 20')
+        if 'semanas_duracion' not in columnas_capacitaciones:
+            cursor.execute('ALTER TABLE capacitaciones ADD COLUMN semanas_duracion INTEGER NOT NULL DEFAULT 1')
+
+        cursor.execute(
+            '''
+            UPDATE capacitaciones
+            SET tipo_accion = CASE
+                WHEN UPPER(TRIM(COALESCE(tipo_accion, ''))) IN ('CONFERENCIA', 'SEMINARIO', 'CURSO')
+                    THEN UPPER(TRIM(tipo_accion))
+                WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'un_dia'
+                    THEN 'CONFERENCIA'
+                WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'varios_dias'
+                    THEN 'SEMINARIO'
+                ELSE 'CURSO'
+            END
+            '''
+        )
+        cursor.execute(
+            '''
+            UPDATE capacitaciones
+            SET horas_totales = CASE
+                WHEN COALESCE(horas_totales, 0) < 1 THEN
+                    CASE
+                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'CONFERENCIA' THEN 4
+                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'SEMINARIO' THEN 16
+                        ELSE 20
+                    END
+                ELSE horas_totales
+            END
+            '''
+        )
+        cursor.execute(
+            '''
+            UPDATE capacitaciones
+            SET semanas_duracion = CASE
+                WHEN COALESCE(semanas_duracion, 0) < 1 THEN
+                    CASE
+                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'CONFERENCIA' THEN 1
+                        WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'varios_dias' THEN 2
+                        ELSE 1
+                    END
+                ELSE semanas_duracion
+            END
+            '''
+        )
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
+                codigo TEXT PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                horas_minimas INTEGER NOT NULL,
+                horas_maximas INTEGER,
+                semanas_minimas INTEGER NOT NULL,
+                semanas_maximas INTEGER
+            )
+            '''
+        )
+        cursor.executemany(
+            '''
+            INSERT OR IGNORE INTO tipo_accion_formativa
+            (codigo, nombre, horas_minimas, horas_maximas, semanas_minimas, semanas_maximas)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            [
+                ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
+                ('SEMINARIO', 'Seminario', 16, 120, 1, 16),
+                ('CURSO', 'Curso', 20, 240, 1, 52),
+            ],
+        )
 
         columnas_matriculas = {
             row[1] for row in cursor.execute('PRAGMA table_info(matriculas)').fetchall()
@@ -154,6 +230,72 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS sesiones_curso (
+                id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_curso TEXT NOT NULL,
+                fecha TEXT NOT NULL,
+                hora_inicio TEXT NOT NULL,
+                hora_fin TEXT NOT NULL,
+                jornada TEXT NOT NULL DEFAULT 'UNICA',
+                docente_sesion TEXT,
+                bloque_codigo TEXT,
+                estado INTEGER NOT NULL DEFAULT 0,
+                token_asistencia TEXT,
+                FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+            )
+            '''
+        )
+        columnas_sesiones = {
+            row[1] for row in cursor.execute('PRAGMA table_info(sesiones_curso)').fetchall()
+        }
+        if 'jornada' not in columnas_sesiones:
+            cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN jornada TEXT NOT NULL DEFAULT 'UNICA'")
+        if 'docente_sesion' not in columnas_sesiones:
+            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN docente_sesion TEXT')
+        if 'bloque_codigo' not in columnas_sesiones:
+            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN bloque_codigo TEXT')
+
+        cursor.execute(
+            '''
+            UPDATE sesiones_curso
+            SET jornada = CASE
+                WHEN UPPER(TRIM(COALESCE(jornada, ''))) IN ('MATUTINA', 'VESPERTINA', 'NOCTURNA', 'UNICA')
+                    THEN UPPER(TRIM(jornada))
+                ELSE 'UNICA'
+            END
+            '''
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)'
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_bloque ON sesiones_curso (id_curso, bloque_codigo)'
+        )
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS registro_asistencia (
+                id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_sesion INTEGER NOT NULL,
+                numero_empleado TEXT NOT NULL,
+                fecha_marcado TEXT NOT NULL,
+                hora_marcado TEXT NOT NULL,
+                FOREIGN KEY (id_sesion) REFERENCES sesiones_curso (id_sesion) ON DELETE CASCADE,
+                FOREIGN KEY (numero_empleado) REFERENCES docentes (numero_empleado),
+                UNIQUE (id_sesion, numero_empleado)
+            )
+            '''
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_registro_asistencia_sesion ON registro_asistencia (id_sesion)'
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_registro_asistencia_empleado ON registro_asistencia (numero_empleado)'
+        )
+
         cursor.execute(
             '''
             CREATE INDEX IF NOT EXISTS idx_historial_chat_usuario

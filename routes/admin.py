@@ -2,21 +2,29 @@ import csv
 from datetime import datetime
 from io import StringIO
 
-from flask import Response, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from config import DIAS_SEMANA, HORARIOS_BASE, MESES_ES
+from database import get_db_connection
 from services.admin_service import (
+    abrir_asistencia_sesion,
     authenticate_admin,
+    cerrar_asistencia_sesion,
     create_admin_user_record,
+    crear_sesion_manual,
     create_curso_records,
     create_direccion_record,
     delete_admin_user_record,
+    eliminar_sesion,
     delete_curso_record,
     delete_direccion_record,
     delete_matricula_record,
     fetch_export_records,
+    generar_calendario_base,
     get_admin_dashboard_payload,
     get_admin_stats_payload,
+    listar_sesiones_curso,
+    editar_sesion,
     update_matricula_resultado,
     update_admin_user_record,
     update_curso_record,
@@ -36,6 +44,149 @@ from utils import (
 
 
 def register_admin_routes(app):
+    def _es_ajax():
+        return (
+            request.form.get('ajax') == '1'
+            or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or 'application/json' in (request.headers.get('Accept') or '')
+        )
+
+    def _admin_puede_gestionar_curso(id_curso):
+        admin_rol = session.get('admin_rol', 'admin')
+        if admin_rol == 'superadmin':
+            return True
+
+        admin_direccion = normalizar_direccion(session.get('admin_direccion', 'IPSD')) or 'IPSD'
+        return (id_curso or '').strip().upper().startswith(f'AF-{admin_direccion}-')
+
+    def _obtener_curso_de_sesion(id_sesion):
+        try:
+            id_sesion_int = int(id_sesion)
+        except (TypeError, ValueError):
+            return None
+
+        try:
+            conn = get_db_connection()
+            fila = conn.execute(
+                'SELECT id_curso FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+                (id_sesion_int,),
+            ).fetchone()
+            conn.close()
+            return fila['id_curso'] if fila else None
+        except Exception:
+            return None
+
+    def _obtener_detalle_curso(id_curso):
+        id_curso = (id_curso or '').strip().upper()
+        if not id_curso:
+            return None
+
+        try:
+            conn = get_db_connection()
+            fila = conn.execute(
+                '''
+                    SELECT id, anio, mes, dia, duracion_tipo, tipo_accion, horas_totales, semanas_duracion
+                FROM capacitaciones
+                WHERE id = ?
+                LIMIT 1
+                ''',
+                (id_curso,),
+            ).fetchone()
+            conn.close()
+            return fila
+        except Exception:
+            return None
+
+    def _construir_configuracion_sesiones(sesiones_curso, fecha_default):
+        fecha_fallback = (fecha_default or datetime.now().strftime('%Y-%m-%d')).strip()
+        configuracion = {
+            'fecha_inicio': fecha_fallback,
+            'fecha_fin': fecha_fallback,
+            'dias_semana': [],
+            'hora_inicio': '',
+            'hora_fin': '',
+                'jornada': 'UNICA',
+                'docente_sesion': '',
+                'bloque_codigo': '',
+        }
+
+        if not sesiones_curso:
+            return configuracion
+
+        fechas = []
+        dias_semana = set()
+        franjas = {}
+        jornadas = {}
+        docentes = {}
+        bloques = {}
+
+        for sesion in sesiones_curso:
+            fecha_iso = (sesion['fecha'] or '').strip()
+            hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
+            hora_fin = (sesion['hora_fin'] or '').strip()[:5]
+
+            if fecha_iso:
+                fechas.append(fecha_iso)
+                try:
+                    dia_semana = datetime.strptime(fecha_iso, '%Y-%m-%d').weekday()
+                    if 0 <= dia_semana <= 6:
+                        dias_semana.add(dia_semana)
+                except ValueError:
+                    pass
+
+            if hora_inicio and hora_fin:
+                clave_franja = (hora_inicio, hora_fin)
+                franjas[clave_franja] = franjas.get(clave_franja, 0) + 1
+
+            jornada = (sesion['jornada'] or '').strip().upper()
+            if jornada:
+                jornadas[jornada] = jornadas.get(jornada, 0) + 1
+
+            docente_sesion = (sesion['docente_sesion'] or '').strip()
+            if docente_sesion:
+                docentes[docente_sesion] = docentes.get(docente_sesion, 0) + 1
+
+            bloque_codigo = (sesion['bloque_codigo'] or '').strip().upper()
+            if bloque_codigo:
+                bloques[bloque_codigo] = bloques.get(bloque_codigo, 0) + 1
+
+        if fechas:
+            configuracion['fecha_inicio'] = min(fechas)
+            configuracion['fecha_fin'] = max(fechas)
+
+        configuracion['dias_semana'] = sorted(dias_semana)
+
+        if franjas:
+            franja_principal = sorted(
+                franjas.items(),
+                key=lambda item: (-item[1], item[0][0], item[0][1]),
+            )[0][0]
+            configuracion['hora_inicio'] = franja_principal[0]
+            configuracion['hora_fin'] = franja_principal[1]
+
+        if jornadas:
+            configuracion['jornada'] = sorted(jornadas.items(), key=lambda item: (-item[1], item[0]))[0][0]
+
+        if docentes:
+            configuracion['docente_sesion'] = sorted(docentes.items(), key=lambda item: (-item[1], item[0]))[0][0]
+
+        if bloques:
+            configuracion['bloque_codigo'] = sorted(bloques.items(), key=lambda item: (-item[1], item[0]))[0][0]
+
+        return configuracion
+
+    def _parse_fecha_form(fecha_raw):
+        fecha_limpia = (fecha_raw or '').strip()
+        if not fecha_limpia:
+            return None
+
+        for formato in ('%Y-%m-%d', '%d/%m/%Y'):
+            try:
+                return datetime.strptime(fecha_limpia, formato)
+            except ValueError:
+                continue
+        return None
+
     @app.route('/login_admin', methods=['GET', 'POST'])
     def login_admin():
         if session.get('admin_logueado'):
@@ -89,6 +240,7 @@ def register_admin_routes(app):
             'admin.html',
             registros=dashboard_payload['registros'],
             cursos=dashboard_payload['cursos'],
+            calendario_eventos=dashboard_payload['calendario_eventos'],
             usuarios_admin=dashboard_payload['usuarios_admin'],
             filtros=dashboard_payload['filtros'],
             stats=dashboard_payload['stats'],
@@ -103,6 +255,62 @@ def register_admin_routes(app):
             horarios_base=HORARIOS_BASE,
         )
 
+    @app.route('/admin/curso/<id_curso>/sesiones')
+    @admin_requerido
+    def admin_gestion_sesiones(id_curso):
+        id_curso = (id_curso or '').strip().upper()
+        if not id_curso:
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            abort(403)
+
+        vista_solicitada = request.args.get('view', 'cursos').strip().lower()
+        anio_filtro = request.args.get('anio', '').strip()
+        trimestre_filtro = request.args.get('trimestre', '').strip()
+        mes_filtro = request.args.get('mes', '').strip()
+        resultado_filtro = request.args.get('resultado', '').strip().lower()
+        admin_rol = session.get('admin_rol', 'admin')
+
+        dashboard_payload = get_admin_dashboard_payload(
+            vista_solicitada,
+            anio_filtro,
+            trimestre_filtro,
+            mes_filtro,
+            resultado_filtro,
+            admin_rol,
+            session.get('admin_direccion', 'IPSD'),
+        )
+
+        sesiones_result = listar_sesiones_curso(id_curso)
+        sesiones_curso = sesiones_result.get('sesiones', []) if sesiones_result.get('ok') else []
+        curso_sesion_detalle = _obtener_detalle_curso(id_curso)
+        fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+        curso_sesion_config = _construir_configuracion_sesiones(sesiones_curso, fecha_hoy)
+
+        return render_template(
+            'admin.html',
+            registros=dashboard_payload['registros'],
+            cursos=dashboard_payload['cursos'],
+            calendario_eventos=dashboard_payload['calendario_eventos'],
+            usuarios_admin=dashboard_payload['usuarios_admin'],
+            filtros=dashboard_payload['filtros'],
+            stats=dashboard_payload['stats'],
+            admin_user=session.get('admin_user', 'Admin'),
+            admin_rol=admin_rol,
+            admin_direccion=dashboard_payload['admin_direccion'],
+            es_superadmin=dashboard_payload['es_superadmin'],
+            direcciones=dashboard_payload['direcciones'],
+            direcciones_gestion=dashboard_payload['direcciones_gestion'],
+            vista_inicial='cursos',
+            fecha_hoy=fecha_hoy,
+            horarios_base=HORARIOS_BASE,
+            curso_sesiones_id=id_curso,
+            curso_sesion_detalle=curso_sesion_detalle,
+            curso_sesion_config=curso_sesion_config,
+            sesiones_curso=sesiones_curso,
+        )
+
     @app.route('/admin/stats')
     @admin_requerido
     def admin_stats():
@@ -111,6 +319,243 @@ def register_admin_routes(app):
             session.get('admin_direccion', 'IPSD'),
         )
         return jsonify({'cursos': stats_payload['cursos'], 'meses': stats_payload['meses']})
+
+    @app.route('/admin/sesion/generar_calendario', methods=['POST'])
+    @admin_requerido
+    def admin_generar_calendario_sesiones():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_curso = request.form.get('id_curso', '').strip().upper()
+        fecha_inicio = request.form.get('fecha_inicio', '').strip()
+        fecha_fin = request.form.get('fecha_fin', '').strip()
+        dias_semana = request.form.getlist('dias_semana')
+        jornada = request.form.get('jornada', 'UNICA').strip().upper()
+        docente_sesion = request.form.get('docente_sesion', '').strip()
+        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+
+        hora_inicio_list = request.form.getlist('hora_inicio')
+        hora_fin_list = request.form.getlist('hora_fin')
+        bloques = []
+        for idx, inicio in enumerate(hora_inicio_list):
+            fin = hora_fin_list[idx] if idx < len(hora_fin_list) else ''
+            bloques.append({'hora_inicio': inicio, 'hora_fin': fin})
+
+        hora_inicio_unica = request.form.get('hora_inicio', '').strip()
+        hora_fin_unica = request.form.get('hora_fin', '').strip()
+        if not bloques and hora_inicio_unica and hora_fin_unica:
+            bloques.append({'hora_inicio': hora_inicio_unica, 'hora_fin': hora_fin_unica})
+
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Curso inválido'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = generar_calendario_base(
+            id_curso,
+            fecha_inicio,
+            fecha_fin,
+            dias_semana,
+            bloques,
+            jornada=jornada,
+            docente_sesion=docente_sesion,
+            bloque_codigo=bloque_codigo,
+        )
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/sesion/crear', methods=['POST'])
+    @admin_requerido
+    def admin_crear_sesion():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_curso = request.form.get('id_curso', '').strip().upper()
+        fecha = request.form.get('fecha', '').strip()
+        hora_inicio = request.form.get('hora_inicio', '').strip()
+        hora_fin = request.form.get('hora_fin', '').strip()
+        jornada = request.form.get('jornada', 'UNICA').strip().upper()
+        docente_sesion = request.form.get('docente_sesion', '').strip()
+        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Curso inválido'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = crear_sesion_manual(
+            id_curso,
+            fecha,
+            hora_inicio,
+            hora_fin,
+            jornada=jornada,
+            docente_sesion=docente_sesion,
+            bloque_codigo=bloque_codigo,
+        )
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/sesion/editar', methods=['POST'])
+    @admin_requerido
+    def admin_editar_sesion():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_sesion = request.form.get('id_sesion', '').strip()
+        fecha = request.form.get('fecha', '').strip()
+        hora_inicio = request.form.get('hora_inicio', '').strip()
+        hora_fin = request.form.get('hora_fin', '').strip()
+        jornada = request.form.get('jornada', 'UNICA').strip().upper()
+        docente_sesion = request.form.get('docente_sesion', '').strip()
+        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+        id_curso_form = request.form.get('id_curso', '').strip().upper()
+
+        id_curso = id_curso_form or _obtener_curso_de_sesion(id_sesion)
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = editar_sesion(
+            id_sesion,
+            fecha,
+            hora_inicio,
+            hora_fin,
+            jornada=jornada,
+            docente_sesion=docente_sesion,
+            bloque_codigo=bloque_codigo,
+        )
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/sesion/eliminar', methods=['POST'])
+    @admin_requerido
+    def admin_eliminar_sesion():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_sesion = request.form.get('id_sesion', '').strip()
+        id_curso_form = request.form.get('id_curso', '').strip().upper()
+
+        id_curso = id_curso_form or _obtener_curso_de_sesion(id_sesion)
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = eliminar_sesion(id_sesion)
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/sesion/abrir', methods=['POST'])
+    @admin_requerido
+    def admin_abrir_sesion_asistencia():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_sesion = request.form.get('id_sesion', '').strip()
+        id_curso_form = request.form.get('id_curso', '').strip().upper()
+
+        id_curso = id_curso_form or _obtener_curso_de_sesion(id_sesion)
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = abrir_asistencia_sesion(id_sesion)
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/sesion/cerrar', methods=['POST'])
+    @admin_requerido
+    def admin_cerrar_sesion_asistencia():
+        es_ajax = _es_ajax()
+
+        if not validar_csrf(request.form.get('_csrf_token')):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+            abort(403)
+
+        id_sesion = request.form.get('id_sesion', '').strip()
+        id_curso_form = request.form.get('id_curso', '').strip().upper()
+
+        id_curso = id_curso_form or _obtener_curso_de_sesion(id_sesion)
+        if not id_curso:
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            if es_ajax:
+                return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+            abort(403)
+
+        result = cerrar_asistencia_sesion(id_sesion)
+        if es_ajax:
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+
+        return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
 
     @app.route('/admin/crear_curso', methods=['POST'])
     @admin_requerido
@@ -121,12 +566,16 @@ def register_admin_routes(app):
         nombre_curso = request.form.get('nombre_curso', '').strip()
         trimestre = request.form.get('trimestre', '').strip()
         fecha_curso = request.form.get('fecha_curso', '').strip()
-        fechas_adicionales_raw = request.form.getlist('fechas_adicionales')
+        tipo_accion = request.form.get('tipo_accion', 'CURSO').strip().upper()
+        horas_totales_raw = request.form.get('horas_totales', '').strip()
+        semanas_duracion_raw = request.form.get('semanas_duracion', '').strip()
         modalidad = request.form.get('modalidad', '').strip()
         enlace_virtual = request.form.get('enlace_virtual', '').strip()
         cupos_maximos_raw = request.form.get('cupos_maximos', '').strip()
-        horarios_seleccionados = request.form.getlist('horarios')
         es_superadmin = session.get('admin_rol') == 'superadmin'
+
+        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
+            tipo_accion = 'CURSO'
 
         if es_superadmin:
             direccion_curso = normalizar_direccion(request.form.get('direccion_curso', ''))
@@ -139,24 +588,19 @@ def register_admin_routes(app):
             cupos_maximos = -1
 
         try:
-            fecha_obj = datetime.strptime(fecha_curso, '%Y-%m-%d')
-        except ValueError:
+            horas_totales = int(horas_totales_raw)
+        except (TypeError, ValueError):
+            horas_totales = 0
+
+        try:
+            semanas_duracion = int(semanas_duracion_raw)
+        except (TypeError, ValueError):
+            semanas_duracion = 1
+
+        fecha_obj = _parse_fecha_form(fecha_curso)
+        if not fecha_obj:
+            flash('La fecha de inicio es inválida.', 'danger')
             return redireccion_admin_vista('cursos')
-
-        dia_semana = DIAS_SEMANA[fecha_obj.weekday()]
-
-        fechas_adicionales = []
-        fechas_vistas = {fecha_curso}
-        for fecha_extra in fechas_adicionales_raw:
-            fecha_extra = (fecha_extra or '').strip()
-            if not fecha_extra or fecha_extra in fechas_vistas:
-                continue
-            try:
-                fecha_extra_obj = datetime.strptime(fecha_extra, '%Y-%m-%d')
-            except ValueError:
-                return redireccion_admin_vista('cursos')
-            fechas_vistas.add(fecha_extra)
-            fechas_adicionales.append(fecha_extra_obj)
 
         if (
             not nombre_curso
@@ -164,42 +608,43 @@ def register_admin_routes(app):
             or not direccion_curso
             or modalidad not in ['Virtual', 'Presencial']
             or cupos_maximos < 0
+            or horas_totales < 1
+            or semanas_duracion < 1
         ):
+            flash('Completa correctamente los campos obligatorios para crear la acción formativa.', 'danger')
             return redireccion_admin_vista('cursos')
 
         if modalidad == 'Virtual':
             if not enlace_virtual or not validar_enlace_virtual(enlace_virtual):
+                flash('Debes ingresar un enlace válido para modalidad virtual.', 'danger')
                 return redireccion_admin_vista('cursos')
         else:
             enlace_virtual = None
-
-        if not horarios_seleccionados:
-            return redireccion_admin_vista('cursos')
-
-        prefijo_dia = f'{dia_semana} '
-        horarios_validos = {f'{dia_semana} {h}' for h in HORARIOS_BASE}
-        if any((not h.startswith(prefijo_dia) or h not in horarios_validos) for h in horarios_seleccionados):
-            return redireccion_admin_vista('cursos')
-
-        franjas_horarias = []
-        for horario in horarios_seleccionados:
-            partes = horario.split(' ', 1)
-            franjas_horarias.append(partes[1] if len(partes) == 2 else horario)
-
-        fechas_objetivo = [fecha_obj] + fechas_adicionales
+        fechas_objetivo = [fecha_obj]
 
         create_result = create_curso_records(
             nombre_curso=nombre_curso,
             trimestre=trimestre,
             modalidad=modalidad,
+            tipo_accion=tipo_accion,
+            horas_totales=horas_totales,
+            semanas_duracion=semanas_duracion,
             cupos_maximos=cupos_maximos,
             enlace_virtual=enlace_virtual,
             direccion_curso=direccion_curso,
             fechas_objetivo=fechas_objetivo,
-            franjas_horarias=franjas_horarias,
+            franjas_horarias=[],
         )
         if not create_result['ok']:
+            if create_result.get('validation_error'):
+                flash(create_result['validation_error'], 'danger')
+            elif create_result.get('invalid_direction'):
+                flash('La dirección seleccionada no es válida.', 'danger')
+            else:
+                flash('No se pudo crear la acción formativa. Intenta nuevamente.', 'danger')
             return redireccion_admin_vista('cursos')
+
+        flash('Acción formativa creada correctamente.', 'success')
 
         return redireccion_admin_vista('cursos')
 
@@ -213,16 +658,21 @@ def register_admin_routes(app):
         nombre_curso = request.form.get('nombre_curso', '').strip()
         fecha_curso = request.form.get('fecha_curso', '').strip()
         trimestre = request.form.get('trimestre', '').strip()
+        tipo_accion = request.form.get('tipo_accion', 'CURSO').strip().upper()
+        horas_totales_raw = request.form.get('horas_totales', '').strip()
+        semanas_duracion_raw = request.form.get('semanas_duracion', '').strip()
         modalidad = request.form.get('modalidad', '').strip()
         enlace_virtual = request.form.get('enlace_virtual', '').strip()
         cupos_maximos_raw = request.form.get('cupos_maximos', '').strip()
 
+        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
+            tipo_accion = 'CURSO'
+
         if not id_curso or not nombre_curso or trimestre not in ['I', 'II', 'III', 'IV']:
             return redireccion_admin_vista('cursos')
 
-        try:
-            fecha_obj = datetime.strptime(fecha_curso, '%Y-%m-%d')
-        except ValueError:
+        fecha_obj = _parse_fecha_form(fecha_curso)
+        if not fecha_obj:
             return redireccion_admin_vista('cursos')
 
         try:
@@ -230,7 +680,17 @@ def register_admin_routes(app):
         except (TypeError, ValueError):
             cupos_maximos = -1
 
-        if modalidad not in ['Virtual', 'Presencial'] or cupos_maximos < 0:
+        try:
+            horas_totales = int(horas_totales_raw)
+        except (TypeError, ValueError):
+            horas_totales = 0
+
+        try:
+            semanas_duracion = int(semanas_duracion_raw)
+        except (TypeError, ValueError):
+            semanas_duracion = 1
+
+        if modalidad not in ['Virtual', 'Presencial'] or cupos_maximos < 0 or horas_totales < 1 or semanas_duracion < 1:
             return redireccion_admin_vista('cursos')
 
         if modalidad == 'Virtual':
@@ -257,6 +717,9 @@ def register_admin_routes(app):
             mes=mes,
             dia=dia,
             modalidad=modalidad,
+            tipo_accion=tipo_accion,
+            horas_totales=horas_totales,
+            semanas_duracion=semanas_duracion,
             cupos_maximos=cupos_maximos,
             enlace_virtual=enlace_virtual,
             dia_semana=dia_semana,

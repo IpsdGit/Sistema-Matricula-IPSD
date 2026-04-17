@@ -40,7 +40,7 @@ HORARIOS_BASE = [
 LIMITE_REPROBADO = 3
 LIMITE_ABANDONO = 2
 
-SECCIONES_DASHBOARD_PERMITIDAS = {'historial', 'disponibles', 'notificaciones'}
+SECCIONES_DASHBOARD_PERMITIDAS = {'historial', 'disponibles', 'notificaciones', 'calendario'}
 FILTROS_HISTORIAL_PERMITIDOS = {'todas', 'aprobadas', 'no_aprobadas', 'canceladas'}
 FILTROS_NOTIFICACION_PERMITIDOS = {
     'todas',
@@ -50,7 +50,7 @@ FILTROS_NOTIFICACION_PERMITIDOS = {
     'oportunidades',
     'certificados',
 }
-VISTAS_ADMIN_PERMITIDAS = {'dashboard', 'cursos', 'matriculas', 'usuarios'}
+VISTAS_ADMIN_PERMITIDAS = {'dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios'}
 
 
 def configure_app(app):

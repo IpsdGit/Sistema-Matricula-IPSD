@@ -1,8 +1,10 @@
-from flask import abort, redirect, render_template, request, session, url_for
+from flask import abort, jsonify, redirect, render_template, request, session, url_for
 
 from database import get_db_connection
 from services.portal_service import (
+    fetch_curso_detalle_docente,
     load_dashboard_context,
+    marcar_asistencia_docente,
     process_cancelar_matricula,
     process_matricula,
 )
@@ -30,6 +32,18 @@ def register_portal_routes(app):
             (numero_empleado, correo_institucional),
         ).fetchone()
         conn.close()
+        return docente
+
+    def docente_activo_desde_sesion():
+        numero_empleado = (session.get('empleado_portal') or '').strip()
+        correo_institucional = normalizar_correo(session.get('correo_docente'))
+
+        if not validar_numero_empleado(numero_empleado) or not validar_correo(correo_institucional):
+            return None
+
+        docente = autenticar_docente(correo_institucional, numero_empleado)
+        if not docente or not bool(docente['activo']):
+            return None
         return docente
 
     @app.route('/')
@@ -200,3 +214,38 @@ def register_portal_routes(app):
             nombre_curso=resultado['nombre_curso'],
             id_curso=resultado['id_curso'],
         )
+
+    @app.route('/api/curso_detalle/<id_curso>', methods=['GET'])
+    def api_curso_detalle(id_curso):
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada. Inicia sesión nuevamente.'}), 401
+
+        resultado = fetch_curso_detalle_docente(docente['numero_empleado'], id_curso)
+        if not resultado.get('ok'):
+            return jsonify(resultado), resultado.get('status_code', 400)
+
+        return jsonify(resultado)
+
+    @app.route('/api/sesion/<int:id_sesion>/marcar_asistencia', methods=['POST'])
+    def api_marcar_asistencia(id_sesion):
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada. Inicia sesión nuevamente.'}), 401
+
+        token_form = request.form.get('token_asistencia', '').strip()
+        token_json = ''
+        if request.is_json:
+            payload = request.get_json(silent=True) or {}
+            token_json = (payload.get('token_asistencia') or '').strip()
+
+        token_asistencia = token_form or token_json
+        resultado = marcar_asistencia_docente(
+            numero_empleado=docente['numero_empleado'],
+            id_sesion=id_sesion,
+            token_asistencia=token_asistencia,
+        )
+        if not resultado.get('ok'):
+            return jsonify(resultado), resultado.get('status_code', 400)
+
+        return jsonify(resultado), 200

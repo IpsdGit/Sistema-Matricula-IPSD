@@ -1,4 +1,6 @@
 import sqlite3
+import uuid
+from datetime import datetime, timedelta
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -12,6 +14,111 @@ from utils import (
     obtener_direcciones,
     registrar_evento_matricula,
 )
+
+
+def _fecha_iso_desde_partes_curso(anio, mes_nombre, dia):
+    try:
+        anio_int = int(str(anio).strip())
+        dia_int = int(str(dia).strip())
+    except (TypeError, ValueError):
+        return None
+
+    meses_map = {nombre.lower(): idx + 1 for idx, nombre in enumerate(MESES_ES)}
+    mes_int = meses_map.get((mes_nombre or '').strip().lower())
+    if not mes_int:
+        return None
+
+    try:
+        return datetime(anio_int, mes_int, dia_int).strftime('%Y-%m-%d')
+    except ValueError:
+        return None
+
+
+def _fecha_mostrar_desde_iso(fecha_iso):
+    try:
+        return datetime.strptime((fecha_iso or '').strip(), '%Y-%m-%d').strftime('%d/%m/%Y')
+    except ValueError:
+        return fecha_iso or ''
+
+
+def _normalizar_duracion_tipo(valor):
+    duracion = (valor or '').strip().lower()
+    if duracion not in {'un_dia', 'varios_dias'}:
+        return 'un_dia'
+    return duracion
+
+
+TIPOS_ACCION_FORMATIVA = {'CONFERENCIA', 'SEMINARIO', 'CURSO'}
+JORNADAS_SESION = {'UNICA', 'MATUTINA', 'VESPERTINA', 'NOCTURNA'}
+
+
+def _normalizar_tipo_accion(valor):
+    tipo = (valor or '').strip().upper()
+    if tipo not in TIPOS_ACCION_FORMATIVA:
+        return 'CURSO'
+    return tipo
+
+
+def _normalizar_jornada(valor):
+    jornada = (valor or '').strip().upper()
+    if jornada not in JORNADAS_SESION:
+        return 'UNICA'
+    return jornada
+
+
+def _normalizar_horas_totales(valor, tipo_accion):
+    try:
+        horas = int(valor)
+    except (TypeError, ValueError):
+        horas = 0
+
+    if horas > 0:
+        return horas
+
+    tipo = _normalizar_tipo_accion(tipo_accion)
+    if tipo == 'CONFERENCIA':
+        return 4
+    if tipo == 'SEMINARIO':
+        return 16
+    return 20
+
+
+def _normalizar_semanas_duracion(valor):
+    try:
+        semanas = int(valor)
+    except (TypeError, ValueError):
+        semanas = 1
+    return semanas if semanas > 0 else 1
+
+
+def _duracion_tipo_desde_semanas(semanas_duracion):
+    return 'varios_dias' if _normalizar_semanas_duracion(semanas_duracion) > 1 else 'un_dia'
+
+
+def _validar_reglas_tipo_accion(tipo_accion, horas_totales, semanas_duracion):
+    tipo = _normalizar_tipo_accion(tipo_accion)
+    horas = _normalizar_horas_totales(horas_totales, tipo)
+    semanas = _normalizar_semanas_duracion(semanas_duracion)
+
+    if tipo == 'CONFERENCIA':
+        if horas < 1 or horas > 16:
+            return 'Las conferencias deben tener entre 1 y 16 horas totales.'
+        if semanas < 1 or semanas > 4:
+            return 'Las conferencias deben definirse entre 1 y 4 semanas.'
+
+    if tipo == 'SEMINARIO':
+        if horas < 16:
+            return 'Los seminarios deben tener al menos 16 horas totales.'
+        if semanas < 1:
+            return 'Los seminarios deben durar al menos 1 semana.'
+
+    if tipo == 'CURSO':
+        if horas < 20:
+            return 'Los cursos deben tener al menos 20 horas totales.'
+        if semanas < 1:
+            return 'Los cursos deben durar al menos 1 semana.'
+
+    return None
 
 
 def authenticate_admin(username, password):
@@ -90,6 +197,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
 
         query_cursos = '''
                  SELECT c.id, c.nombre, c.anio, c.trimestre, c.mes, c.dia, c.modalidad, c.cupos_maximos, c.enlace_virtual,
+                                     c.duracion_tipo, c.tipo_accion, c.horas_totales, c.semanas_duracion,
                    GROUP_CONCAT(h.horario, '<br>') as horarios_html,
                    COUNT(DISTINCT m.numero_empleado) as total_inscritos
             FROM capacitaciones c
@@ -103,6 +211,75 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
 
         query_cursos += ' GROUP BY c.id ORDER BY c.anio DESC, c.mes'
         cursos = conn.execute(query_cursos, cursos_params).fetchall()
+
+        query_calendario = '''
+            SELECT s.fecha, s.hora_inicio, s.hora_fin, s.estado, c.id AS id_curso, c.nombre AS nombre_curso, c.tipo_accion
+            FROM sesiones_curso s
+            JOIN capacitaciones c ON c.id = s.id_curso
+        '''
+        calendario_params = []
+        if not es_superadmin:
+            query_calendario += ' WHERE c.id LIKE ?'
+            calendario_params.append(f'AF-{admin_direccion}-%')
+
+        query_calendario += ' ORDER BY s.fecha ASC, s.hora_inicio ASC, c.id ASC'
+        calendario_sesiones = conn.execute(query_calendario, calendario_params).fetchall()
+
+        cursos_con_sesion = set()
+        calendario_eventos = []
+        for fila in calendario_sesiones:
+            fecha_iso = (fila['fecha'] or '').strip()
+            if not fecha_iso:
+                continue
+
+            id_curso = (fila['id_curso'] or '').strip().upper()
+            if id_curso:
+                cursos_con_sesion.add(id_curso)
+
+            calendario_eventos.append(
+                {
+                    'tipo_evento': 'sesion',
+                    'fecha_iso': fecha_iso,
+                    'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_iso),
+                    'hora_inicio': fila['hora_inicio'],
+                    'hora_fin': fila['hora_fin'],
+                    'id_curso': id_curso,
+                    'nombre_curso': fila['nombre_curso'],
+                    'estado': fila['estado'],
+                    'tipo_accion': _normalizar_tipo_accion(fila['tipo_accion']),
+                }
+            )
+
+        for curso in cursos:
+            id_curso = (curso['id'] or '').strip().upper()
+            if not id_curso or id_curso in cursos_con_sesion:
+                continue
+
+            fecha_iso = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+            if not fecha_iso:
+                continue
+
+            calendario_eventos.append(
+                {
+                    'tipo_evento': 'curso',
+                    'fecha_iso': fecha_iso,
+                    'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_iso),
+                    'hora_inicio': None,
+                    'hora_fin': None,
+                    'id_curso': id_curso,
+                    'nombre_curso': curso['nombre'],
+                    'estado': None,
+                    'tipo_accion': _normalizar_tipo_accion(curso['tipo_accion']),
+                }
+            )
+
+        calendario_eventos.sort(
+            key=lambda evento: (
+                evento.get('fecha_iso') or '',
+                evento.get('hora_inicio') or '99:99',
+                evento.get('id_curso') or '',
+            )
+        )
 
         if es_superadmin:
             total_matriculas = conn.execute('SELECT COUNT(*) FROM matriculas').fetchone()[0]
@@ -171,6 +348,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'direcciones': direcciones,
             'registros': registros,
             'cursos': cursos,
+            'calendario_eventos': calendario_eventos,
             'stats': stats,
             'usuarios_admin': usuarios_admin,
             'direcciones_gestion': direcciones_gestion,
@@ -190,6 +368,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'direcciones': [],
             'registros': [],
             'cursos': [],
+            'calendario_eventos': [],
             'stats': {'total_matriculas': 0, 'total_cursos': 0, 'total_profesores': 0},
             'usuarios_admin': [],
             'direcciones_gestion': [],
@@ -353,6 +532,9 @@ def create_curso_records(
     nombre_curso,
     trimestre,
     modalidad,
+    tipo_accion,
+    horas_totales,
+    semanas_duracion,
     cupos_maximos,
     enlace_virtual,
     direccion_curso,
@@ -365,6 +547,20 @@ def create_curso_records(
             conn.close()
             return {'ok': False, 'invalid_direction': True}
 
+        franjas_norm = [str(franja).strip() for franja in (franjas_horarias or []) if str(franja).strip()]
+        if not franjas_norm:
+            franjas_norm = ['Por definir']
+
+        tipo_accion_norm = _normalizar_tipo_accion(tipo_accion)
+        horas_totales_norm = _normalizar_horas_totales(horas_totales, tipo_accion_norm)
+        semanas_duracion_norm = _normalizar_semanas_duracion(semanas_duracion)
+        error_regla = _validar_reglas_tipo_accion(tipo_accion_norm, horas_totales_norm, semanas_duracion_norm)
+        if error_regla:
+            conn.close()
+            return {'ok': False, 'validation_error': error_regla}
+
+        duracion_tipo_norm = _duracion_tipo_desde_semanas(semanas_duracion_norm)
+
         for fecha_actual in fechas_objetivo:
             anio_actual = str(fecha_actual.year)
             mes_actual = MESES_ES[fecha_actual.month - 1]
@@ -375,8 +571,9 @@ def create_curso_records(
             conn.execute(
                 '''
                 INSERT INTO capacitaciones
-                (id, nombre, anio, trimestre, mes, dia, modalidad, cupos_maximos, enlace_virtual)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, nombre, anio, trimestre, mes, dia, modalidad, cupos_maximos, enlace_virtual, duracion_tipo,
+                 tipo_accion, horas_totales, semanas_duracion)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     id_curso,
@@ -388,9 +585,13 @@ def create_curso_records(
                     modalidad,
                     cupos_maximos,
                     enlace_virtual,
+                    duracion_tipo_norm,
+                    tipo_accion_norm,
+                    horas_totales_norm,
+                    semanas_duracion_norm,
                 ),
             )
-            for franja in franjas_horarias:
+            for franja in franjas_norm:
                 conn.execute(
                     'INSERT INTO horarios_curso (id_capacitacion, horario) VALUES (?, ?)',
                     (id_curso, f'{dia_semana_actual} {franja}'),
@@ -413,6 +614,9 @@ def update_curso_record(
     mes,
     dia,
     modalidad,
+    tipo_accion,
+    horas_totales,
+    semanas_duracion,
     cupos_maximos,
     enlace_virtual,
     dia_semana,
@@ -428,13 +632,38 @@ def update_curso_record(
             conn.close()
             return {'ok': False, 'not_found': True}
 
+        tipo_accion_norm = _normalizar_tipo_accion(tipo_accion)
+        horas_totales_norm = _normalizar_horas_totales(horas_totales, tipo_accion_norm)
+        semanas_duracion_norm = _normalizar_semanas_duracion(semanas_duracion)
+        error_regla = _validar_reglas_tipo_accion(tipo_accion_norm, horas_totales_norm, semanas_duracion_norm)
+        if error_regla:
+            conn.close()
+            return {'ok': False, 'validation_error': error_regla}
+
+        duracion_tipo_norm = _duracion_tipo_desde_semanas(semanas_duracion_norm)
+
         conn.execute(
             '''
             UPDATE capacitaciones
-            SET nombre = ?, anio = ?, trimestre = ?, mes = ?, dia = ?, modalidad = ?, cupos_maximos = ?, enlace_virtual = ?
+            SET nombre = ?, anio = ?, trimestre = ?, mes = ?, dia = ?, modalidad = ?, duracion_tipo = ?,
+                tipo_accion = ?, horas_totales = ?, semanas_duracion = ?, cupos_maximos = ?, enlace_virtual = ?
             WHERE id = ?
             ''',
-            (nombre_curso, anio, trimestre, mes, dia, modalidad, cupos_maximos, enlace_virtual, id_curso),
+            (
+                nombre_curso,
+                anio,
+                trimestre,
+                mes,
+                dia,
+                modalidad,
+                duracion_tipo_norm,
+                tipo_accion_norm,
+                horas_totales_norm,
+                semanas_duracion_norm,
+                cupos_maximos,
+                enlace_virtual,
+                id_curso,
+            ),
         )
 
         horarios = conn.execute(
@@ -647,6 +876,453 @@ def delete_curso_record(id_curso):
         return {'ok': True}
     except sqlite3.Error:
         return {'ok': False}
+
+
+def _normalizar_fecha_iso(fecha_raw):
+    fecha_str = (fecha_raw or '').strip()
+    if not fecha_str:
+        return None
+    try:
+        return datetime.strptime(fecha_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def _normalizar_hora_24(hora_raw):
+    hora_str = (hora_raw or '').strip()
+    if not hora_str:
+        return None
+
+    formatos = ('%H:%M', '%H:%M:%S')
+    for formato in formatos:
+        try:
+            return datetime.strptime(hora_str, formato).strftime('%H:%M')
+        except ValueError:
+            continue
+    return None
+
+
+def _normalizar_dias_semana(dias_semana):
+    if not dias_semana:
+        return []
+
+    dias_norm = set()
+    for dia in dias_semana:
+        try:
+            valor = int(dia)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= valor <= 6:
+            dias_norm.add(valor)
+    return sorted(dias_norm)
+
+
+def _normalizar_bloques_horarios(horas):
+    bloques = []
+    for bloque in horas or []:
+        if isinstance(bloque, dict):
+            inicio_raw = bloque.get('hora_inicio') or bloque.get('inicio')
+            fin_raw = bloque.get('hora_fin') or bloque.get('fin')
+        elif isinstance(bloque, (list, tuple)) and len(bloque) >= 2:
+            inicio_raw = bloque[0]
+            fin_raw = bloque[1]
+        else:
+            continue
+
+        inicio = _normalizar_hora_24(inicio_raw)
+        fin = _normalizar_hora_24(fin_raw)
+        if not inicio or not fin or inicio >= fin:
+            continue
+
+        bloques.append((inicio, fin))
+
+    return bloques
+
+
+def _generar_token_asistencia_unico(conn):
+    for _ in range(10):
+        token = uuid.uuid4().hex[:8]
+        token_en_uso = conn.execute(
+            'SELECT 1 FROM sesiones_curso WHERE token_asistencia = ? LIMIT 1',
+            (token,),
+        ).fetchone()
+        if not token_en_uso:
+            return token
+
+    return uuid.uuid4().hex
+
+
+def listar_sesiones_curso(id_curso):
+    id_curso_limpio = (id_curso or '').strip().upper()
+    if not id_curso_limpio:
+        return {'ok': False, 'error': 'Curso inválido'}
+
+    try:
+        conn = get_db_connection()
+        sesiones = conn.execute(
+            '''
+            SELECT id_sesion, id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia
+            FROM sesiones_curso
+            WHERE id_curso = ?
+            ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
+            ''',
+            (id_curso_limpio,),
+        ).fetchall()
+        conn.close()
+        return {'ok': True, 'sesiones': sesiones}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudieron cargar las sesiones'}
+
+
+def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+    id_curso_limpio = (id_curso or '').strip().upper()
+    fecha_obj = _normalizar_fecha_iso(fecha)
+    hora_inicio_norm = _normalizar_hora_24(hora_inicio)
+    hora_fin_norm = _normalizar_hora_24(hora_fin)
+
+    if not id_curso_limpio:
+        return {'ok': False, 'error': 'Curso inválido'}
+    if not fecha_obj or not hora_inicio_norm or not hora_fin_norm:
+        return {'ok': False, 'error': 'Fecha u horas inválidas'}
+    if hora_inicio_norm >= hora_fin_norm:
+        return {'ok': False, 'error': 'La hora de fin debe ser mayor a la de inicio'}
+
+    jornada_norm = _normalizar_jornada(jornada)
+    docente_sesion_norm = (docente_sesion or '').strip()
+    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+
+    try:
+        conn = get_db_connection()
+        curso = conn.execute(
+            'SELECT anio, mes, dia, duracion_tipo, tipo_accion FROM capacitaciones WHERE id = ? LIMIT 1',
+            (id_curso_limpio,),
+        ).fetchone()
+        if not curso:
+            conn.close()
+            return {'ok': False, 'error': 'Curso no encontrado'}
+
+        duracion_tipo = _normalizar_duracion_tipo(curso['duracion_tipo'])
+        if duracion_tipo == 'un_dia':
+            fecha_base = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+            if fecha_base and fecha_obj.isoformat() != fecha_base:
+                conn.close()
+                return {'ok': False, 'error': f'Este curso es de un dia. Solo se permiten sesiones en {fecha_base}'}
+
+        existe = conn.execute(
+            '''
+            SELECT 1
+            FROM sesiones_curso
+            WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ?
+            LIMIT 1
+            ''',
+            (id_curso_limpio, fecha_obj.isoformat(), hora_inicio_norm, hora_fin_norm, jornada_norm),
+        ).fetchone()
+        if existe:
+            conn.close()
+            return {'ok': False, 'error': 'La sesión ya existe para ese horario y jornada'}
+
+        cursor = conn.execute(
+            '''
+            INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
+            ''',
+            (
+                id_curso_limpio,
+                fecha_obj.isoformat(),
+                hora_inicio_norm,
+                hora_fin_norm,
+                jornada_norm,
+                docente_sesion_norm or None,
+                bloque_codigo_norm or None,
+            ),
+        )
+        conn.commit()
+        id_sesion = cursor.lastrowid
+        conn.close()
+        return {'ok': True, 'id_sesion': id_sesion}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo crear la sesión'}
+
+
+def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+    fecha_obj = _normalizar_fecha_iso(fecha)
+    hora_inicio_norm = _normalizar_hora_24(hora_inicio)
+    hora_fin_norm = _normalizar_hora_24(hora_fin)
+
+    try:
+        id_sesion_int = int(id_sesion)
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Sesión inválida'}
+
+    if not fecha_obj or not hora_inicio_norm or not hora_fin_norm:
+        return {'ok': False, 'error': 'Fecha u horas inválidas'}
+    if hora_inicio_norm >= hora_fin_norm:
+        return {'ok': False, 'error': 'La hora de fin debe ser mayor a la de inicio'}
+
+    jornada_norm = _normalizar_jornada(jornada)
+    docente_sesion_norm = (docente_sesion or '').strip()
+    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+
+    try:
+        conn = get_db_connection()
+        sesion = conn.execute(
+            'SELECT id_curso, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+            (id_sesion_int,),
+        ).fetchone()
+        if not sesion:
+            conn.close()
+            return {'ok': False, 'error': 'Sesión no encontrada'}
+
+        if sesion['estado'] != 0:
+            conn.close()
+            return {'ok': False, 'error': 'Solo se pueden editar sesiones cerradas'}
+
+        existe = conn.execute(
+            '''
+            SELECT 1
+            FROM sesiones_curso
+            WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ? AND id_sesion <> ?
+            LIMIT 1
+            ''',
+            (
+                sesion['id_curso'],
+                fecha_obj.isoformat(),
+                hora_inicio_norm,
+                hora_fin_norm,
+                jornada_norm,
+                id_sesion_int,
+            ),
+        ).fetchone()
+        if existe:
+            conn.close()
+            return {'ok': False, 'error': 'Ya existe otra sesión con el mismo horario y jornada'}
+
+        conn.execute(
+            '''
+            UPDATE sesiones_curso
+            SET fecha = ?, hora_inicio = ?, hora_fin = ?, jornada = ?, docente_sesion = ?, bloque_codigo = ?
+            WHERE id_sesion = ?
+            ''',
+            (
+                fecha_obj.isoformat(),
+                hora_inicio_norm,
+                hora_fin_norm,
+                jornada_norm,
+                docente_sesion_norm or None,
+                bloque_codigo_norm or None,
+                id_sesion_int,
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo editar la sesión'}
+
+
+def eliminar_sesion(id_sesion):
+    try:
+        id_sesion_int = int(id_sesion)
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Sesión inválida'}
+
+    try:
+        conn = get_db_connection()
+        sesion = conn.execute(
+            'SELECT estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+            (id_sesion_int,),
+        ).fetchone()
+        if not sesion:
+            conn.close()
+            return {'ok': False, 'error': 'Sesión no encontrada'}
+
+        total_asistencia = conn.execute(
+            'SELECT COUNT(*) FROM registro_asistencia WHERE id_sesion = ?',
+            (id_sesion_int,),
+        ).fetchone()[0]
+        if total_asistencia > 0:
+            conn.close()
+            return {'ok': False, 'error': 'No se puede eliminar una sesión con asistencia registrada'}
+
+        if sesion['estado'] == 1:
+            conn.close()
+            return {'ok': False, 'error': 'No se puede eliminar una sesión abierta'}
+
+        conn.execute('DELETE FROM sesiones_curso WHERE id_sesion = ?', (id_sesion_int,))
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo eliminar la sesión'}
+
+
+def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+    id_curso_limpio = (id_curso or '').strip().upper()
+    fecha_inicio_obj = _normalizar_fecha_iso(fecha_inicio)
+    fecha_fin_obj = _normalizar_fecha_iso(fecha_fin)
+    dias_norm = _normalizar_dias_semana(dias_semana)
+    bloques_horarios = _normalizar_bloques_horarios(horas)
+
+    if not id_curso_limpio:
+        return {'ok': False, 'error': 'Curso inválido'}
+    if not fecha_inicio_obj or not fecha_fin_obj:
+        return {'ok': False, 'error': 'Fechas inválidas'}
+    if fecha_inicio_obj > fecha_fin_obj:
+        return {'ok': False, 'error': 'La fecha de inicio no puede ser mayor que la fecha de fin'}
+    if not dias_norm:
+        return {'ok': False, 'error': 'Debes seleccionar al menos un día de la semana'}
+    if not bloques_horarios:
+        return {'ok': False, 'error': 'Debes enviar al menos un bloque horario válido'}
+
+    jornada_norm = _normalizar_jornada(jornada)
+    docente_sesion_norm = (docente_sesion or '').strip()
+    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+
+    try:
+        conn = get_db_connection()
+        curso = conn.execute(
+            'SELECT anio, mes, dia, duracion_tipo FROM capacitaciones WHERE id = ? LIMIT 1',
+            (id_curso_limpio,),
+        ).fetchone()
+        if not curso:
+            conn.close()
+            return {'ok': False, 'error': 'Curso no encontrado'}
+
+        duracion_tipo = _normalizar_duracion_tipo(curso['duracion_tipo'])
+        if duracion_tipo == 'un_dia':
+            fecha_base = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+            if fecha_base:
+                if fecha_inicio_obj.isoformat() != fecha_base or fecha_fin_obj.isoformat() != fecha_base:
+                    conn.close()
+                    return {'ok': False, 'error': f'Curso de un dia: fecha inicio y fin deben ser {fecha_base}'}
+
+        sesiones_creadas = 0
+        fecha_cursor = fecha_inicio_obj
+
+        while fecha_cursor <= fecha_fin_obj:
+            if fecha_cursor.weekday() in dias_norm:
+                fecha_iso = fecha_cursor.isoformat()
+                for hora_inicio_norm, hora_fin_norm in bloques_horarios:
+                    existe = conn.execute(
+                        '''
+                        SELECT 1
+                        FROM sesiones_curso
+                        WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ?
+                        LIMIT 1
+                        ''',
+                        (id_curso_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm, jornada_norm),
+                    ).fetchone()
+                    if existe:
+                        continue
+
+                    conn.execute(
+                        '''
+                        INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
+                        ''',
+                        (
+                            id_curso_limpio,
+                            fecha_iso,
+                            hora_inicio_norm,
+                            hora_fin_norm,
+                            jornada_norm,
+                            docente_sesion_norm or None,
+                            bloque_codigo_norm or None,
+                        ),
+                    )
+                    sesiones_creadas += 1
+
+            fecha_cursor += timedelta(days=1)
+
+        conn.commit()
+        conn.close()
+        return {'ok': True, 'sesiones_creadas': sesiones_creadas}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo generar el calendario base'}
+
+
+def abrir_asistencia_sesion(id_sesion):
+    try:
+        id_sesion_int = int(id_sesion)
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Sesión inválida'}
+
+    try:
+        conn = get_db_connection()
+        sesion = conn.execute(
+            '''
+            SELECT id_sesion, estado
+            FROM sesiones_curso
+            WHERE id_sesion = ?
+            LIMIT 1
+            ''',
+            (id_sesion_int,),
+        ).fetchone()
+        if not sesion:
+            conn.close()
+            return {'ok': False, 'error': 'Sesión no encontrada'}
+
+        if sesion['estado'] != 0:
+            conn.close()
+            return {'ok': False, 'error': 'Solo se puede abrir asistencia en sesiones cerradas'}
+
+        token = _generar_token_asistencia_unico(conn)
+        conn.execute(
+            '''
+            UPDATE sesiones_curso
+            SET estado = 1,
+                token_asistencia = ?
+            WHERE id_sesion = ?
+            ''',
+            (token, id_sesion_int),
+        )
+
+        conn.commit()
+        conn.close()
+        return {'ok': True, 'token_asistencia': token}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo abrir la asistencia'}
+
+
+def cerrar_asistencia_sesion(id_sesion):
+    try:
+        id_sesion_int = int(id_sesion)
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Sesión inválida'}
+
+    try:
+        conn = get_db_connection()
+        sesion = conn.execute(
+            '''
+            SELECT id_sesion, estado
+            FROM sesiones_curso
+            WHERE id_sesion = ?
+            LIMIT 1
+            ''',
+            (id_sesion_int,),
+        ).fetchone()
+        if not sesion:
+            conn.close()
+            return {'ok': False, 'error': 'Sesión no encontrada'}
+
+        if sesion['estado'] != 1:
+            conn.close()
+            return {'ok': False, 'error': 'Solo se puede desactivar asistencia en sesiones abiertas'}
+
+        conn.execute(
+            '''
+            UPDATE sesiones_curso
+            SET estado = 2
+            WHERE id_sesion = ?
+            ''',
+            (id_sesion_int,),
+        )
+
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo desactivar la asistencia'}
 
 
 def delete_matricula_record(numero_empleado, id_capacitacion, matricula_id=None):

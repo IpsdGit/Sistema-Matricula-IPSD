@@ -4,6 +4,8 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   .admin-screen {
     display: none;
@@ -170,6 +172,443 @@
     min-width: 62px;
     text-align: left;
   }
+
+  .calendar-toggle-btn {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 10px;
+    padding: .45rem .75rem;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .calendar-panel {
+    border: 1px dashed #bfdbfe;
+    border-radius: 12px;
+    padding: .85rem;
+    margin-bottom: .85rem;
+    background: #f8fbff;
+  }
+
+  .calendar-panel.hidden {
+    display: none;
+  }
+
+  .calendar-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .45rem;
+  }
+
+  .calendar-day-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    font-size: .75rem;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 8px;
+    padding: .35rem .4rem;
+  }
+
+  .calendar-day-pill input {
+    accent-color: var(--primary);
+  }
+
+  .calendar-board-header {
+    border-bottom: 1px solid #d8dee8;
+    background: #f8fafc;
+  }
+
+  .calendar-board-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .calendar-board-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .calendar-board-title {
+    font-weight: 800;
+    font-size: 1.02rem;
+    color: #0f172a;
+  }
+
+  .calendar-board-subtitle {
+    margin: .15rem 0 0;
+    font-size: .77rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .calendar-toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .85rem;
+  }
+
+  .calendar-nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+
+  .calendar-nav-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #dbe3f0;
+    background: #2563eb;
+    color: #fff;
+    font-size: .95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .calendar-nav-btn:hover {
+    background: #1d4ed8;
+  }
+
+  .calendar-today-btn {
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #eef2f7;
+    color: #334155;
+    font-size: .8rem;
+    font-weight: 700;
+    padding: .35rem .65rem;
+    cursor: pointer;
+  }
+
+  .calendar-title-center {
+    text-align: center;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .calendar-view-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+
+  .calendar-view-btn {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 8px;
+    padding: .35rem .75rem;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .calendar-view-btn.active {
+    background: #1e293b;
+    color: #fff;
+    border-color: #1e293b;
+  }
+
+  .calendar-grid-shell {
+    border: 1px solid #d7dee9;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .calendar-grid-shell.view-week .calendar-month-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: 192px;
+  }
+
+  .calendar-grid-shell.view-day .calendar-month-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(360px, auto);
+  }
+
+  .calendar-week-header {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    background: #f1f5f9;
+    border-bottom: 1px solid #d7dee9;
+  }
+
+  .calendar-week-header span {
+    text-align: center;
+    padding: .62rem .35rem;
+    font-size: .78rem;
+    color: #334155;
+    font-weight: 800;
+    text-transform: lowercase;
+  }
+
+  .calendar-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: 92px;
+  }
+
+  .calendar-day-cell {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: .38rem .35rem;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    transition: background .15s ease;
+  }
+
+  .calendar-day-cell:hover {
+    background: #f8fbff;
+  }
+
+  .calendar-day-cell:nth-child(7n) {
+    border-right: none;
+  }
+
+  .calendar-day-cell.other-month {
+    background: #f8fafc;
+  }
+
+  .calendar-day-number {
+    font-size: .8rem;
+    color: #0f172a;
+    line-height: 1;
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .calendar-day-label {
+    margin-left: .32rem;
+    font-size: .7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: capitalize;
+  }
+
+  .calendar-day-cell.other-month .calendar-day-number {
+    color: #94a3b8;
+  }
+
+  .calendar-day-cell.is-today .calendar-day-number {
+    background: #2563eb;
+    color: #fff;
+  }
+
+  .calendar-day-events {
+    margin-top: .28rem;
+    display: grid;
+    gap: .2rem;
+  }
+
+  .calendar-grid-shell.view-week .calendar-day-events {
+    max-height: 146px;
+    overflow-y: auto;
+    padding-right: .1rem;
+  }
+
+  .calendar-grid-shell.view-day .calendar-day-events {
+    margin-top: .55rem;
+    gap: .35rem;
+  }
+
+  .calendar-event-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .calendar-event-item {
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: .66rem;
+    padding: .22rem .32rem;
+    border: 1px solid #d8e1ee;
+    display: grid;
+    gap: .15rem;
+    color: #0f172a;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .08);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+
+  .calendar-event-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .28rem;
+  }
+
+  .calendar-event-chip {
+    font-size: .58rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: .08rem .34rem;
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .calendar-event-time {
+    font-size: .58rem;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .calendar-event-title {
+    font-size: .66rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calendar-grid-shell.view-month .calendar-event-top {
+    display: none;
+  }
+
+  .calendar-grid-shell.view-month .calendar-event-title {
+    font-size: .62rem;
+  }
+
+  .calendar-grid-shell.view-day .calendar-event-item {
+    font-size: .8rem;
+    padding: .46rem .56rem;
+    border-color: #cfdaea;
+    gap: .26rem;
+  }
+
+  .calendar-event-item:hover {
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, .16);
+  }
+
+  .calendar-event-item.is-presencial {
+    border-color: #86efac;
+    background: linear-gradient(180deg, #f0fdf4, #dcfce7);
+  }
+
+  .calendar-event-item.is-presencial .calendar-event-chip {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  .calendar-event-item.is-virtual {
+    border-color: #93c5fd;
+    background: linear-gradient(180deg, #eff6ff, #dbeafe);
+  }
+
+  .calendar-event-item.is-virtual .calendar-event-chip {
+    background: #3b82f6;
+    color: #fff;
+  }
+
+  .calendar-event-item.is-inicio {
+    border-color: #c4b5fd;
+    background: linear-gradient(180deg, #f5f3ff, #ede9fe);
+  }
+
+  .calendar-event-item.is-inicio .calendar-event-chip {
+    background: #8b5cf6;
+    color: #fff;
+  }
+
+  .calendar-event-item.is-fin {
+    border-color: #fecaca;
+    background: linear-gradient(180deg, #fef2f2, #fee2e2);
+  }
+
+  .calendar-event-item.is-fin .calendar-event-chip {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .calendar-event-item.is-otros {
+    border-color: #cbd5e1;
+    background: linear-gradient(180deg, #f8fafc, #eef2f7);
+  }
+
+  .calendar-event-item.is-otros .calendar-event-chip {
+    background: #64748b;
+    color: #fff;
+  }
+
+  .calendar-event-more {
+    font-size: .62rem;
+    color: #64748b;
+    font-weight: 700;
+  }
+
+  .calendar-day-empty {
+    margin-top: .7rem;
+    font-size: .78rem;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .calendar-legend {
+    margin-top: .8rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .calendar-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .76rem;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  @media (max-width: 900px) {
+    .calendar-toolbar {
+      grid-template-columns: 1fr;
+      justify-items: start;
+      gap: .5rem;
+    }
+
+    .calendar-title-center {
+      text-align: left;
+    }
+
+    .calendar-month-grid {
+      grid-auto-rows: 84px;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -189,6 +628,9 @@
       </a>
       <a href="/admin?view=cursos" class="sidebar-link" data-view="cursos">
         <span class="link-icon">📚</span> Gestión de Cursos
+      </a>
+      <a href="/admin?view=calendario" class="sidebar-link" data-view="calendario">
+        <span class="link-icon">🗓️</span> Calendario
       </a>
       <a href="/admin?view=matriculas" class="sidebar-link" data-view="matriculas">
         <span class="link-icon">📋</span> Matrículas
@@ -236,6 +678,27 @@
 
     <div class="admin-content">
 
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% if mensajes %}
+      <div style="display:grid; gap:.55rem; margin-bottom:.85rem;">
+        {% for categoria, mensaje in mensajes %}
+          {% set clase_alerta = 'info' %}
+          {% if categoria in ['danger', 'error'] %}
+            {% set clase_alerta = 'danger' %}
+          {% elif categoria in ['success', 'ok'] %}
+            {% set clase_alerta = 'success' %}
+          {% elif categoria in ['warning', 'warn'] %}
+            {% set clase_alerta = 'warning' %}
+          {% endif %}
+          <div class="alert-ipsd {{ clase_alerta }}" style="margin:0;">
+            <span>{% if clase_alerta == 'danger' %}⛔{% elif clase_alerta == 'success' %}✅{% elif clase_alerta == 'warning' %}⚠️{% else %}ℹ️{% endif %}</span>
+            <span>{{ mensaje }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
       <section class="admin-screen" data-screen="dashboard">
       <!-- STATS CARDS -->
       <section id="section-stats">
@@ -262,6 +725,186 @@
             </div>
           </div>
         </div>
+
+        {% if false and curso_sesiones_id %}
+        <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}">
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+            <div>
+              <span style="font-weight:700; font-size:.95rem;">🗓️ Gestión de Calendario</span>
+              <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
+                Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
+              </div>
+            </div>
+            <button type="button" class="calendar-toggle-btn" id="btn-toggle-generacion-calendario" aria-expanded="false" aria-controls="panel-generacion-calendario">
+              Mostrar generación automática
+            </button>
+          </div>
+
+          <div class="card-body" style="display:grid; gap:1rem;">
+            <div id="panel-generacion-calendario" class="calendar-panel hidden">
+              <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Fecha inicio</label>
+                    <input type="date" class="form-input" name="fecha_inicio" value="{{ curso_sesion_config['fecha_inicio'] }}" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Fecha fin</label>
+                    <input type="date" class="form-input" name="fecha_fin" value="{{ curso_sesion_config['fecha_fin'] }}" required>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Días de clase</label>
+                  <div class="calendar-days-grid">
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="0" {% if 0 in curso_sesion_config['dias_semana'] %}checked{% endif %}> L</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="1" {% if 1 in curso_sesion_config['dias_semana'] %}checked{% endif %}> M</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="2" {% if 2 in curso_sesion_config['dias_semana'] %}checked{% endif %}> X</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="3" {% if 3 in curso_sesion_config['dias_semana'] %}checked{% endif %}> J</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="4" {% if 4 in curso_sesion_config['dias_semana'] %}checked{% endif %}> V</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="5" {% if 5 in curso_sesion_config['dias_semana'] %}checked{% endif %}> S</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="6" {% if 6 in curso_sesion_config['dias_semana'] %}checked{% endif %}> D</label>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:.65rem; align-items:end;" id="bloques-horarios-auto">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Hora inicio</label>
+                    <input type="time" class="form-input" name="hora_inicio" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Hora fin</label>
+                    <input type="time" class="form-input" name="hora_fin" required>
+                  </div>
+                  <button type="submit" class="btn-primary-ipsd" style="height:42px;">Generar</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0;">
+              <form action="/admin/sesion/crear" method="POST" style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:.65rem; align-items:end;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Fecha sesión</label>
+                  <input type="date" class="form-input" name="fecha" value="{{ fecha_hoy }}" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Inicio</label>
+                  <input type="time" class="form-input" name="hora_inicio" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Fin</label>
+                  <input type="time" class="form-input" name="hora_fin" required>
+                </div>
+                <button type="submit" class="btn-success-ipsd" style="height:42px;">Agregar sesión</button>
+              </form>
+            </div>
+
+            <div style="overflow-x:auto;">
+              <table class="table-ipsd">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Estado</th>
+                    <th>Token</th>
+                    <th style="text-align:right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for sesion in sesiones_curso|default([]) %}
+                  <tr>
+                    <td><span class="badge-pill secondary text-xs">#{{ sesion['id_sesion'] }}</span></td>
+                    <td>{{ sesion['fecha'] }}</td>
+                    <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
+                    <td>
+                      {% if sesion['estado'] == 1 %}
+                        <span class="badge-pill success text-xs">Abierta</span>
+                      {% elif sesion['estado'] == 2 %}
+                        <span class="badge-pill primary text-xs">Finalizada</span>
+                      {% else %}
+                        <span class="badge-pill secondary text-xs">Cerrada</span>
+                      {% endif %}
+                    </td>
+                    <td style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:.78rem;">
+                      {{ sesion['token_asistencia'] or '—' }}
+                    </td>
+                    <td style="text-align:right;">
+                      <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
+                        {% if sesion['estado'] == 0 %}
+                        <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                          <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia">🔓</button>
+                        </form>
+                        {% endif %}
+
+                        {% if sesion['token_asistencia'] %}
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-view-qr-admin"
+                          title="Ver y descargar QR"
+                          aria-label="Ver y descargar QR"
+                          data-id-sesion="{{ sesion['id_sesion'] }}"
+                          data-id-curso="{{ curso_sesiones_id }}"
+                          data-fecha="{{ sesion['fecha'] }}"
+                          data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                          data-hora-fin="{{ sesion['hora_fin'] }}"
+                          data-token="{{ sesion['token_asistencia'] }}">
+                          QR
+                        </button>
+                        {% endif %}
+
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-edit-sesion"
+                          title="Editar sesión"
+                          aria-label="Editar sesión"
+                          data-id-sesion="{{ sesion['id_sesion'] }}"
+                          data-id-curso="{{ curso_sesiones_id }}"
+                          data-fecha="{{ sesion['fecha'] }}"
+                          data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                          data-hora-fin="{{ sesion['hora_fin'] }}"
+                          data-estado="{{ sesion['estado'] }}">
+                          ✏️
+                        </button>
+
+                        <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                          <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                          <button
+                            type="submit"
+                            class="btn-danger-ipsd btn-icon-action"
+                            title="Eliminar sesión"
+                            aria-label="Eliminar sesión"
+                            onclick="return confirm('¿Eliminar esta sesión?');">
+                            🗑️
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="6" style="text-align:center; color:var(--text-muted); padding:1.6rem;">
+                      Aún no hay sesiones creadas para este curso.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </section>
 
       <!-- GRÁFICOS -->
@@ -308,14 +951,14 @@
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Nombre del Curso</label>
+                  <label class="form-label">Nombre de la Acción Formativa</label>
                   <input type="text" class="form-input" name="nombre_curso"
-                    placeholder="Ej. Uso de Webex" required maxlength="150">
+                    placeholder="Ej. Seminario de Evaluación Formativa" required maxlength="150">
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Fecha del Curso</label>
+                    <label class="form-label">Fecha de Inicio (Límite de Matrícula)</label>
                     <input type="date" class="form-input" name="fecha_curso" id="fecha_curso" value="{{ fecha_hoy }}" required>
                   </div>
                   <div class="form-group" style="margin-bottom:0;">
@@ -329,17 +972,9 @@
                   </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom:.9rem;">
-                  <label class="form-label">Fechas Adicionales (Opcional)</label>
-                  <div id="fechas-adicionales-contenedor" style="display:grid; gap:.45rem;"></div>
-                  <div style="display:flex; gap:.5rem; margin-top:.45rem;">
-                    <button type="button" id="btn-add-fecha-adicional" class="btn-ghost" style="color:var(--primary); border-color:#bfdbfe; background:#eff6ff; font-size:.8rem; padding:.38rem .7rem;">
-                      + Agregar otra fecha
-                    </button>
-                  </div>
-                  <div id="fechas-adicionales-ayuda" style="font-size:.74rem; color:var(--text-muted); margin-top:.35rem;">
-                    Puedes habilitar la misma acción formativa en varias fechas del calendario.
-                  </div>
+                <div class="alert-ipsd info" style="margin:.2rem 0 .9rem 0;">
+                  <span>ℹ️</span>
+                  <span>Días y horarios se gestionan después desde <strong>Gestión de Calendario</strong> del curso.</span>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
@@ -369,6 +1004,32 @@
                   </div>
                 </div>
 
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Tipo de Acción</label>
+                    <select class="form-select" name="tipo_accion" id="tipo_accion" required>
+                      <option value="CONFERENCIA">Conferencia</option>
+                      <option value="SEMINARIO">Seminario</option>
+                      <option value="CURSO" selected>Curso</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Cupos Máximos</label>
+                    <input type="number" class="form-input" name="cupos_maximos" min="0" step="1" value="0" required>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Horas Totales</label>
+                    <input type="number" class="form-input" id="horas_totales" name="horas_totales" min="1" step="1" value="20" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Semanas de Duración</label>
+                    <input type="number" class="form-input" id="semanas_duracion" name="semanas_duracion" min="1" step="1" value="1" required>
+                  </div>
+                </div>
+
                 <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2" id="enlace_virtual_group">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Enlace de Acceso (solo Virtual)</label>
@@ -384,26 +1045,8 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Cupos Máximos</label>
-                    <input type="number" class="form-input" name="cupos_maximos" min="0" step="1" value="0" required>
-                  </div>
-                </div>
-
-                <div class="form-group mt-2">
-                  <label class="form-label">Horarios Disponibles</label>
-                  <div style="border:1.5px solid var(--border); border-radius:var(--radius); padding:1rem; max-height:230px; overflow-y:auto; background:#f8fafc;">
-                    <div id="horarios-dia-label" style="display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--primary); margin-bottom:.35rem;"></div>
-                    <div id="horarios-dia-contenedor" style="display:flex; flex-wrap:wrap; gap:.4rem;"></div>
-                    <div id="horarios-dia-vacio" style="display:none; font-size:.8rem; color:var(--text-muted);">
-                      Selecciona una fecha válida para mostrar los horarios.
-                    </div>
-                  </div>
-                </div>
-
                 <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
-                  Crear Curso
+                  Crear Acción Formativa
                 </button>
               </form>
             </div>
@@ -435,7 +1078,7 @@
                         {{ curso['dia'] }}/{{ curso['mes'] }}/{{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}
                       </span><br>
                       <span style="font-size:.73rem; color:var(--text-muted);">
-                        {{ curso['modalidad'] }} · Cupos: {{ curso['cupos_maximos'] }}
+                        {{ curso['modalidad'] }} · {{ (curso['tipo_accion'] or 'CURSO')|title }} · {{ curso['horas_totales'] or 0 }}h · {{ curso['semanas_duracion'] or 1 }} semana(s) · Cupos: {{ curso['cupos_maximos'] }}
                       </span>
                       {% if curso['modalidad'] == 'Virtual' and curso['enlace_virtual'] %}
                       <br>
@@ -451,6 +1094,14 @@
                     </td>
                     <td style="text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:.35rem;">
+                        <a
+                          href="{{ url_for('admin_gestion_sesiones', id_curso=curso['id']) }}"
+                          class="btn-ghost btn-icon-action"
+                          title="Gestionar sesiones"
+                          aria-label="Gestionar sesiones"
+                          style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; text-decoration:none;">
+                          🗓️
+                        </a>
                         <button
                           type="button"
                           class="btn-primary-ipsd btn-icon-action btn-edit-curso"
@@ -463,6 +1114,9 @@
                           data-dia="{{ curso['dia'] }}"
                           data-trimestre="{{ curso['trimestre'] }}"
                           data-modalidad="{{ curso['modalidad'] }}"
+                          data-tipo="{{ curso['tipo_accion'] or 'CURSO' }}"
+                          data-horas="{{ curso['horas_totales'] or 20 }}"
+                          data-semanas="{{ curso['semanas_duracion'] or 1 }}"
                           data-enlace="{{ curso['enlace_virtual'] or '' }}"
                           data-cupos="{{ curso['cupos_maximos'] }}">
                           ✏️
@@ -496,7 +1150,336 @@
             </div>
           </div>
         </div>
+
+        {% if curso_sesiones_id %}
+        {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle else 'CURSO') %}
+        {% set curso_sesion_semanas = (curso_sesion_detalle['semanas_duracion'] if curso_sesion_detalle else 1) %}
+        {% set curso_sesion_horas = (curso_sesion_detalle['horas_totales'] if curso_sesion_detalle else 0) %}
+        {% set curso_sesion_es_un_dia = (curso_sesion_semanas|int <= 1) %}
+        {% set curso_sesion_fecha_base = fecha_hoy %}
+        {% if curso_sesion_detalle %}
+          {% set mes_num = {
+            'Enero':'01','Febrero':'02','Marzo':'03','Abril':'04','Mayo':'05','Junio':'06',
+            'Julio':'07','Agosto':'08','Septiembre':'09','Octubre':'10','Noviembre':'11','Diciembre':'12'
+          }.get(curso_sesion_detalle['mes'], '01') %}
+          {% set curso_sesion_fecha_base = (curso_sesion_detalle['anio'] ~ '-' ~ mes_num ~ '-' ~ (curso_sesion_detalle['dia']|string).zfill(2)) %}
+        {% endif %}
+        <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}">
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+            <div>
+              <span style="font-weight:700; font-size:.95rem;">🗓️ Gestión de Calendario</span>
+              <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
+                Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
+              </div>
+              <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
+                Tipo: <strong>{{ curso_sesion_tipo|title }}</strong> · {{ curso_sesion_horas }}h · {{ curso_sesion_semanas }} semana(s)
+              </div>
+            </div>
+            {% if not curso_sesion_es_un_dia %}
+            <button type="button" class="calendar-toggle-btn" id="btn-toggle-generacion-calendario" aria-expanded="false" aria-controls="panel-generacion-calendario">
+              Mostrar generación automática
+            </button>
+            {% endif %}
+          </div>
+
+          <div class="card-body" style="display:grid; gap:1rem;">
+            {% if curso_sesion_es_un_dia %}
+            <div class="alert-ipsd info" style="margin:0;">
+              <span>ℹ️</span>
+              <span>Este curso está configurado como <strong>un día</strong>. Solo se permiten sesiones en la fecha base: <strong>{{ curso_sesion_fecha_base }}</strong>.</span>
+            </div>
+            {% endif %}
+
+            {% if not curso_sesion_es_un_dia %}
+            <div id="panel-generacion-calendario" class="calendar-panel hidden">
+              <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Fecha inicio</label>
+                    <input type="date" class="form-input" name="fecha_inicio" value="{{ curso_sesion_config['fecha_inicio'] }}" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Fecha fin</label>
+                    <input type="date" class="form-input" name="fecha_fin" value="{{ curso_sesion_config['fecha_fin'] }}" required>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Días de clase</label>
+                  <div class="calendar-days-grid">
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="0" {% if 0 in curso_sesion_config['dias_semana'] %}checked{% endif %}> L</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="1" {% if 1 in curso_sesion_config['dias_semana'] %}checked{% endif %}> M</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="2" {% if 2 in curso_sesion_config['dias_semana'] %}checked{% endif %}> X</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="3" {% if 3 in curso_sesion_config['dias_semana'] %}checked{% endif %}> J</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="4" {% if 4 in curso_sesion_config['dias_semana'] %}checked{% endif %}> V</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="5" {% if 5 in curso_sesion_config['dias_semana'] %}checked{% endif %}> S</label>
+                    <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="6" {% if 6 in curso_sesion_config['dias_semana'] %}checked{% endif %}> D</label>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:.65rem; align-items:end;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Hora inicio</label>
+                    <input type="time" class="form-input" name="hora_inicio" value="{{ curso_sesion_config['hora_inicio'] }}" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Hora fin</label>
+                    <input type="time" class="form-input" name="hora_fin" value="{{ curso_sesion_config['hora_fin'] }}" required>
+                  </div>
+                  <button type="submit" class="btn-primary-ipsd" style="height:42px;">Generar</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Jornada</label>
+                    <select class="form-select" name="jornada">
+                      <option value="UNICA" {% if curso_sesion_config['jornada'] == 'UNICA' %}selected{% endif %}>Única</option>
+                      <option value="MATUTINA" {% if curso_sesion_config['jornada'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
+                      <option value="VESPERTINA" {% if curso_sesion_config['jornada'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
+                      <option value="NOCTURNA" {% if curso_sesion_config['jornada'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Docente Responsable</label>
+                    <input type="text" class="form-input" name="docente_sesion" value="{{ curso_sesion_config['docente_sesion'] }}" maxlength="120" placeholder="Ej. Mgtr. Ana López">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Bloque / Grupo</label>
+                    <input type="text" class="form-input" name="bloque_codigo" value="{{ curso_sesion_config['bloque_codigo'] }}" maxlength="20" placeholder="Ej. G1">
+                  </div>
+                </div>
+              </form>
+            </div>
+            {% endif %}
+
+            <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0;">
+              <form action="/admin/sesion/crear" method="POST" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto; gap:.65rem; align-items:end;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Fecha sesión</label>
+                  <input
+                    type="date"
+                    class="form-input"
+                    name="fecha"
+                    value="{{ curso_sesion_fecha_base if curso_sesion_es_un_dia else curso_sesion_config['fecha_inicio'] }}"
+                    {% if curso_sesion_es_un_dia %}min="{{ curso_sesion_fecha_base }}" max="{{ curso_sesion_fecha_base }}"{% endif %}
+                    required
+                  >
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Inicio</label>
+                  <input type="time" class="form-input" name="hora_inicio" value="{{ curso_sesion_config['hora_inicio'] }}" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Fin</label>
+                  <input type="time" class="form-input" name="hora_fin" value="{{ curso_sesion_config['hora_fin'] }}" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Jornada</label>
+                  <select class="form-select" name="jornada">
+                    <option value="UNICA" {% if curso_sesion_config['jornada'] == 'UNICA' %}selected{% endif %}>Única</option>
+                    <option value="MATUTINA" {% if curso_sesion_config['jornada'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
+                    <option value="VESPERTINA" {% if curso_sesion_config['jornada'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
+                    <option value="NOCTURNA" {% if curso_sesion_config['jornada'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Docente</label>
+                  <input type="text" class="form-input" name="docente_sesion" value="{{ curso_sesion_config['docente_sesion'] }}" maxlength="120" placeholder="Responsable">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Bloque</label>
+                  <input type="text" class="form-input" name="bloque_codigo" value="{{ curso_sesion_config['bloque_codigo'] }}" maxlength="20" placeholder="G1">
+                </div>
+                <button type="submit" class="btn-success-ipsd" style="height:42px;">Agregar sesión</button>
+              </form>
+            </div>
+
+            <div style="overflow-x:auto;">
+              <table class="table-ipsd">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Jornada</th>
+                    <th>Docente</th>
+                    <th>Estado</th>
+                    <th>Token</th>
+                    <th style="text-align:right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for sesion in sesiones_curso|default([]) %}
+                  <tr>
+                    <td><span class="badge-pill secondary text-xs">#{{ sesion['id_sesion'] }}</span></td>
+                    <td>{{ sesion['fecha'] }}</td>
+                    <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
+                    <td>
+                      {{ sesion['jornada'] or 'UNICA' }}
+                      {% if sesion['bloque_codigo'] %}
+                      <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['bloque_codigo'] }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ sesion['docente_sesion'] or '—' }}</td>
+                    <td>
+                      {% if sesion['estado'] == 1 %}
+                        <span class="badge-pill success text-xs">Abierta</span>
+                      {% elif sesion['estado'] == 2 %}
+                        <span class="badge-pill primary text-xs">Finalizada</span>
+                      {% else %}
+                        <span class="badge-pill secondary text-xs">Cerrada</span>
+                      {% endif %}
+                    </td>
+                    <td style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:.78rem;">
+                      {{ sesion['token_asistencia'] or '—' }}
+                    </td>
+                    <td style="text-align:right;">
+                      <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
+                        {% if sesion['estado'] == 0 %}
+                        <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                          <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia">🔓</button>
+                        </form>
+                        {% endif %}
+
+                        {% if sesion['estado'] == 1 %}
+                        <form action="/admin/sesion/cerrar" method="POST" style="display:inline; margin:0;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                          <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                          <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Desactivar asistencia" aria-label="Desactivar asistencia">🔒</button>
+                        </form>
+                        {% endif %}
+
+                        {% if sesion['estado'] == 1 and sesion['token_asistencia'] %}
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-view-qr-admin"
+                          title="Ver y descargar QR"
+                          aria-label="Ver y descargar QR"
+                          data-id-sesion="{{ sesion['id_sesion'] }}"
+                          data-id-curso="{{ curso_sesiones_id }}"
+                          data-fecha="{{ sesion['fecha'] }}"
+                          data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                          data-hora-fin="{{ sesion['hora_fin'] }}"
+                          data-token="{{ sesion['token_asistencia'] }}">
+                          QR
+                        </button>
+                        {% endif %}
+
+                        <button
+                          type="button"
+                          class="btn-primary-ipsd btn-icon-action btn-edit-sesion"
+                          title="Editar sesión"
+                          aria-label="Editar sesión"
+                          data-id-sesion="{{ sesion['id_sesion'] }}"
+                          data-id-curso="{{ curso_sesiones_id }}"
+                          data-fecha="{{ sesion['fecha'] }}"
+                          data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                          data-hora-fin="{{ sesion['hora_fin'] }}"
+                          data-jornada="{{ sesion['jornada'] or 'UNICA' }}"
+                          data-docente-sesion="{{ sesion['docente_sesion'] or '' }}"
+                          data-bloque-codigo="{{ sesion['bloque_codigo'] or '' }}"
+                          data-estado="{{ sesion['estado'] }}">
+                          ✏️
+                        </button>
+
+                        <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                          <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                          <button
+                            type="submit"
+                            class="btn-danger-ipsd btn-icon-action"
+                            title="Eliminar sesión"
+                            aria-label="Eliminar sesión"
+                            onclick="return confirm('¿Eliminar esta sesión?');">
+                            🗑️
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="8" style="text-align:center; color:var(--text-muted); padding:1.6rem;">
+                      Aún no hay sesiones creadas para este curso.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </section>
+
+      <!-- CALENDARIO GENERAL -->
+      <section id="section-calendario" class="admin-screen" data-screen="calendario">
+        <div class="card-ipsd animate-fade-up-2">
+          <div class="card-header calendar-board-header">
+            <div class="calendar-board-title-wrap">
+              <span class="calendar-board-icon">🗓️</span>
+              <div>
+                <div class="calendar-board-title">Calendario de Eventos</div>
+                <p class="calendar-board-subtitle" id="calendario-total-visible">{{ calendario_eventos|length }} evento(s) cargado(s)</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body" style="padding:1.1rem 1.2rem;">
+            <div class="calendar-toolbar">
+              <div class="calendar-nav-group">
+                <button type="button" class="calendar-nav-btn" id="calendar-prev-month" aria-label="Mes anterior">‹</button>
+                <button type="button" class="calendar-nav-btn" id="calendar-next-month" aria-label="Mes siguiente">›</button>
+                <button type="button" class="calendar-today-btn" id="calendar-today-btn">Hoy</button>
+              </div>
+
+              <div class="calendar-title-center" id="calendar-month-label">abril de 2026</div>
+
+              <div class="calendar-view-switch">
+                <button type="button" class="calendar-view-btn active" data-calendar-view="mes">Mes</button>
+                <button type="button" class="calendar-view-btn" data-calendar-view="semana">Semana</button>
+                <button type="button" class="calendar-view-btn" data-calendar-view="dia">Día</button>
+              </div>
+            </div>
+
+            <div class="calendar-grid-shell view-month" id="calendar-grid-shell">
+              <div class="calendar-week-header" id="calendar-week-header">
+                <span>dom</span>
+                <span>lun</span>
+                <span>mar</span>
+                <span>mié</span>
+                <span>jue</span>
+                <span>vie</span>
+                <span>sáb</span>
+              </div>
+              <div class="calendar-month-grid" id="calendar-month-grid"></div>
+            </div>
+
+            <div class="calendar-legend" aria-label="Leyenda del calendario">
+              <span class="calendar-legend-item"><span class="calendar-event-dot" style="background:#22c55e;"></span>Reunión Presencial</span>
+              <span class="calendar-legend-item"><span class="calendar-event-dot" style="background:#3b82f6;"></span>Reunión Virtual</span>
+              <span class="calendar-legend-item"><span class="calendar-event-dot" style="background:#a855f7;"></span>Inicio Proyecto</span>
+              <span class="calendar-legend-item"><span class="calendar-event-dot" style="background:#ef4444;"></span>Fin Proyecto</span>
+              <span class="calendar-legend-item"><span class="calendar-event-dot" style="background:#64748b;"></span>Otros</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <script type="application/json" id="calendar-eventos-data">
+        {{ calendario_eventos|tojson }}
+      </script>
 
       {% if es_superadmin %}
       <section id="section-usuarios" class="admin-screen" data-screen="usuarios">
@@ -531,7 +1514,7 @@
 
                 <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
                   Crear Usuario Admin
-                </button>
+              </button>
               </form>
             </div>
           </div>
@@ -998,6 +1981,25 @@
           </select>
         </div>
         <div>
+          <label class="form-label" style="font-size:.8rem;">Tipo de Acción</label>
+          <select class="form-select" id="edit-curso-tipo" name="tipo_accion" required>
+            <option value="CONFERENCIA">Conferencia</option>
+            <option value="SEMINARIO">Seminario</option>
+            <option value="CURSO">Curso</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Horas Totales</label>
+          <input type="number" class="form-input" id="edit-curso-horas" name="horas_totales" min="1" step="1" required>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Semanas de Duración</label>
+          <input type="number" class="form-input" id="edit-curso-semanas" name="semanas_duracion" min="1" step="1" required>
+        </div>
+        <div>
           <label class="form-label" style="font-size:.8rem;">Cupos Máximos</label>
           <input type="number" class="form-input" id="edit-curso-cupos" name="cupos_maximos" min="0" step="1" required>
         </div>
@@ -1022,6 +2024,86 @@
     </form>
   </div>
 </div>
+
+<!-- Modal editar sesión -->
+<div class="modal-overlay" id="modal-editar-sesion">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-icon">🗓️</div>
+    <div class="modal-title">Editar Sesión</div>
+    <form action="/admin/sesion/editar" method="POST" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="id_curso" id="edit-sesion-id-curso">
+      <input type="hidden" name="id_sesion" id="edit-sesion-id-sesion">
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Fecha</label>
+        <input type="date" class="form-input" id="edit-sesion-fecha" name="fecha" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Hora inicio</label>
+          <input type="time" class="form-input" id="edit-sesion-hora-inicio" name="hora_inicio" required>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Hora fin</label>
+          <input type="time" class="form-input" id="edit-sesion-hora-fin" name="hora_fin" required>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Jornada</label>
+          <select class="form-select" id="edit-sesion-jornada" name="jornada">
+            <option value="UNICA">Única</option>
+            <option value="MATUTINA">Matutina</option>
+            <option value="VESPERTINA">Vespertina</option>
+            <option value="NOCTURNA">Nocturna</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Docente Responsable</label>
+          <input type="text" class="form-input" id="edit-sesion-docente" name="docente_sesion" maxlength="120" placeholder="Responsable">
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Bloque / Grupo</label>
+          <input type="text" class="form-input" id="edit-sesion-bloque" name="bloque_codigo" maxlength="20" placeholder="G1">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-sesion')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-qr-sesion-admin">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-icon">📱</div>
+    <div class="modal-title" id="qr-sesion-admin-title">QR de Asistencia</div>
+    <p id="qr-sesion-admin-meta" style="margin:.2rem 0 .85rem; color:var(--text-muted); font-size:.86rem;"></p>
+    <p id="qr-sesion-admin-token" style="margin:0 0 .85rem; color:#334155; font-size:.82rem; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"></p>
+
+    <div
+      id="qr-sesion-admin-canvas"
+      style="display:flex; justify-content:center; align-items:center; min-height:220px; border:1px dashed var(--border); border-radius:14px; background:#f8fafc; margin-bottom:.9rem;">
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn-ghost"
+        style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
+        onclick="cerrarModal('modal-qr-sesion-admin')">
+        Cerrar
+      </button>
+      <button type="button" class="btn-ghost" id="btn-descargar-pdf-qr-admin" style="color:#1d4ed8; border-color:#bfdbfe; border-radius:var(--radius);">Descargar PDF</button>
+      <button type="button" class="btn-primary-ipsd" id="btn-descargar-qr-admin" style="justify-content:center;">Descargar QR</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -1029,10 +2111,11 @@
 // Variables para modales
 let currentFormId = null;
 let chartsInitialized = false;
+let qrSesionAdminNombreArchivo = 'qr-asistencia.png';
 const adminLayout = document.querySelector('.admin-layout');
 const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
 const vistaInicialServidor = adminLayout?.dataset.vistaInicial || 'dashboard';
-const vistasPermitidas = ['dashboard', 'cursos', 'matriculas', 'usuarios'];
+const vistasPermitidas = ['dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios'];
 const horariosBase = [
   '08:00 AM - 10:00 AM',
   '10:00 AM - 12:00 PM',
@@ -1179,11 +2262,159 @@ function abrirModalEditarCurso(data) {
   document.getElementById('edit-curso-fecha').value = fechaIso;
   document.getElementById('edit-curso-trimestre').value = data.trimestre || 'I';
   document.getElementById('edit-curso-modalidad').value = data.modalidad || 'Virtual';
+  document.getElementById('edit-curso-tipo').value = data.tipo || 'CURSO';
+  document.getElementById('edit-curso-horas').value = data.horas || '20';
+  document.getElementById('edit-curso-semanas').value = data.semanas || '1';
   document.getElementById('edit-curso-cupos').value = data.cupos || '0';
   document.getElementById('edit-curso-enlace').value = data.enlace || '';
 
   actualizarEstadoEnlaceVirtualEdicion();
   abrirModal('modal-editar-curso');
+}
+
+function abrirModalEditarSesion(data) {
+  const idCurso = document.getElementById('edit-sesion-id-curso');
+  const idSesion = document.getElementById('edit-sesion-id-sesion');
+  const fecha = document.getElementById('edit-sesion-fecha');
+  const horaInicio = document.getElementById('edit-sesion-hora-inicio');
+  const horaFin = document.getElementById('edit-sesion-hora-fin');
+  const jornada = document.getElementById('edit-sesion-jornada');
+  const docente = document.getElementById('edit-sesion-docente');
+  const bloque = document.getElementById('edit-sesion-bloque');
+
+  if (!idCurso || !idSesion || !fecha || !horaInicio || !horaFin || !jornada || !docente || !bloque) {
+    return;
+  }
+
+  idCurso.value = data.idCurso || '';
+  idSesion.value = data.idSesion || '';
+  fecha.value = data.fecha || '';
+  horaInicio.value = (data.horaInicio || '').slice(0, 5);
+  horaFin.value = (data.horaFin || '').slice(0, 5);
+  jornada.value = data.jornada || 'UNICA';
+  docente.value = data.docenteSesion || '';
+  bloque.value = data.bloqueCodigo || '';
+
+  abrirModal('modal-editar-sesion');
+}
+
+function construirNombreArchivoQrSesion(data) {
+  const curso = String(data.idCurso || 'curso').replace(/[^a-zA-Z0-9_-]+/g, '-');
+  const sesion = String(data.idSesion || '0').replace(/[^a-zA-Z0-9_-]+/g, '-');
+  return `qr-${curso}-sesion-${sesion}.png`;
+}
+
+function abrirModalQrSesion(data) {
+  const qrTitle = document.getElementById('qr-sesion-admin-title');
+  const qrMeta = document.getElementById('qr-sesion-admin-meta');
+  const qrToken = document.getElementById('qr-sesion-admin-token');
+  const qrCanvas = document.getElementById('qr-sesion-admin-canvas');
+
+  if (!qrTitle || !qrMeta || !qrToken || !qrCanvas) {
+    return;
+  }
+
+  const tituloSesion = data.idSesion ? `QR de Asistencia - Sesion #${data.idSesion}` : 'QR de Asistencia';
+  const detalleSesion = [
+    data.idCurso ? `Curso ${data.idCurso}` : '',
+    data.fecha || '',
+    (data.horaInicio && data.horaFin) ? `${data.horaInicio}-${data.horaFin}` : ''
+  ].filter(Boolean).join(' · ');
+
+  qrTitle.textContent = tituloSesion;
+  qrMeta.textContent = detalleSesion;
+  qrToken.textContent = data.token ? `Token: ${data.token}` : 'Sin token disponible';
+  qrCanvas.innerHTML = '';
+
+  qrSesionAdminNombreArchivo = construirNombreArchivoQrSesion(data);
+
+  if (window.QRCode && data.token) {
+    new window.QRCode(qrCanvas, {
+      text: data.token,
+      width: 220,
+      height: 220,
+    });
+  } else {
+    qrCanvas.textContent = 'No se pudo generar el QR en este navegador.';
+  }
+
+  abrirModal('modal-qr-sesion-admin');
+}
+
+function descargarQrSesionAdmin() {
+  const qrCanvas = document.getElementById('qr-sesion-admin-canvas');
+  if (!qrCanvas) {
+    return;
+  }
+
+  const canvas = qrCanvas.querySelector('canvas');
+  const img = qrCanvas.querySelector('img');
+  const dataUrl = canvas?.toDataURL('image/png') || img?.src || '';
+
+  if (!dataUrl) {
+    alert('No hay un QR disponible para descargar.');
+    return;
+  }
+
+  const enlace = document.createElement('a');
+  enlace.href = dataUrl;
+  enlace.download = qrSesionAdminNombreArchivo || 'qr-asistencia.png';
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+}
+
+function descargarPdfQrSesionAdmin() {
+  const qrCanvas = document.getElementById('qr-sesion-admin-canvas');
+  const qrTitle = document.getElementById('qr-sesion-admin-title');
+  const qrMeta = document.getElementById('qr-sesion-admin-meta');
+  const qrToken = document.getElementById('qr-sesion-admin-token');
+  const jsPDFCtor = window.jspdf?.jsPDF;
+
+  if (!qrCanvas) {
+    return;
+  }
+
+  const canvas = qrCanvas.querySelector('canvas');
+  const img = qrCanvas.querySelector('img');
+  const dataUrl = canvas?.toDataURL('image/png') || img?.src || '';
+
+  if (!dataUrl) {
+    alert('No hay un QR disponible para exportar a PDF.');
+    return;
+  }
+
+  if (!jsPDFCtor) {
+    alert('No se pudo cargar la libreria para exportar PDF.');
+    return;
+  }
+
+  const doc = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const titulo = (qrTitle?.textContent || 'QR de Asistencia').trim();
+  const detalle = (qrMeta?.textContent || '').trim();
+  const token = (qrToken?.textContent || '').trim();
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(titulo, 15, 20);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+
+  const detalleLineas = doc.splitTextToSize(detalle || 'Sin detalle de sesion', 180);
+  doc.text(detalleLineas, 15, 30);
+
+  const tokenLineas = doc.splitTextToSize(token || 'Sin token', 180);
+  const tokenTop = 30 + (detalleLineas.length * 5) + 4;
+  doc.text(tokenLineas, 15, tokenTop);
+
+  const qrTop = tokenTop + (tokenLineas.length * 5) + 8;
+  const qrSize = 95;
+  const qrLeft = (210 - qrSize) / 2;
+  doc.addImage(dataUrl, 'PNG', qrLeft, qrTop, qrSize, qrSize);
+
+  const nombrePdf = (qrSesionAdminNombreArchivo || 'qr-asistencia.png').replace(/\.png$/i, '.pdf');
+  doc.save(nombrePdf);
 }
 
 function confirmarVaciar() {
@@ -1363,11 +2594,59 @@ document.addEventListener('DOMContentLoaded', function() {
         dia: this.dataset.dia,
         trimestre: this.dataset.trimestre,
         modalidad: this.dataset.modalidad,
+        tipo: this.dataset.tipo,
+        horas: this.dataset.horas,
+        semanas: this.dataset.semanas,
         enlace: this.dataset.enlace,
         cupos: this.dataset.cupos
       });
     });
   });
+  document.querySelectorAll('.btn-edit-sesion').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if ((this.dataset.estado || '0') !== '0') {
+        alert('Solo se pueden editar sesiones cerradas.');
+        return;
+      }
+      abrirModalEditarSesion({
+        idCurso: this.dataset.idCurso,
+        idSesion: this.dataset.idSesion,
+        fecha: this.dataset.fecha,
+        horaInicio: this.dataset.horaInicio,
+        horaFin: this.dataset.horaFin,
+        jornada: this.dataset.jornada,
+        docenteSesion: this.dataset.docenteSesion,
+        bloqueCodigo: this.dataset.bloqueCodigo,
+      });
+    });
+  });
+  document.querySelectorAll('.btn-view-qr-admin').forEach(btn => {
+    btn.addEventListener('click', function() {
+      abrirModalQrSesion({
+        idCurso: this.dataset.idCurso,
+        idSesion: this.dataset.idSesion,
+        fecha: this.dataset.fecha,
+        horaInicio: this.dataset.horaInicio,
+        horaFin: this.dataset.horaFin,
+        token: this.dataset.token,
+      });
+    });
+  });
+
+  const btnDescargarQrAdmin = document.getElementById('btn-descargar-qr-admin');
+  if (btnDescargarQrAdmin) {
+    btnDescargarQrAdmin.addEventListener('click', function() {
+      descargarQrSesionAdmin();
+    });
+  }
+
+  const btnDescargarPdfQrAdmin = document.getElementById('btn-descargar-pdf-qr-admin');
+  if (btnDescargarPdfQrAdmin) {
+    btnDescargarPdfQrAdmin.addEventListener('click', function() {
+      descargarPdfQrSesionAdmin();
+    });
+  }
+
   document.querySelectorAll('.btn-del-matricula').forEach(btn => {
     btn.addEventListener('click', function() {
       confirmarEliminarMatricula(this.dataset.formId, this.dataset.empleado, this.dataset.nombre);
@@ -1399,6 +2678,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const direccionCurso = document.getElementById('direccion_curso');
   const fechaCurso = document.getElementById('fecha_curso');
   const modalidad = document.getElementById('modalidad');
+  const tipoAccion = document.getElementById('tipo_accion');
+  const horasTotalesInput = document.getElementById('horas_totales');
+  const semanasDuracionInput = document.getElementById('semanas_duracion');
   const enlaceVirtual = document.getElementById('enlace_virtual');
   const enlaceVirtualGroup = document.getElementById('enlace_virtual_group');
   const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
@@ -1406,9 +2688,396 @@ document.addEventListener('DOMContentLoaded', function() {
   const horariosLabel = document.getElementById('horarios-dia-label');
   const horariosContenedor = document.getElementById('horarios-dia-contenedor');
   const horariosVacio = document.getElementById('horarios-dia-vacio');
+  const fechasAdicionalesWrapper = document.getElementById('fechas-adicionales-wrapper');
   const fechasAdicionalesContenedor = document.getElementById('fechas-adicionales-contenedor');
   const addFechaAdicionalBtn = document.getElementById('btn-add-fecha-adicional');
   const fechasAdicionalesAyuda = document.getElementById('fechas-adicionales-ayuda');
+  const toggleCalendarioBtn = document.getElementById('btn-toggle-generacion-calendario');
+  const panelCalendario = document.getElementById('panel-generacion-calendario');
+  const calendarEventosDataEl = document.getElementById('calendar-eventos-data');
+  const calendarMonthLabel = document.getElementById('calendar-month-label');
+  const calendarMonthGrid = document.getElementById('calendar-month-grid');
+  const calendarPrevMonth = document.getElementById('calendar-prev-month');
+  const calendarNextMonth = document.getElementById('calendar-next-month');
+  const calendarTodayBtn = document.getElementById('calendar-today-btn');
+  const calendarViewButtons = document.querySelectorAll('.calendar-view-btn[data-calendar-view]');
+  const calendarioTotalVisible = document.getElementById('calendario-total-visible');
+
+  const calendarEventosData = (() => {
+    if (!calendarEventosDataEl) return [];
+    try {
+      const parsed = JSON.parse(calendarEventosDataEl.textContent || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_err) {
+      return [];
+    }
+  })();
+
+  const mesesEsCalendario = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const diasSemanaCortosCalendario = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
+  const diasSemanaLargosCalendario = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const hoyCalendario = new Date();
+  hoyCalendario.setHours(0, 0, 0, 0);
+
+  const estadoCalendario = {
+    vista: 'mes',
+    cursor: new Date(hoyCalendario.getFullYear(), hoyCalendario.getMonth(), hoyCalendario.getDate())
+  };
+
+  const calendarGridShell = document.getElementById('calendar-grid-shell');
+  const calendarWeekHeader = document.getElementById('calendar-week-header');
+
+  function normalizarFecha(fecha) {
+    const copia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+    copia.setHours(0, 0, 0, 0);
+    return copia;
+  }
+
+  function sumarDias(fecha, dias) {
+    const copia = normalizarFecha(fecha);
+    copia.setDate(copia.getDate() + dias);
+    return copia;
+  }
+
+  function fechaIsoDesdeFecha(fecha) {
+    const y = String(fecha.getFullYear());
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function inicioSemanaDomingo(fecha) {
+    const base = normalizarFecha(fecha);
+    base.setDate(base.getDate() - base.getDay());
+    return base;
+  }
+
+  function tituloSemana(inicio, fin) {
+    if (inicio.getMonth() === fin.getMonth() && inicio.getFullYear() === fin.getFullYear()) {
+      return `Semana del ${inicio.getDate()} al ${fin.getDate()} de ${mesesEsCalendario[inicio.getMonth()]} de ${inicio.getFullYear()}`;
+    }
+    return `Semana del ${inicio.getDate()} de ${mesesEsCalendario[inicio.getMonth()]} al ${fin.getDate()} de ${mesesEsCalendario[fin.getMonth()]} de ${fin.getFullYear()}`;
+  }
+
+  function obtenerCategoriaEvento(evento) {
+    const idCurso = (evento.id_curso || '').toUpperCase();
+    if (evento.tipo_evento === 'curso') {
+      return { key: 'inicio', className: 'is-inicio', label: 'Inicio Proyecto' };
+    }
+    if (Number(evento.estado) === 2) {
+      return { key: 'fin', className: 'is-fin', label: 'Fin Proyecto' };
+    }
+    if (idCurso.includes('-P-')) {
+      return { key: 'presencial', className: 'is-presencial', label: 'Reunión Presencial' };
+    }
+    if (idCurso.includes('-V-')) {
+      return { key: 'virtual', className: 'is-virtual', label: 'Reunión Virtual' };
+    }
+    return { key: 'otros', className: 'is-otros', label: 'Otros' };
+  }
+
+  function textoEventoCalendario(evento) {
+    if (evento.tipo_evento === 'curso') {
+      return evento.nombre_curso || evento.id_curso || 'Curso';
+    }
+    return evento.nombre_curso || evento.id_curso || 'Sesion';
+  }
+
+  function etiquetaTipoEventoCalendario(evento, categoria) {
+    if (evento.tipo_evento === 'curso') return 'Inicio';
+    if (categoria.key === 'fin') return 'Fin';
+    if (categoria.key === 'presencial') return 'Presencial';
+    if (categoria.key === 'virtual') return 'Virtual';
+    return 'Sesion';
+  }
+
+  function etiquetaHoraEventoCalendario(evento) {
+    if (evento.hora_inicio && evento.hora_fin) {
+      return `${String(evento.hora_inicio).slice(0, 5)}-${String(evento.hora_fin).slice(0, 5)}`;
+    }
+    return 'Sin hora';
+  }
+
+  function agruparEventosPorFecha() {
+    const mapa = {};
+    calendarEventosData.forEach(evento => {
+      const fechaIso = (evento.fecha_iso || '').trim();
+      if (!fechaIso) return;
+      if (!mapa[fechaIso]) mapa[fechaIso] = [];
+      mapa[fechaIso].push(evento);
+    });
+    Object.keys(mapa).forEach(fechaIso => {
+      mapa[fechaIso].sort((a, b) => {
+        const hA = (a.hora_inicio || '00:00').slice(0, 5);
+        const hB = (b.hora_inicio || '00:00').slice(0, 5);
+        return hA.localeCompare(hB);
+      });
+    });
+    return mapa;
+  }
+
+  const eventosPorFecha = agruparEventosPorFecha();
+
+  function crearEnlaceEvento(evento) {
+    const categoria = obtenerCategoriaEvento(evento);
+    const link = document.createElement('a');
+    link.className = `calendar-event-item ${categoria.className}`;
+    link.href = `/admin/curso/${encodeURIComponent(evento.id_curso || '')}/sesiones`;
+    link.title = `${categoria.label}: ${textoEventoCalendario(evento)}`;
+
+    const top = document.createElement('div');
+    top.className = 'calendar-event-top';
+
+    const chip = document.createElement('span');
+    chip.className = 'calendar-event-chip';
+    chip.textContent = etiquetaTipoEventoCalendario(evento, categoria);
+
+    const time = document.createElement('span');
+    time.className = 'calendar-event-time';
+    time.textContent = etiquetaHoraEventoCalendario(evento);
+
+    const title = document.createElement('span');
+    title.className = 'calendar-event-title';
+    title.textContent = textoEventoCalendario(evento);
+
+    top.appendChild(chip);
+    top.appendChild(time);
+    link.appendChild(top);
+    link.appendChild(title);
+    return link;
+  }
+
+  function renderEventosCelda(celda, eventosDia, mostrarTodos = false, limite = 2) {
+    if (!eventosDia.length) {
+      return false;
+    }
+
+    const lista = document.createElement('div');
+    lista.className = 'calendar-day-events';
+
+    const eventosVisibles = mostrarTodos ? eventosDia : eventosDia.slice(0, limite);
+    eventosVisibles.forEach(evento => {
+      lista.appendChild(crearEnlaceEvento(evento));
+    });
+
+    if (!mostrarTodos && eventosDia.length > limite) {
+      const extra = document.createElement('span');
+      extra.className = 'calendar-event-more';
+      extra.textContent = `+${eventosDia.length - limite} mas`;
+      lista.appendChild(extra);
+    }
+
+    celda.appendChild(lista);
+    return true;
+  }
+
+  function crearCeldaDia(fecha, opciones = {}) {
+    const {
+      esOtroMes = false,
+      mostrarEtiquetaDia = false,
+      etiquetaDia = '',
+      mostrarTodosEventos = false,
+      limiteEventos = 2,
+      mostrarVacio = false
+    } = opciones;
+
+    const fechaNormalizada = normalizarFecha(fecha);
+    const fechaIso = fechaIsoDesdeFecha(fechaNormalizada);
+    const eventosDia = eventosPorFecha[fechaIso] || [];
+
+    const celda = document.createElement('div');
+    celda.className = `calendar-day-cell${esOtroMes ? ' other-month' : ''}`;
+
+    if (fechaNormalizada.getTime() === hoyCalendario.getTime()) {
+      celda.classList.add('is-today');
+    }
+
+    const headerDia = document.createElement('div');
+    headerDia.style.display = 'flex';
+    headerDia.style.alignItems = 'center';
+
+    const dia = document.createElement('span');
+    dia.className = 'calendar-day-number';
+    dia.textContent = String(fechaNormalizada.getDate());
+    headerDia.appendChild(dia);
+
+    if (mostrarEtiquetaDia) {
+      const etiqueta = document.createElement('span');
+      etiqueta.className = 'calendar-day-label';
+      etiqueta.textContent = etiquetaDia;
+      headerDia.appendChild(etiqueta);
+    }
+
+    celda.appendChild(headerDia);
+
+    const tieneEventos = renderEventosCelda(celda, eventosDia, mostrarTodosEventos, limiteEventos);
+    if (!tieneEventos && mostrarVacio) {
+      const vacio = document.createElement('div');
+      vacio.className = 'calendar-day-empty';
+      vacio.textContent = 'No hay eventos para esta fecha.';
+      celda.appendChild(vacio);
+    }
+
+    return { celda, totalEventos: eventosDia.length };
+  }
+
+  function aplicarClaseVista() {
+    if (!calendarGridShell || !calendarWeekHeader) return;
+
+    calendarGridShell.classList.remove('view-month', 'view-week', 'view-day');
+    if (estadoCalendario.vista === 'semana') {
+      calendarGridShell.classList.add('view-week');
+      calendarWeekHeader.style.display = 'grid';
+      return;
+    }
+    if (estadoCalendario.vista === 'dia') {
+      calendarGridShell.classList.add('view-day');
+      calendarWeekHeader.style.display = 'none';
+      return;
+    }
+    calendarGridShell.classList.add('view-month');
+    calendarWeekHeader.style.display = 'grid';
+  }
+
+  function renderVistaMes() {
+    const base = normalizarFecha(estadoCalendario.cursor);
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const inicioMes = new Date(year, month, 1);
+    const inicioGrilla = new Date(year, month, 1 - inicioMes.getDay());
+
+    calendarMonthLabel.textContent = `${mesesEsCalendario[month]} de ${year}`;
+    calendarMonthGrid.innerHTML = '';
+
+    let totalEventos = 0;
+
+    for (let idx = 0; idx < 42; idx += 1) {
+      const fechaCelda = sumarDias(inicioGrilla, idx);
+      const esOtroMes = fechaCelda.getMonth() !== month;
+      const { celda, totalEventos: eventosDia } = crearCeldaDia(fechaCelda, {
+        esOtroMes,
+        mostrarTodosEventos: false,
+        limiteEventos: 2
+      });
+
+      if (!esOtroMes) {
+        totalEventos += eventosDia;
+      }
+      calendarMonthGrid.appendChild(celda);
+    }
+
+    if (calendarioTotalVisible) {
+      calendarioTotalVisible.textContent = `${totalEventos} evento(s) en ${mesesEsCalendario[month]}`;
+    }
+  }
+
+  function renderVistaSemana() {
+    const inicio = inicioSemanaDomingo(estadoCalendario.cursor);
+    const fin = sumarDias(inicio, 6);
+
+    calendarMonthLabel.textContent = tituloSemana(inicio, fin);
+    calendarMonthGrid.innerHTML = '';
+
+    let totalEventos = 0;
+    for (let idx = 0; idx < 7; idx += 1) {
+      const fechaCelda = sumarDias(inicio, idx);
+      const { celda, totalEventos: eventosDia } = crearCeldaDia(fechaCelda, {
+        mostrarEtiquetaDia: true,
+        etiquetaDia: `${diasSemanaCortosCalendario[fechaCelda.getDay()]} ${fechaCelda.getDate()}`,
+        mostrarTodosEventos: true,
+        limiteEventos: 8
+      });
+      totalEventos += eventosDia;
+      calendarMonthGrid.appendChild(celda);
+    }
+
+    if (calendarioTotalVisible) {
+      calendarioTotalVisible.textContent = `${totalEventos} evento(s) en esta semana`;
+    }
+  }
+
+  function renderVistaDia() {
+    const fechaDia = normalizarFecha(estadoCalendario.cursor);
+    calendarMonthLabel.textContent = `${diasSemanaLargosCalendario[fechaDia.getDay()]}, ${fechaDia.getDate()} de ${mesesEsCalendario[fechaDia.getMonth()]} de ${fechaDia.getFullYear()}`;
+    calendarMonthGrid.innerHTML = '';
+
+    const { celda, totalEventos } = crearCeldaDia(fechaDia, {
+      mostrarEtiquetaDia: true,
+      etiquetaDia: diasSemanaLargosCalendario[fechaDia.getDay()],
+      mostrarTodosEventos: true,
+      limiteEventos: 99,
+      mostrarVacio: true
+    });
+    calendarMonthGrid.appendChild(celda);
+
+    if (calendarioTotalVisible) {
+      calendarioTotalVisible.textContent = `${totalEventos} evento(s) este dia`;
+    }
+  }
+
+  function renderCalendarioActual() {
+    if (!calendarMonthGrid || !calendarMonthLabel) return;
+    aplicarClaseVista();
+
+    if (estadoCalendario.vista === 'semana') {
+      renderVistaSemana();
+      return;
+    }
+    if (estadoCalendario.vista === 'dia') {
+      renderVistaDia();
+      return;
+    }
+    renderVistaMes();
+  }
+
+  function activarVistaCalendario(viewKey) {
+    const vista = ['mes', 'semana', 'dia'].includes(viewKey) ? viewKey : 'mes';
+    estadoCalendario.vista = vista;
+    calendarViewButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.calendarView === vista);
+    });
+    renderCalendarioActual();
+  }
+
+  function moverCursorCalendario(direccion) {
+    const cursor = normalizarFecha(estadoCalendario.cursor);
+    if (estadoCalendario.vista === 'mes') {
+      cursor.setMonth(cursor.getMonth() + direccion);
+    } else if (estadoCalendario.vista === 'semana') {
+      cursor.setDate(cursor.getDate() + (direccion * 7));
+    } else {
+      cursor.setDate(cursor.getDate() + direccion);
+    }
+    estadoCalendario.cursor = cursor;
+    renderCalendarioActual();
+  }
+
+  if (calendarPrevMonth) {
+    calendarPrevMonth.addEventListener('click', function() {
+      moverCursorCalendario(-1);
+    });
+  }
+
+  if (calendarNextMonth) {
+    calendarNextMonth.addEventListener('click', function() {
+      moverCursorCalendario(1);
+    });
+  }
+
+  if (calendarTodayBtn) {
+    calendarTodayBtn.addEventListener('click', function() {
+      estadoCalendario.cursor = new Date(hoyCalendario.getFullYear(), hoyCalendario.getMonth(), hoyCalendario.getDate());
+      renderCalendarioActual();
+    });
+  }
+
+  calendarViewButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      activarVistaCalendario(this.dataset.calendarView || 'mes');
+    });
+  });
+
+  activarVistaCalendario('mes');
 
   function actualizarTextoFechasAdicionales() {
     if (!fechasAdicionalesAyuda || !fechasAdicionalesContenedor) return;
@@ -1416,7 +3085,44 @@ document.addEventListener('DOMContentLoaded', function() {
     if (total === 0) {
       fechasAdicionalesAyuda.textContent = 'Puedes habilitar la misma acción formativa en varias fechas del calendario.';
     } else {
-      fechasAdicionalesAyuda.textContent = `Se crearán ${total + 1} fecha(s) para este curso.`;
+      fechasAdicionalesAyuda.textContent = `Se crearán ${total + 1} fecha(s) para esta acción formativa.`;
+    }
+  }
+
+  function actualizarReglasTipoAccion() {
+    if (!tipoAccion || !horasTotalesInput || !semanasDuracionInput) return;
+
+    let horasMin = 20;
+    let semanasMin = 1;
+
+    if (tipoAccion.value === 'CONFERENCIA') {
+      horasMin = 1;
+      semanasMin = 1;
+    } else if (tipoAccion.value === 'SEMINARIO') {
+      horasMin = 16;
+      semanasMin = 1;
+    }
+
+    horasTotalesInput.min = String(horasMin);
+    semanasDuracionInput.min = String(semanasMin);
+
+    if (Number(horasTotalesInput.value || 0) < horasMin) {
+      horasTotalesInput.value = String(horasMin);
+    }
+    if (Number(semanasDuracionInput.value || 0) < semanasMin) {
+      semanasDuracionInput.value = String(semanasMin);
+    }
+  }
+
+  function actualizarEstadoDuracionCurso() {
+    if (!semanasDuracionInput || !fechasAdicionalesWrapper || !fechasAdicionalesContenedor) return;
+
+    const esVariosDias = Number(semanasDuracionInput.value || 1) > 1;
+    fechasAdicionalesWrapper.style.display = esVariosDias ? '' : 'none';
+
+    if (!esVariosDias) {
+      fechasAdicionalesContenedor.innerHTML = '';
+      actualizarTextoFechasAdicionales();
     }
   }
 
@@ -1539,6 +3245,16 @@ document.addEventListener('DOMContentLoaded', function() {
       actualizarEstadoEnlaceVirtual();
     });
   }
+  if (tipoAccion) {
+    tipoAccion.addEventListener('change', function() {
+      actualizarReglasTipoAccion();
+      actualizarEstadoDuracionCurso();
+    });
+  }
+  if (semanasDuracionInput) {
+    semanasDuracionInput.addEventListener('input', actualizarEstadoDuracionCurso);
+    semanasDuracionInput.addEventListener('change', actualizarEstadoDuracionCurso);
+  }
   if (fechaCurso) {
     fechaCurso.addEventListener('change', renderizarHorariosPorFecha);
   }
@@ -1550,9 +3266,20 @@ document.addEventListener('DOMContentLoaded', function() {
       agregarCampoFechaAdicional('');
     });
   }
-
+  if (toggleCalendarioBtn && panelCalendario) {
+    toggleCalendarioBtn.addEventListener('click', function() {
+      const oculto = panelCalendario.classList.toggle('hidden');
+      const expandido = !oculto;
+      toggleCalendarioBtn.setAttribute('aria-expanded', expandido ? 'true' : 'false');
+      toggleCalendarioBtn.textContent = expandido
+        ? 'Ocultar generación automática'
+        : 'Mostrar generación automática';
+    });
+  }
   actualizarPreviewCodigo();
   actualizarEstadoEnlaceVirtual();
+  actualizarReglasTipoAccion();
+  actualizarEstadoDuracionCurso();
   actualizarEstadoEnlaceVirtualEdicion();
   renderizarHorariosPorFecha();
   actualizarTextoFechasAdicionales();

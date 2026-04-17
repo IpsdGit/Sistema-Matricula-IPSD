@@ -39,9 +39,36 @@ def inicializar_bd():
             dia TEXT NOT NULL DEFAULT '1',
             modalidad TEXT NOT NULL DEFAULT 'Virtual',
             cupos_maximos INTEGER NOT NULL DEFAULT 0,
-            enlace_virtual TEXT
+            enlace_virtual TEXT,
+            duracion_tipo TEXT NOT NULL DEFAULT 'un_dia',
+            tipo_accion TEXT NOT NULL DEFAULT 'CURSO',
+            horas_totales INTEGER NOT NULL DEFAULT 20,
+            semanas_duracion INTEGER NOT NULL DEFAULT 1
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            horas_minimas INTEGER NOT NULL,
+            horas_maximas INTEGER,
+            semanas_minimas INTEGER NOT NULL,
+            semanas_maximas INTEGER
+        )
+    ''')
+    cursor.executemany(
+        '''
+        INSERT OR IGNORE INTO tipo_accion_formativa
+        (codigo, nombre, horas_minimas, horas_maximas, semanas_minimas, semanas_maximas)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        [
+            ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
+            ('SEMINARIO', 'Seminario', 16, 120, 1, 16),
+            ('CURSO', 'Curso', 20, 240, 1, 52),
+        ]
+    )
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS horarios_curso (
@@ -63,6 +90,38 @@ def inicializar_bd():
             FOREIGN KEY (id_capacitacion) REFERENCES capacitaciones (id) ON DELETE CASCADE
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sesiones_curso (
+            id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_curso TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            hora_inicio TEXT NOT NULL,
+            hora_fin TEXT NOT NULL,
+            jornada TEXT NOT NULL DEFAULT 'UNICA',
+            docente_sesion TEXT,
+            bloque_codigo TEXT,
+            estado INTEGER NOT NULL DEFAULT 0,
+            token_asistencia TEXT,
+            FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS registro_asistencia (
+            id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_sesion INTEGER NOT NULL,
+            numero_empleado TEXT NOT NULL,
+            fecha_marcado TEXT NOT NULL,
+            hora_marcado TEXT NOT NULL,
+            FOREIGN KEY (id_sesion) REFERENCES sesiones_curso (id_sesion) ON DELETE CASCADE,
+            FOREIGN KEY (numero_empleado) REFERENCES docentes (numero_empleado),
+            UNIQUE (id_sesion, numero_empleado)
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_registro_asistencia_sesion ON registro_asistencia (id_sesion)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_registro_asistencia_empleado ON registro_asistencia (numero_empleado)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS estado_matricula_catalogo (

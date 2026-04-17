@@ -2,6 +2,10 @@
 
 {% block title %}IPSD - Mi Portal | {{ nombre_docente or ('Empleado ' ~ empleado) }}{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="portal-layout">
   <aside class="portal-sidebar" id="portal-sidebar">
@@ -14,6 +18,10 @@
       <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-sidebar-link {% if seccion_activa == 'historial' %}active{% endif %}">
         <span class="link-icon">📚</span>
         <span>Historial Formativo</span>
+      </a>
+      <a href="/dashboard?seccion=calendario" class="portal-sidebar-link {% if seccion_activa == 'calendario' %}active{% endif %}">
+        <span class="link-icon">🗓️</span>
+        <span>Calendario</span>
       </a>
       <a href="/dashboard?seccion=disponibles" class="portal-sidebar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">
         <span class="link-icon">📝</span>
@@ -30,6 +38,9 @@
         {% if seccion_activa == 'historial' %}
         <h1 class="portal-topbar-title">Historial | Acciones Formativas</h1>
         <p class="portal-topbar-subtitle">Seguimiento por estado</p>
+        {% elif seccion_activa == 'calendario' %}
+        <h1 class="portal-topbar-title">Calendario de Cursos</h1>
+        <p class="portal-topbar-subtitle">Vista por mes, semana y día para tus actividades</p>
         {% elif seccion_activa == 'notificaciones' %}
         <h1 class="portal-topbar-title">Centro de Notificaciones</h1>
         <p class="portal-topbar-subtitle">Alertas y avisos importantes del sistema</p>
@@ -192,7 +203,13 @@
           {% if historial_acciones %}
           <div class="historial-grid">
             {% for accion in historial_acciones %}
-            <article class="historial-card">
+            <article
+              class="historial-card curso-modal-trigger"
+              data-curso-modal-id="{{ accion['id_capacitacion'] }}"
+              tabindex="0"
+              role="button"
+              aria-label="Ver detalle del curso {{ accion['nombre_curso'] }}"
+            >
               <div class="historial-card-head">
                 <span class="historial-course-id">{{ accion['id_capacitacion'] }}</span>
                 {% set estado_class = 'estado-pendiente' %}
@@ -228,6 +245,49 @@
         </div>
       </div>
 
+      {% elif seccion_activa == 'calendario' %}
+      <section class="doc-cal-wrap">
+        <div class="card-ipsd">
+          <div class="card-header doc-cal-header">
+            <div>
+              <h5 style="margin:0; font-weight:700;">Calendario personal de cursos</h5>
+              <p class="doc-cal-subtitle" id="doc-cal-summary">Cargando eventos...</p>
+            </div>
+          </div>
+
+          <div class="card-body" style="padding:1rem 1.1rem;">
+            <div class="doc-cal-toolbar">
+              <div class="doc-cal-nav">
+                <button type="button" class="doc-cal-nav-btn" id="doc-cal-prev" aria-label="Anterior">‹</button>
+                <button type="button" class="doc-cal-nav-btn" id="doc-cal-next" aria-label="Siguiente">›</button>
+                <button type="button" class="doc-cal-today-btn" id="doc-cal-today">Hoy</button>
+              </div>
+
+              <div class="doc-cal-title" id="doc-cal-title">abril de 2026</div>
+
+              <div class="doc-cal-view-switch">
+                <button type="button" class="doc-cal-view-btn active" data-doc-view="mes">Mes</button>
+                <button type="button" class="doc-cal-view-btn" data-doc-view="semana">Semana</button>
+                <button type="button" class="doc-cal-view-btn" data-doc-view="dia">Día</button>
+              </div>
+            </div>
+
+            <div class="doc-cal-shell" id="doc-cal-shell">
+              <div class="doc-cal-week-head" id="doc-cal-week-header">
+                <span>dom</span>
+                <span>lun</span>
+                <span>mar</span>
+                <span>mie</span>
+                <span>jue</span>
+                <span>vie</span>
+                <span>sab</span>
+              </div>
+              <div class="doc-cal-grid" id="doc-cal-grid"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {% elif seccion_activa == 'disponibles' %}
 
       {% if avisos_oportunidades %}
@@ -262,7 +322,13 @@
           {% if matriculados %}
           <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
             {% for curso in matriculados %}
-            <div class="enrolled-pill">
+            <div
+              class="enrolled-pill enrolled-pill-clickable curso-modal-trigger"
+              data-curso-modal-id="{{ curso['id'] }}"
+              tabindex="0"
+              role="button"
+              aria-label="Ver detalle del curso {{ curso['nombre'] }}"
+            >
               <span>✓</span>
               <span>
                 <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
@@ -282,6 +348,7 @@
                 <span style="font-weight:600; font-size:.75rem; color:#64748b;">Pendiente</span>
                 {% endif %}
               </span>
+              <span class="enrolled-view-action">Ver detalle</span>
               {% if curso['aprobado'] is none %}
               <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar esta inscripción?');">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -365,7 +432,63 @@
   </main>
 </div>
 
+<div class="modal-overlay" id="curso-sesiones-modal" aria-hidden="true">
+  <div class="modal-box" style="max-width:760px; width:min(94vw, 760px); max-height:88vh; overflow:auto;">
+    <div class="modal-title" id="curso-sesiones-title">Detalle del curso</div>
+    <div class="modal-desc" id="curso-sesiones-meta">Cargando información...</div>
+
+    <div style="display:grid; gap:.85rem;">
+      <div class="card-ipsd" style="border:1px solid var(--border); box-shadow:none;">
+        <div class="card-header" style="padding:.75rem 1rem;">
+          <span style="font-weight:700; font-size:.86rem;">Información del curso</span>
+        </div>
+        <div class="card-body" style="padding:.8rem 1rem;">
+          <div id="curso-detalle-info" style="display:grid; gap:.55rem;"></div>
+        </div>
+      </div>
+
+      <div class="card-ipsd" style="border:1px solid var(--border); box-shadow:none;">
+        <div class="card-header" style="padding:.75rem 1rem;">
+          <span style="font-weight:700; font-size:.86rem;">Sesiones futuras</span>
+        </div>
+        <div class="card-body" style="padding:.8rem 1rem;">
+          <div id="curso-sesiones-futuras"></div>
+        </div>
+      </div>
+
+      <div class="card-ipsd" style="border:1px solid var(--border); box-shadow:none;">
+        <div class="card-header" style="padding:.75rem 1rem;">
+          <span style="font-weight:700; font-size:.86rem;">Sesiones pasadas</span>
+        </div>
+        <div class="card-body" style="padding:.8rem 1rem;">
+          <div id="curso-sesiones-pasadas"></div>
+        </div>
+      </div>
+
+      <div class="card-ipsd" id="curso-sesiones-qr-card" style="display:none; border:1px solid var(--border); box-shadow:none;">
+        <div class="card-header" style="padding:.75rem 1rem;">
+          <span style="font-weight:700; font-size:.86rem;">Asistencia habilitada</span>
+        </div>
+        <div class="card-body" style="display:grid; gap:.7rem; justify-items:center; padding:1rem;">
+          <div id="curso-sesion-abierta-info" style="font-size:.82rem; color:var(--text-muted);"></div>
+          <div id="curso-sesion-qr" style="padding:.6rem; background:#fff; border:1px solid var(--border); border-radius:10px;"></div>
+          <button type="button" class="btn-primary-ipsd" id="btn-marcar-asistencia" style="justify-content:center;">
+            Marcar Asistencia
+          </button>
+          <div id="curso-sesion-feedback" style="font-size:.8rem; font-weight:600;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('curso-sesiones-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="portal-overlay" id="portal-overlay"></div>
+
+<script type="application/json" id="docente-calendar-data">{{ calendario_eventos_docente|default([], true)|tojson }}</script>
 
 <script>
   (function () {
