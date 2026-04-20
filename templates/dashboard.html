@@ -392,6 +392,15 @@
               </span>
             </div>
             <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
+            <div style="font-size:.76rem; margin-top:.28rem; color:#1e3a8a; font-weight:600;">
+              {% if curso['horarios_preview'] %}
+                Horarios: {{ curso['horarios_preview']|join(' · ') }}
+              {% elif curso['horarios'] %}
+                Horarios: {{ curso['horarios']|join(' · ') }}
+              {% else %}
+                Horarios por confirmar
+              {% endif %}
+            </div>
             {% if curso['mensaje_oportunidades'] %}
             <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
             {% endif %}

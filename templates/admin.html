@@ -758,7 +758,7 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Días de clase</label>
+                  <label class="form-label">Días de clase (Jornada principal)</label>
                   <div class="calendar-days-grid">
                     <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="0" {% if 0 in curso_sesion_config['dias_semana'] %}checked{% endif %}> L</label>
                     <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="1" {% if 1 in curso_sesion_config['dias_semana'] %}checked{% endif %}> M</label>
@@ -905,6 +905,94 @@
           </div>
         </div>
         {% endif %}
+
+        {% if curso_asistencias_id and curso_asistencia_reporte and curso_asistencia_reporte['ok'] %}
+        {% set curso_reporte = curso_asistencia_reporte['curso'] %}
+        <div class="modal-overlay active" id="modal-asistencia-curso" aria-hidden="false" data-close-url="{{ url_for('admin') }}?view=cursos">
+          <div class="modal-box" style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
+            <div class="card-ipsd animate-fade-up-3" style="box-shadow:none; border-radius:0; border:none;">
+              <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+                <div>
+                  <span style="font-weight:700; font-size:.95rem;">📊 Asistencias por Acción Formativa</span>
+                  <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
+                    Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
+                  </div>
+                  <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
+                    {{ curso_reporte['mes'] }}/{{ curso_reporte['anio'] }} · Trim. {{ curso_reporte['trimestre'] }} · {{ curso_reporte['modalidad'] or 'Modalidad no definida' }}
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:.5rem;">
+                  <span class="badge-pill primary text-xs">{{ curso_asistencia_reporte['total_inscritos'] }} inscrito(s)</span>
+                  <span class="badge-pill secondary text-xs">{{ curso_asistencia_reporte['total_sesiones'] }} sesión(es)</span>
+                  <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
+                </div>
+              </div>
+
+              <div class="card-body" style="display:grid; gap:1rem;">
+                {% for jornada in curso_asistencia_reporte['jornadas'] %}
+                <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
+                      <strong style="font-size:.87rem; color:#0f172a;">{{ jornada['nombre'] }}</strong>
+                      <span class="badge-pill secondary text-xs">{{ jornada['total_sesiones'] }} sesión(es)</span>
+                      <span class="badge-pill primary text-xs">{{ jornada['total_inscritos'] }} inscrito(s)</span>
+                    </div>
+                    <div style="font-size:.79rem; color:var(--text-muted);">
+                      Cobertura global: <strong>{{ jornada['porcentaje_cobertura'] }}%</strong> · Registros: {{ jornada['total_asistencias'] }}
+                    </div>
+                  </div>
+
+                  <div style="overflow-x:auto;">
+                    <table class="table-ipsd">
+                      <thead>
+                        <tr>
+                          <th>Empleado</th>
+                          <th>Docente</th>
+                          <th>Horario Elegido</th>
+                          <th>Estado Matrícula</th>
+                          <th>Asistencias</th>
+                          <th>Cobertura</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for docente in jornada['docentes'] %}
+                        <tr>
+                          <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
+                          <td>{{ docente['nombre_completo'] }}</td>
+                          <td style="font-size:.8rem;">{{ docente['horario_elegido'] }}</td>
+                          <td>
+                            {% if docente['estado_matricula'] == 'Aprobado' %}
+                              <span class="badge-pill success text-xs">Aprobado</span>
+                            {% elif docente['estado_matricula'] == 'No aprobado' %}
+                              <span class="badge-pill danger text-xs">No aprobado</span>
+                            {% elif docente['estado_matricula'] == 'Abandono' %}
+                              <span class="badge-pill secondary text-xs">Abandono</span>
+                            {% else %}
+                              <span class="badge-pill primary text-xs">Pendiente</span>
+                            {% endif %}
+                          </td>
+                          <td>{{ docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}</td>
+                          <td>
+                            <span class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 60 %}primary{% else %}secondary{% endif %} text-xs">
+                              {{ docente['porcentaje'] }}%
+                            </span>
+                          </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                          <td colspan="6" style="text-align:center; color:var(--text-muted); padding:1.2rem;">No hay docentes inscritos para esta jornada.</td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </section>
 
       <!-- GRÁFICOS -->
@@ -1019,14 +1107,10 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
+                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Horas Totales</label>
                     <input type="number" class="form-input" id="horas_totales" name="horas_totales" min="1" step="1" value="20" required>
-                  </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Semanas de Duración</label>
-                    <input type="number" class="form-input" id="semanas_duracion" name="semanas_duracion" min="1" step="1" value="1" required>
                   </div>
                 </div>
 
@@ -1102,6 +1186,14 @@
                           style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; text-decoration:none;">
                           🗓️
                         </a>
+                        <a
+                          href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id']) }}"
+                          class="btn-ghost btn-icon-action"
+                          title="Ver asistencias"
+                          aria-label="Ver asistencias"
+                          style="color:#065f46; border-color:#99f6e4; background:#ecfeff; text-decoration:none;">
+                          👥
+                        </a>
                         <button
                           type="button"
                           class="btn-primary-ipsd btn-icon-action btn-edit-curso"
@@ -1155,16 +1247,9 @@
         {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle else 'CURSO') %}
         {% set curso_sesion_semanas = (curso_sesion_detalle['semanas_duracion'] if curso_sesion_detalle else 1) %}
         {% set curso_sesion_horas = (curso_sesion_detalle['horas_totales'] if curso_sesion_detalle else 0) %}
-        {% set curso_sesion_es_un_dia = (curso_sesion_semanas|int <= 1) %}
-        {% set curso_sesion_fecha_base = fecha_hoy %}
-        {% if curso_sesion_detalle %}
-          {% set mes_num = {
-            'Enero':'01','Febrero':'02','Marzo':'03','Abril':'04','Mayo':'05','Junio':'06',
-            'Julio':'07','Agosto':'08','Septiembre':'09','Octubre':'10','Noviembre':'11','Diciembre':'12'
-          }.get(curso_sesion_detalle['mes'], '01') %}
-          {% set curso_sesion_fecha_base = (curso_sesion_detalle['anio'] ~ '-' ~ mes_num ~ '-' ~ (curso_sesion_detalle['dia']|string).zfill(2)) %}
-        {% endif %}
-        <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}">
+        <div class="modal-overlay active" id="modal-gestion-calendario" aria-hidden="false" data-close-url="{{ url_for('admin') }}?view=cursos">
+          <div class="modal-box" style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
+        <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}" style="box-shadow:none; border-radius:0; border:none;">
           <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
             <div>
               <span style="font-weight:700; font-size:.95rem;">🗓️ Gestión de Calendario</span>
@@ -1175,22 +1260,15 @@
                 Tipo: <strong>{{ curso_sesion_tipo|title }}</strong> · {{ curso_sesion_horas }}h · {{ curso_sesion_semanas }} semana(s)
               </div>
             </div>
-            {% if not curso_sesion_es_un_dia %}
+            <div style="display:flex; align-items:center; gap:.5rem;">
             <button type="button" class="calendar-toggle-btn" id="btn-toggle-generacion-calendario" aria-expanded="false" aria-controls="panel-generacion-calendario">
               Mostrar generación automática
             </button>
-            {% endif %}
+            <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
+            </div>
           </div>
 
           <div class="card-body" style="display:grid; gap:1rem;">
-            {% if curso_sesion_es_un_dia %}
-            <div class="alert-ipsd info" style="margin:0;">
-              <span>ℹ️</span>
-              <span>Este curso está configurado como <strong>un día</strong>. Solo se permiten sesiones en la fecha base: <strong>{{ curso_sesion_fecha_base }}</strong>.</span>
-            </div>
-            {% endif %}
-
-            {% if not curso_sesion_es_un_dia %}
             <div id="panel-generacion-calendario" class="calendar-panel hidden">
               <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -1220,7 +1298,7 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:.65rem; align-items:end;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.65rem; align-items:end;">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Hora inicio</label>
                     <input type="time" class="form-input" name="hora_inicio" value="{{ curso_sesion_config['hora_inicio'] }}" required>
@@ -1229,12 +1307,11 @@
                     <label class="form-label">Hora fin</label>
                     <input type="time" class="form-input" name="hora_fin" value="{{ curso_sesion_config['hora_fin'] }}" required>
                   </div>
-                  <button type="submit" class="btn-primary-ipsd" style="height:42px;">Generar</button>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem;">
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Jornada</label>
+                    <label class="form-label">Jornada principal</label>
                     <select class="form-select" name="jornada">
                       <option value="UNICA" {% if curso_sesion_config['jornada'] == 'UNICA' %}selected{% endif %}>Única</option>
                       <option value="MATUTINA" {% if curso_sesion_config['jornada'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
@@ -1251,52 +1328,61 @@
                     <input type="text" class="form-input" name="bloque_codigo" value="{{ curso_sesion_config['bloque_codigo'] }}" maxlength="20" placeholder="Ej. G1">
                   </div>
                 </div>
-              </form>
-            </div>
-            {% endif %}
 
-            <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0;">
-              <form action="/admin/sesion/crear" method="POST" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto; gap:.65rem; align-items:end;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                <div style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:grid; gap:.65rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
+                    <strong style="font-size:.84rem; color:#1e3a8a;">Segunda jornada (opcional)</strong>
+                    <span style="font-size:.75rem; color:var(--text-muted);">Completa este bloque solo si necesitas una segunda jornada.</span>
+                  </div>
 
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Fecha sesión</label>
-                  <input
-                    type="date"
-                    class="form-input"
-                    name="fecha"
-                    value="{{ curso_sesion_fecha_base if curso_sesion_es_un_dia else curso_sesion_config['fecha_inicio'] }}"
-                    {% if curso_sesion_es_un_dia %}min="{{ curso_sesion_fecha_base }}" max="{{ curso_sesion_fecha_base }}"{% endif %}
-                    required
-                  >
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Días de clase (Segunda jornada)</label>
+                    <div class="calendar-days-grid">
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="0"> L</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="1"> M</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="2"> X</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="3"> J</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="4"> V</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="5"> S</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="6"> D</label>
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:.65rem; align-items:end;">
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Hora inicio (Segunda jornada)</label>
+                      <input type="time" class="form-input" name="hora_inicio_2">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Hora fin (Segunda jornada)</label>
+                      <input type="time" class="form-input" name="hora_fin_2">
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Jornada secundaria</label>
+                      <select class="form-select" name="jornada_2">
+                        <option value="VESPERTINA" selected>Vespertina</option>
+                        <option value="MATUTINA">Matutina</option>
+                        <option value="NOCTURNA">Nocturna</option>
+                        <option value="UNICA">Única</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Docente Responsable (2)</label>
+                      <input type="text" class="form-input" name="docente_sesion_2" maxlength="120" placeholder="Ej. Lic. Carlos Flores">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Bloque / Grupo (2)</label>
+                      <input type="text" class="form-input" name="bloque_codigo_2" maxlength="20" placeholder="Ej. G2">
+                    </div>
+                  </div>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Inicio</label>
-                  <input type="time" class="form-input" name="hora_inicio" value="{{ curso_sesion_config['hora_inicio'] }}" required>
+
+                <div style="display:flex; justify-content:flex-end;">
+                  <button type="submit" class="btn-primary-ipsd" style="height:42px; min-width:150px;">Generar</button>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Fin</label>
-                  <input type="time" class="form-input" name="hora_fin" value="{{ curso_sesion_config['hora_fin'] }}" required>
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Jornada</label>
-                  <select class="form-select" name="jornada">
-                    <option value="UNICA" {% if curso_sesion_config['jornada'] == 'UNICA' %}selected{% endif %}>Única</option>
-                    <option value="MATUTINA" {% if curso_sesion_config['jornada'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
-                    <option value="VESPERTINA" {% if curso_sesion_config['jornada'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
-                    <option value="NOCTURNA" {% if curso_sesion_config['jornada'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Docente</label>
-                  <input type="text" class="form-input" name="docente_sesion" value="{{ curso_sesion_config['docente_sesion'] }}" maxlength="120" placeholder="Responsable">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label">Bloque</label>
-                  <input type="text" class="form-input" name="bloque_codigo" value="{{ curso_sesion_config['bloque_codigo'] }}" maxlength="20" placeholder="G1">
-                </div>
-                <button type="submit" class="btn-success-ipsd" style="height:42px;">Agregar sesión</button>
               </form>
             </div>
 
@@ -1418,6 +1504,8 @@
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
           </div>
         </div>
         {% endif %}
@@ -2116,14 +2204,6 @@ const adminLayout = document.querySelector('.admin-layout');
 const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
 const vistaInicialServidor = adminLayout?.dataset.vistaInicial || 'dashboard';
 const vistasPermitidas = ['dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios'];
-const horariosBase = [
-  '08:00 AM - 10:00 AM',
-  '10:00 AM - 12:00 PM',
-  '12:00 PM - 02:00 PM',
-  '02:00 PM - 04:00 PM',
-  '04:00 PM - 06:00 PM',
-  '06:00 PM - 08:00 PM'
-];
 
 function normalizarVista(view) {
   let vistaFinal = vistasPermitidas.includes(view) ? view : 'dashboard';
@@ -2538,6 +2618,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const vistaInicial = vistaUrl || vistaInicialServidor || vistaGuardada;
   setActiveScreen(vistaInicial, { syncUrl: true });
 
+  const cardGestionCalendario = document.getElementById('card-gestion-calendario');
+  const modalAsistenciaCurso = document.getElementById('modal-asistencia-curso');
+  if (cardGestionCalendario || modalAsistenciaCurso) {
+    setActiveScreen('cursos', { syncUrl: true });
+    document.body.style.overflow = 'hidden';
+  }
+
   document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
@@ -2671,7 +2758,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // Cerrar modales al hacer clic fuera
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
-      if (e.target === this) cerrarModal(this.id);
+      if (e.target !== this) return;
+      const closeUrl = this.dataset.closeUrl;
+      if (closeUrl) {
+        window.location.href = closeUrl;
+        return;
+      }
+      cerrarModal(this.id);
     });
   });
 
@@ -2680,18 +2773,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalidad = document.getElementById('modalidad');
   const tipoAccion = document.getElementById('tipo_accion');
   const horasTotalesInput = document.getElementById('horas_totales');
-  const semanasDuracionInput = document.getElementById('semanas_duracion');
   const enlaceVirtual = document.getElementById('enlace_virtual');
   const enlaceVirtualGroup = document.getElementById('enlace_virtual_group');
   const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
   const previewCodigo = document.getElementById('preview-codigo');
-  const horariosLabel = document.getElementById('horarios-dia-label');
-  const horariosContenedor = document.getElementById('horarios-dia-contenedor');
-  const horariosVacio = document.getElementById('horarios-dia-vacio');
-  const fechasAdicionalesWrapper = document.getElementById('fechas-adicionales-wrapper');
-  const fechasAdicionalesContenedor = document.getElementById('fechas-adicionales-contenedor');
-  const addFechaAdicionalBtn = document.getElementById('btn-add-fecha-adicional');
-  const fechasAdicionalesAyuda = document.getElementById('fechas-adicionales-ayuda');
   const toggleCalendarioBtn = document.getElementById('btn-toggle-generacion-calendario');
   const panelCalendario = document.getElementById('panel-generacion-calendario');
   const calendarEventosDataEl = document.getElementById('calendar-eventos-data');
@@ -3079,82 +3164,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   activarVistaCalendario('mes');
 
-  function actualizarTextoFechasAdicionales() {
-    if (!fechasAdicionalesAyuda || !fechasAdicionalesContenedor) return;
-    const total = fechasAdicionalesContenedor.querySelectorAll('input[name="fechas_adicionales"]').length;
-    if (total === 0) {
-      fechasAdicionalesAyuda.textContent = 'Puedes habilitar la misma acción formativa en varias fechas del calendario.';
-    } else {
-      fechasAdicionalesAyuda.textContent = `Se crearán ${total + 1} fecha(s) para esta acción formativa.`;
-    }
-  }
-
   function actualizarReglasTipoAccion() {
-    if (!tipoAccion || !horasTotalesInput || !semanasDuracionInput) return;
+    if (!tipoAccion || !horasTotalesInput) return;
 
     let horasMin = 20;
-    let semanasMin = 1;
 
     if (tipoAccion.value === 'CONFERENCIA') {
       horasMin = 1;
-      semanasMin = 1;
     } else if (tipoAccion.value === 'SEMINARIO') {
       horasMin = 16;
-      semanasMin = 1;
     }
 
     horasTotalesInput.min = String(horasMin);
-    semanasDuracionInput.min = String(semanasMin);
 
     if (Number(horasTotalesInput.value || 0) < horasMin) {
       horasTotalesInput.value = String(horasMin);
     }
-    if (Number(semanasDuracionInput.value || 0) < semanasMin) {
-      semanasDuracionInput.value = String(semanasMin);
-    }
-  }
-
-  function actualizarEstadoDuracionCurso() {
-    if (!semanasDuracionInput || !fechasAdicionalesWrapper || !fechasAdicionalesContenedor) return;
-
-    const esVariosDias = Number(semanasDuracionInput.value || 1) > 1;
-    fechasAdicionalesWrapper.style.display = esVariosDias ? '' : 'none';
-
-    if (!esVariosDias) {
-      fechasAdicionalesContenedor.innerHTML = '';
-      actualizarTextoFechasAdicionales();
-    }
-  }
-
-  function agregarCampoFechaAdicional(valor = '') {
-    if (!fechasAdicionalesContenedor) return;
-
-    const fila = document.createElement('div');
-    fila.style.display = 'grid';
-    fila.style.gridTemplateColumns = '1fr auto';
-    fila.style.gap = '.45rem';
-
-    const input = document.createElement('input');
-    input.type = 'date';
-    input.className = 'form-input';
-    input.name = 'fechas_adicionales';
-    input.value = valor;
-
-    const btnQuitar = document.createElement('button');
-    btnQuitar.type = 'button';
-    btnQuitar.className = 'btn-danger-ipsd';
-    btnQuitar.style.fontSize = '.78rem';
-    btnQuitar.style.padding = '.45rem .65rem';
-    btnQuitar.textContent = 'Quitar';
-    btnQuitar.addEventListener('click', function() {
-      fila.remove();
-      actualizarTextoFechasAdicionales();
-    });
-
-    fila.appendChild(input);
-    fila.appendChild(btnQuitar);
-    fechasAdicionalesContenedor.appendChild(fila);
-    actualizarTextoFechasAdicionales();
   }
 
   function actualizarPreviewCodigo() {
@@ -3177,65 +3202,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function obtenerDiaSemana(fechaIso) {
-    if (!fechaIso) return '';
-    const partes = fechaIso.split('-').map(Number);
-    if (partes.length !== 3 || partes.some(Number.isNaN)) return '';
-
-    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
-    const dia = fecha.getDay();
-    const mapaDias = {
-      0: 'Domingo',
-      1: 'Lunes',
-      2: 'Martes',
-      3: 'Miércoles',
-      4: 'Jueves',
-      5: 'Viernes',
-      6: 'Sábado'
-    };
-    return mapaDias[dia] || '';
-  }
-
-  function renderizarHorariosPorFecha() {
-    if (!horariosContenedor || !horariosLabel || !horariosVacio || !fechaCurso) return;
-
-    const diaSemana = obtenerDiaSemana(fechaCurso.value);
-    horariosContenedor.innerHTML = '';
-
-    if (!diaSemana) {
-      horariosLabel.textContent = 'Sin horarios para fin de semana';
-      horariosVacio.style.display = 'block';
-      return;
-    }
-
-    horariosLabel.textContent = `Horarios disponibles para ${diaSemana}`;
-    horariosVacio.style.display = 'none';
-
-    horariosBase.forEach(hora => {
-      const label = document.createElement('label');
-      label.style.display = 'inline-flex';
-      label.style.alignItems = 'center';
-      label.style.gap = '.3rem';
-      label.style.fontSize = '.78rem';
-      label.style.cursor = 'pointer';
-      label.style.background = '#fff';
-      label.style.border = '1px solid var(--border)';
-      label.style.borderRadius = '6px';
-      label.style.padding = '.25rem .5rem';
-      label.style.transition = 'all .15s';
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.name = 'horarios';
-      checkbox.value = `${diaSemana} ${hora}`;
-      checkbox.style.accentColor = 'var(--primary)';
-
-      label.appendChild(checkbox);
-      label.append(document.createTextNode(hora));
-      horariosContenedor.appendChild(label);
-    });
-  }
-
   if (direccionCurso) {
     direccionCurso.addEventListener('change', actualizarPreviewCodigo);
   }
@@ -3248,23 +3214,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (tipoAccion) {
     tipoAccion.addEventListener('change', function() {
       actualizarReglasTipoAccion();
-      actualizarEstadoDuracionCurso();
     });
-  }
-  if (semanasDuracionInput) {
-    semanasDuracionInput.addEventListener('input', actualizarEstadoDuracionCurso);
-    semanasDuracionInput.addEventListener('change', actualizarEstadoDuracionCurso);
-  }
-  if (fechaCurso) {
-    fechaCurso.addEventListener('change', renderizarHorariosPorFecha);
   }
   if (modalidadEditCurso) {
     modalidadEditCurso.addEventListener('change', actualizarEstadoEnlaceVirtualEdicion);
-  }
-  if (addFechaAdicionalBtn) {
-    addFechaAdicionalBtn.addEventListener('click', function() {
-      agregarCampoFechaAdicional('');
-    });
   }
   if (toggleCalendarioBtn && panelCalendario) {
     toggleCalendarioBtn.addEventListener('click', function() {
@@ -3279,10 +3232,7 @@ document.addEventListener('DOMContentLoaded', function() {
   actualizarPreviewCodigo();
   actualizarEstadoEnlaceVirtual();
   actualizarReglasTipoAccion();
-  actualizarEstadoDuracionCurso();
   actualizarEstadoEnlaceVirtualEdicion();
-  renderizarHorariosPorFecha();
-  actualizarTextoFechasAdicionales();
 });
 
 // Inicializar gráficos con Chart.js

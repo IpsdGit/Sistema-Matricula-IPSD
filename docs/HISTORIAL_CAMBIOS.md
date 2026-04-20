@@ -3037,6 +3037,253 @@ Sistema-Matricula-IPSD/
 
 ---
 
-**Última actualización**: Abril 17, 2026  
-**Versión actual**: 1.7 (Gestión de Sesiones y Calendarios)  
-**Estado**: Development - Calendarios interactivos, gestión de sesiones, registro de asistencia
+# 🔧 Versión 1.7.1 - Mejoras en Gestión de Sesiones y Asistencia
+
+**Fecha**: Abril 20, 2026  
+**Cambios**: 761 insertiones, 285 eliminaciones en 8 archivos
+
+## Cambio 25.1: Expansión de funciones de servicios de sesiones
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `services/admin_service.py` (+358 líneas)
+
+**QUÉ**:
+Nuevas funciones implementadas:
+- `_resolver_jornada_desde_horario()`: Detecta jornada (MATUTINA/VESPERTINA/NOCTURNA) desde horario
+- `_generar_token_asistencia_unico()`: Genera tokens únicos y validables para QR
+- `_recalcular_duracion_desde_sesiones()`: Calcula horas totales desde sesiones creadas
+- `_sincronizar_horarios_desde_sesiones()`: Sincroniza tabla de horarios desde sesiones
+- `listar_sesiones_curso()`: Lista completa de sesiones de un curso
+- `crear_sesion_manual()`: Crear sesión individual con validaciones
+- `editar_sesion()`: Actualizar sesión existente con sincronización de horarios
+- `eliminar_sesion()`: Eliminar sesión con restricciones (no si ya iniciada)
+- `generar_calendario_base()`: Generar calendarios automáticos (recurrentes semanales)
+- `obtener_reporte_asistencia_curso()`: Reportes detallados de asistencia
+- `abrir_asistencia_sesion()`: Habilita marcación de asistencia con token único
+- `cerrar_asistencia_sesion()`: Cierra período de marcación y calcula estadísticas
+
+**POR QUÉ**:
+- v1.7 tenía estructura básica pero funcionalidad incompleta
+- Se requiere CRUD completo de sesiones
+- Necesidad de validaciones robustas de horarios y solapamientos
+- Reportes de asistencia necesarios para certificación
+
+**PARA QUÉ**:
+- Funcionalidad completa de gestión de sesiones
+- Automatización de calendarios recurrentes
+- Reportes de asistencia integral
+
+---
+
+## Cambio 25.2: Nuevas rutas de administración
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `routes/admin.py` (+142 líneas)
+
+**QUÉ**:
+Nuevas rutas REST implementadas:
+
+- `GET /admin/curso/<id_curso>/sesiones`: Listar sesiones con filtros
+- `POST /admin/sesion/generar_calendario`: Generar calendario automático (recurrente)
+- `POST /admin/sesion/crear`: Crear sesión manual
+- `POST /admin/sesion/editar`: Actualizar sesión
+- `POST /admin/sesion/eliminar`: Eliminar sesión
+- `POST /admin/sesion/abrir`: Abrir asistencia (genera token)
+- `POST /admin/sesion/cerrar`: Cerrar asistencia
+- `GET /admin/curso/<id_curso>/asistencias`: Reporte de asistencia por curso
+
+Todas con:
+- Validación de permisos (admin de dirección)
+- Respuestas AJAX JSON
+- Manejo de errores con mensajes claros
+
+**POR QUÉ**:
+- Necesidad de endpoints específicos para sesiones
+- Flujo conversacional: crear → editar → abrir → cerrar
+
+**PARA QUÉ**:
+- Interface completa de manejo de sesiones
+- Validación centralizada de permisos
+
+---
+
+## Cambio 25.3: Validaciones mejoradas en utils.py
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `utils.py` (+74 líneas)
+
+**QUÉ**:
+Nuevas funciones de validación:
+
+- `validar_rango_horario()`: Verifica que hora_fin > hora_inicio
+- `validar_solapamiento_horarios()`: Detecta conflictos entre sesiones
+- `validar_recurso_disponible()`: Valida disponibilidad de aulas/recursos
+- `normalizar_hora_formato()`: Convierte HH:MM a formato estándar
+- `calcular_minutos_entre_horas()`: Duración exacta de sesión
+- `detectar_jornada_automática()`: Infiere jornada desde horario
+- `validar_docente_disponibilidad()`: Chequea que docente no tenga sesiones simultáneas
+
+**POR QUÉ**:
+- Validaciones centralizadas en v1.7 eran mínimas
+- Necesidad de prevenir conflictos de horarios
+- Cálculos de asistencia requieren precisión
+
+**PARA QUÉ**:
+- Consistencia en todas las validaciones
+- Prevención de errores de datos
+
+---
+
+## Cambio 25.4: Refactorización de templates
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `templates/admin.html` (refactorización), `templates/dashboard.html` (+9 líneas)
+
+**QUÉ**:
+- **admin.html**: Reorganización de sección de sesiones
+  - Mejora de legibilidad (398 líneas, pero -87 netas por consolidación)
+  - Separación clara de: crear sesión, generar calendario, editar, eliminar
+  - Modales independientes para cada acción
+  - Mejora de validación visual en formularios
+  
+- **dashboard.html**: 
+  - Agrega indicadores visuales de sesión próxima
+  - Botón prominente de "Marcar asistencia"
+  - Contador de sesiones completadas vs pendientes
+
+**POR QUÉ**:
+- v1.7 templates eran difíciles de navegar
+- Necesidad de UX más clara para admin
+- Docentes necesitan visibilidad de sesiones inminentes
+
+**PARA QUÉ**:
+- Mejor experiencia de usuario
+- Interfaz más intuitiva
+
+---
+
+## Cambio 25.5: Documentación actualizada
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `README.md` (+21 líneas), `docs/PYTHONANYWHERE_SETUP.md` (+25 líneas)
+
+**QUÉ**:
+- **README.md**:
+  - Nuevas secciones sobre funcionalidad de sesiones
+  - Instrucciones de generación de calendarios
+  - Información sobre tokens de asistencia
+  
+- **PYTHONANYWHERE_SETUP.md**:
+  - Notas sobre tablas nuevas (sesiones_curso, registro_asistencia)
+  - Consideraciones de permisos de archivos para CRUD
+
+**POR QUÉ**:
+- Usuarios necesitan saber cómo usar nuevas features
+- Deployment en PythonAnywhere tiene particularidades
+
+**PARA QUÉ**:
+- Mejor onboarding
+- Menos errores de implementación
+
+---
+
+## Cambio 25.6: Sincronización de horarios desde sesiones
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `services/admin_service.py`
+
+**QUÉ**:
+- Función bidireccional: 
+  - Si se crea sesión → se genera horario automáticamente
+  - Si se elimina sesión → se recalcula lista de horarios
+  - Sincronización automática de tabla de horarios_sesion
+
+**PARA QUÉ**:
+- Consistencia entre sesiones y horarios
+- Evitar duplicados/inconsistencias
+- Base para reportes de ocupación
+
+---
+
+## Cambio 25.7: Generación automática de calendarios
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `services/admin_service.py`
+
+**QUÉ**:
+- Nueva función `generar_calendario_base()`:
+  - Parámetros: id_curso, fecha_inicio, fecha_fin, días_semana, horas
+  - Genera automáticamente sesiones recurrentes
+  - Respeta holidays/fechas excluidas
+  - Genera bloques semanales automáticamente
+  
+**PARA QUÉ**:
+- Eliminación manual de crear 20+ sesiones
+- Mayor velocidad de planificación
+- Menos errores de datas
+
+---
+
+## Cambio 25.8: Tokens únicos e invulnerables para asistencia
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `services/admin_service.py`, `database.py`
+
+**QUÉ**:
+- Función `_generar_token_asistencia_unico()`:
+  - Token de 8 caracteres alfanuméricos único por sesión
+  - Válido solo durante período de sesión (abierto-cerrado)
+  - No reutilizable después de cerrar asistencia
+  - QR compatible
+
+**PARA QUÉ**:
+- Seguridad: imposible adivinar token
+- Trazabilidad: token único por sesión
+- Auditoría: timestamp de cuándo se marcó
+
+---
+
+## Cambio 25.9: Reportes detallados de asistencia
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `services/admin_service.py`
+
+**QUÉ**:
+- Función `obtener_reporte_asistencia_curso()`:
+  - Resumen por sesión: presentes, ausentes, sin marcar
+  - Resumen por docente: % asistencia, sesiones totales
+  - Datos de timestamp (hora exacta de marcación)
+  - Exportable a CSV/Excel
+
+**PARA QUÉ**:
+- Reportes de cumplimiento
+- Identificación de patrones de inasistencia
+- Base para certificación (mínimo % requerido)
+
+---
+
+## Cambio 25.10: Mejoras en validación de conflictos
+**Fecha**: Abril 20, 2026  
+**Archivos afectados**: `utils.py`
+
+**QUÉ**:
+- Nueva lógica:
+  - Verifica no solapamiento de sesiones del MISMO curso
+  - Verifica disponibilidad de docente (no puede dictar simultáneamente)
+  - Verifica conflictos de aulas/recursos
+  - Validación de fechas (no en pasado, no en feriados)
+
+**PARA QUÉ**:
+- Prevención de conflictos de horarios
+- Validación de recursos disponibles
+- Garantía de integridad de calendario
+
+---
+
+## Resumen de Cambios v1.7.1
+
+| Aspecto | Cambio |
+|--------|--------|
+| Rutas nuevas | +8 endpoints específicos para sesiones/asistencia |
+| Funciones servicios | +12 nuevas funciones de gestión de sesiones |
+| Validadores | +7 nuevas validaciones robustas |
+| Líneas código | +761 insertiones, -285 eliminaciones |
+| Features completadas | Calendarios automáticos, reportes de asistencia, tokens únicos |
+| Documentación | README + PYTHONANYWHERE_SETUP mejorados |
+
+---
+
+**Última actualización**: Abril 20, 2026  
+**Versión actual**: 1.7.1 (Mejoras en Gestión de Sesiones y Asistencia)  
+**Estado**: Development - Funcionalidad completa de sesiones, asistencia, calendarios automáticos

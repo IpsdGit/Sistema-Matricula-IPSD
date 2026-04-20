@@ -1,4 +1,5 @@
 import sqlite3
+import re
 import uuid
 from datetime import datetime, timedelta
 
@@ -50,6 +51,7 @@ def _normalizar_duracion_tipo(valor):
 
 TIPOS_ACCION_FORMATIVA = {'CONFERENCIA', 'SEMINARIO', 'CURSO'}
 JORNADAS_SESION = {'UNICA', 'MATUTINA', 'VESPERTINA', 'NOCTURNA'}
+ORDEN_JORNADAS_REPORTE = ['UNICA', 'MATUTINA', 'VESPERTINA', 'NOCTURNA', 'POR_CONFIRMAR']
 
 
 def _normalizar_tipo_accion(valor):
@@ -64,6 +66,74 @@ def _normalizar_jornada(valor):
     if jornada not in JORNADAS_SESION:
         return 'UNICA'
     return jornada
+
+
+def _nombre_jornada(jornada):
+    jornada_norm = (jornada or '').strip().upper()
+    nombres = {
+        'UNICA': 'Unica',
+        'MATUTINA': 'Matutina',
+        'VESPERTINA': 'Vespertina',
+        'NOCTURNA': 'Nocturna',
+        'POR_CONFIRMAR': 'Por confirmar',
+    }
+    return nombres.get(jornada_norm, 'Unica')
+
+
+def _etiqueta_horario_jornada(jornada, hora_inicio, hora_fin):
+    jornada_norm = _normalizar_jornada(jornada)
+    return f"{_nombre_jornada(jornada_norm)} {hora_inicio}-{hora_fin}"
+
+
+def _normalizar_hora_desde_texto(valor):
+    texto = (valor or '').strip().upper().replace('.', ':')
+    if not texto:
+        return None
+
+    for formato in ('%H:%M', '%I:%M %p', '%I:%M%p'):
+        try:
+            return datetime.strptime(texto, formato).strftime('%H:%M')
+        except ValueError:
+            continue
+    return None
+
+
+def _extraer_rango_horario(texto):
+    valores = re.findall(r'\d{1,2}:\d{2}(?:\s*[APap][Mm])?', texto or '')
+    if len(valores) < 2:
+        return None
+
+    inicio = _normalizar_hora_desde_texto(valores[0])
+    fin = _normalizar_hora_desde_texto(valores[1])
+    if not inicio or not fin:
+        return None
+    return inicio, fin
+
+
+def _resolver_jornada_desde_horario(horario_elegido, jornadas_sesiones):
+    texto = (horario_elegido or '').strip()
+    texto_upper = texto.upper()
+    if not texto:
+        return 'POR_CONFIRMAR'
+
+    for jornada in JORNADAS_SESION:
+        if jornada in texto_upper:
+            return jornada
+
+    rango = _extraer_rango_horario(texto)
+    if rango:
+        jornadas_match = [
+            jornada
+            for jornada, meta in jornadas_sesiones.items()
+            if rango in meta['rangos']
+        ]
+        if len(jornadas_match) == 1:
+            return jornadas_match[0]
+
+    if len(jornadas_sesiones) == 1:
+        return next(iter(jornadas_sesiones.keys()))
+
+    return 'POR_CONFIRMAR'
 
 
 def _normalizar_horas_totales(valor, tipo_accion):
@@ -952,6 +1022,69 @@ def _generar_token_asistencia_unico(conn):
     return uuid.uuid4().hex
 
 
+def _recalcular_duracion_desde_sesiones(conn, id_curso):
+    fila = conn.execute(
+        '''
+        SELECT MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin
+        FROM sesiones_curso
+        WHERE id_curso = ?
+        ''',
+        (id_curso,),
+    ).fetchone()
+
+    semanas = 1
+    fecha_inicio = (fila['fecha_inicio'] or '').strip() if fila else ''
+    fecha_fin = (fila['fecha_fin'] or '').strip() if fila else ''
+
+    if fecha_inicio and fecha_fin:
+        try:
+            fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            delta_dias = max(0, (fecha_fin_dt - fecha_inicio_dt).days)
+            semanas = (delta_dias // 7) + 1
+        except ValueError:
+            semanas = 1
+
+    semanas = _normalizar_semanas_duracion(semanas)
+    conn.execute(
+        '''
+        UPDATE capacitaciones
+        SET semanas_duracion = ?,
+            duracion_tipo = ?
+        WHERE id = ?
+        ''',
+        (semanas, _duracion_tipo_desde_semanas(semanas), id_curso),
+    )
+
+
+def _sincronizar_horarios_desde_sesiones(conn, id_curso):
+    franjas = conn.execute(
+        '''
+        SELECT jornada, hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
+        FROM sesiones_curso
+        WHERE id_curso = ?
+        GROUP BY jornada, hora_inicio, hora_fin
+        ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
+        ''',
+        (id_curso,),
+    ).fetchall()
+
+    conn.execute('DELETE FROM horarios_curso WHERE id_capacitacion = ?', (id_curso,))
+
+    for fila in franjas:
+        jornada = _normalizar_jornada(fila['jornada'])
+        hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
+        hora_fin = (fila['hora_fin'] or '').strip()[:5]
+        if not hora_inicio or not hora_fin:
+            continue
+
+        horario_legible = _etiqueta_horario_jornada(jornada, hora_inicio, hora_fin)
+        conn.execute(
+            'INSERT INTO horarios_curso (id_capacitacion, horario) VALUES (?, ?)',
+            (id_curso, horario_legible),
+        )
+
+
 def listar_sesiones_curso(id_curso):
     id_curso_limpio = (id_curso or '').strip().upper()
     if not id_curso_limpio:
@@ -994,19 +1127,12 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
     try:
         conn = get_db_connection()
         curso = conn.execute(
-            'SELECT anio, mes, dia, duracion_tipo, tipo_accion FROM capacitaciones WHERE id = ? LIMIT 1',
+            'SELECT id FROM capacitaciones WHERE id = ? LIMIT 1',
             (id_curso_limpio,),
         ).fetchone()
         if not curso:
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado'}
-
-        duracion_tipo = _normalizar_duracion_tipo(curso['duracion_tipo'])
-        if duracion_tipo == 'un_dia':
-            fecha_base = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
-            if fecha_base and fecha_obj.isoformat() != fecha_base:
-                conn.close()
-                return {'ok': False, 'error': f'Este curso es de un dia. Solo se permiten sesiones en {fecha_base}'}
 
         existe = conn.execute(
             '''
@@ -1036,6 +1162,8 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
                 bloque_codigo_norm or None,
             ),
         )
+        _recalcular_duracion_desde_sesiones(conn, id_curso_limpio)
+        _sincronizar_horarios_desde_sesiones(conn, id_curso_limpio)
         conn.commit()
         id_sesion = cursor.lastrowid
         conn.close()
@@ -1113,6 +1241,8 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
                 id_sesion_int,
             ),
         )
+        _recalcular_duracion_desde_sesiones(conn, sesion['id_curso'])
+        _sincronizar_horarios_desde_sesiones(conn, sesion['id_curso'])
         conn.commit()
         conn.close()
         return {'ok': True}
@@ -1129,7 +1259,7 @@ def eliminar_sesion(id_sesion):
     try:
         conn = get_db_connection()
         sesion = conn.execute(
-            'SELECT estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+            'SELECT id_curso, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
             (id_sesion_int,),
         ).fetchone()
         if not sesion:
@@ -1149,6 +1279,8 @@ def eliminar_sesion(id_sesion):
             return {'ok': False, 'error': 'No se puede eliminar una sesión abierta'}
 
         conn.execute('DELETE FROM sesiones_curso WHERE id_sesion = ?', (id_sesion_int,))
+        _recalcular_duracion_desde_sesiones(conn, sesion['id_curso'])
+        _sincronizar_horarios_desde_sesiones(conn, sesion['id_curso'])
         conn.commit()
         conn.close()
         return {'ok': True}
@@ -1181,20 +1313,12 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
     try:
         conn = get_db_connection()
         curso = conn.execute(
-            'SELECT anio, mes, dia, duracion_tipo FROM capacitaciones WHERE id = ? LIMIT 1',
+            'SELECT id FROM capacitaciones WHERE id = ? LIMIT 1',
             (id_curso_limpio,),
         ).fetchone()
         if not curso:
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado'}
-
-        duracion_tipo = _normalizar_duracion_tipo(curso['duracion_tipo'])
-        if duracion_tipo == 'un_dia':
-            fecha_base = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
-            if fecha_base:
-                if fecha_inicio_obj.isoformat() != fecha_base or fecha_fin_obj.isoformat() != fecha_base:
-                    conn.close()
-                    return {'ok': False, 'error': f'Curso de un dia: fecha inicio y fin deben ser {fecha_base}'}
 
         sesiones_creadas = 0
         fecha_cursor = fecha_inicio_obj
@@ -1234,11 +1358,209 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
 
             fecha_cursor += timedelta(days=1)
 
+        _recalcular_duracion_desde_sesiones(conn, id_curso_limpio)
+        _sincronizar_horarios_desde_sesiones(conn, id_curso_limpio)
         conn.commit()
         conn.close()
         return {'ok': True, 'sesiones_creadas': sesiones_creadas}
     except sqlite3.Error:
         return {'ok': False, 'error': 'No se pudo generar el calendario base'}
+
+
+def obtener_reporte_asistencia_curso(id_curso):
+    id_curso_limpio = (id_curso or '').strip().upper()
+    if not id_curso_limpio:
+        return {'ok': False, 'error': 'Curso inválido'}
+
+    try:
+        conn = get_db_connection()
+        curso = conn.execute(
+            '''
+            SELECT id, nombre, anio, trimestre, mes, dia, modalidad, tipo_accion
+            FROM capacitaciones
+            WHERE id = ?
+            LIMIT 1
+            ''',
+            (id_curso_limpio,),
+        ).fetchone()
+        if not curso:
+            conn.close()
+            return {'ok': False, 'error': 'Curso no encontrado'}
+
+        sesiones = conn.execute(
+            '''
+            SELECT jornada, hora_inicio, hora_fin, fecha
+            FROM sesiones_curso
+            WHERE id_curso = ?
+            ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
+            ''',
+            (id_curso_limpio,),
+        ).fetchall()
+
+        jornadas_sesiones = {}
+        total_sesiones_curso = 0
+        for sesion in sesiones:
+            jornada = _normalizar_jornada(sesion['jornada'])
+            hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
+            hora_fin = (sesion['hora_fin'] or '').strip()[:5]
+            if not jornada:
+                jornada = 'UNICA'
+
+            if jornada not in jornadas_sesiones:
+                jornadas_sesiones[jornada] = {
+                    'codigo': jornada,
+                    'nombre': _nombre_jornada(jornada),
+                    'total_sesiones': 0,
+                    'rangos': set(),
+                }
+
+            jornadas_sesiones[jornada]['total_sesiones'] += 1
+            if hora_inicio and hora_fin:
+                jornadas_sesiones[jornada]['rangos'].add((hora_inicio, hora_fin))
+            total_sesiones_curso += 1
+
+        matriculas_raw = conn.execute(
+            '''
+            SELECT
+                m.id,
+                m.numero_empleado,
+                m.horario_elegido,
+                m.aprobado,
+                d.nombre_completo
+            FROM matriculas m
+            LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+            WHERE m.id_capacitacion = ?
+            ORDER BY m.id DESC
+            ''',
+            (id_curso_limpio,),
+        ).fetchall()
+
+        matriculas_por_docente = {}
+        for fila in matriculas_raw:
+            numero_empleado = (fila['numero_empleado'] or '').strip()
+            if not numero_empleado or numero_empleado in matriculas_por_docente:
+                continue
+            matriculas_por_docente[numero_empleado] = fila
+
+        asistencia_por_docente_jornada = {}
+        asistencia_raw = conn.execute(
+            '''
+            SELECT ra.numero_empleado, s.jornada, COUNT(*) AS total_asistencias
+            FROM registro_asistencia ra
+            JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+            WHERE s.id_curso = ?
+            GROUP BY ra.numero_empleado, s.jornada
+            ''',
+            (id_curso_limpio,),
+        ).fetchall()
+        for fila in asistencia_raw:
+            numero_empleado = (fila['numero_empleado'] or '').strip()
+            jornada = _normalizar_jornada(fila['jornada'])
+            asistencia_por_docente_jornada[(numero_empleado, jornada)] = int(fila['total_asistencias'] or 0)
+
+        grupos = {}
+        for codigo in ORDEN_JORNADAS_REPORTE:
+            if codigo == 'POR_CONFIRMAR' or codigo in jornadas_sesiones:
+                total_sesiones = jornadas_sesiones[codigo]['total_sesiones'] if codigo in jornadas_sesiones else total_sesiones_curso
+                grupos[codigo] = {
+                    'codigo': codigo,
+                    'nombre': _nombre_jornada(codigo),
+                    'total_sesiones': total_sesiones,
+                    'docentes': [],
+                    'total_inscritos': 0,
+                    'total_asistencias': 0,
+                    'porcentaje_cobertura': 0.0,
+                }
+
+        for numero_empleado, fila in matriculas_por_docente.items():
+            horario_elegido = (fila['horario_elegido'] or '').strip()
+            jornada_resuelta = _resolver_jornada_desde_horario(horario_elegido, jornadas_sesiones)
+            if jornada_resuelta not in grupos:
+                grupos[jornada_resuelta] = {
+                    'codigo': jornada_resuelta,
+                    'nombre': _nombre_jornada(jornada_resuelta),
+                    'total_sesiones': total_sesiones_curso,
+                    'docentes': [],
+                    'total_inscritos': 0,
+                    'total_asistencias': 0,
+                    'porcentaje_cobertura': 0.0,
+                }
+
+            total_sesiones_jornada = grupos[jornada_resuelta]['total_sesiones']
+            if jornada_resuelta == 'POR_CONFIRMAR':
+                asistencias_docente = sum(
+                    asistencia_por_docente_jornada.get((numero_empleado, codigo_jornada), 0)
+                    for codigo_jornada in jornadas_sesiones.keys()
+                )
+            else:
+                asistencias_docente = asistencia_por_docente_jornada.get((numero_empleado, jornada_resuelta), 0)
+
+            porcentaje_docente = 0.0
+            if total_sesiones_jornada > 0:
+                porcentaje_docente = round((asistencias_docente / total_sesiones_jornada) * 100, 1)
+
+            estado_matricula = fila['aprobado']
+            if estado_matricula == 1:
+                estado_texto = 'Aprobado'
+            elif estado_matricula == 0:
+                estado_texto = 'No aprobado'
+            elif estado_matricula == 2:
+                estado_texto = 'Abandono'
+            else:
+                estado_texto = 'Pendiente'
+
+            grupos[jornada_resuelta]['docentes'].append(
+                {
+                    'numero_empleado': numero_empleado,
+                    'nombre_completo': (fila['nombre_completo'] or '').strip() or 'Docente sin nombre',
+                    'horario_elegido': horario_elegido or 'Sin horario definido',
+                    'asistencias': asistencias_docente,
+                    'sesiones_programadas': total_sesiones_jornada,
+                    'porcentaje': porcentaje_docente,
+                    'estado_matricula': estado_texto,
+                }
+            )
+
+        jornadas_ordenadas = []
+        for codigo in ORDEN_JORNADAS_REPORTE:
+            grupo = grupos.get(codigo)
+            if not grupo:
+                continue
+
+            grupo['docentes'].sort(key=lambda item: (item['nombre_completo'].lower(), item['numero_empleado']))
+            grupo['total_inscritos'] = len(grupo['docentes'])
+            grupo['total_asistencias'] = sum(item['asistencias'] for item in grupo['docentes'])
+
+            denominador = grupo['total_inscritos'] * grupo['total_sesiones']
+            if denominador > 0:
+                grupo['porcentaje_cobertura'] = round((grupo['total_asistencias'] / denominador) * 100, 1)
+            else:
+                grupo['porcentaje_cobertura'] = 0.0
+
+            if grupo['total_inscritos'] > 0 or grupo['total_sesiones'] > 0:
+                jornadas_ordenadas.append(grupo)
+
+        total_inscritos = sum(grupo['total_inscritos'] for grupo in jornadas_ordenadas)
+
+        conn.close()
+        return {
+            'ok': True,
+            'curso': {
+                'id': curso['id'],
+                'nombre': curso['nombre'],
+                'anio': curso['anio'],
+                'trimestre': curso['trimestre'],
+                'mes': curso['mes'],
+                'dia': curso['dia'],
+                'modalidad': curso['modalidad'],
+                'tipo_accion': curso['tipo_accion'],
+            },
+            'jornadas': jornadas_ordenadas,
+            'total_sesiones': total_sesiones_curso,
+            'total_inscritos': total_inscritos,
+        }
+    except sqlite3.Error:
+        return {'ok': False, 'error': 'No se pudo cargar el reporte de asistencias'}
 
 
 def abrir_asistencia_sesion(id_sesion):

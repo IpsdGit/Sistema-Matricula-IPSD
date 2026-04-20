@@ -32,6 +32,7 @@ FLASK_ENV=production
 ### Cómo Generar una Clave Secreta Segura
 
 **En la consola de PythonAnywhere:**
+
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
@@ -103,6 +104,7 @@ python3 scripts/parche.py
 ```
 
 **Importante**: Después de ejecutar estos scripts, la BD estará en:
+
 ```
 /home/IPSDUNAH/mysite/matricula.db
 ```
@@ -116,6 +118,7 @@ Es recomendable hacer backups regulares. Puedes:
    - Descárgalo
 
 2. **Programar backups con script**:
+
    ```bash
    # En una consola de PythonAnywhere
    cp /home/IPSDUNAH/mysite/matricula.db /home/IPSDUNAH/mysite/backups/matricula_$(date +%Y%m%d_%H%M%S).db
@@ -138,6 +141,7 @@ Es recomendable hacer backups regulares. Puedes:
 Si necesitas cambiar la contraseña sin re-ejecutar `scripts/parche.py`:
 
 **En Consola de PythonAnywhere:**
+
 ```python
 import sqlite3
 from werkzeug.security import generate_password_hash
@@ -171,6 +175,7 @@ Después de cada cambio en el código o variables de entorno:
 ## 🧪 Paso 7: Verificación
 
 Accede a tu aplicación:
+
 - **Portal profesor**: `https://IPSDUNAH.pythonanywhere.com`
 - **Panel admin**: `https://IPSDUNAH.pythonanywhere.com/login_admin`
 - **Credenciales**: usuario `admin` con la contraseña que configuraste
@@ -180,39 +185,46 @@ Accede a tu aplicación:
 ## 🐛 Resolución de Problemas
 
 ### Error: "módulo no encontrado"
+
 ```
 Solución: Verifica que requirements.txt esté instalado en el virtualenv
 ```
 
 En **Consoles** > **Bash console**:
+
 ```bash
 mkvirtualenv --python=/usr/bin/python3.10 IPSDUNAH-venv
 pip install -r /home/IPSDUNAH/mysite/requirements.txt
 ```
 
 ### Error: "permiso denegado" en la BD
+
 ```
 Solución: Verifica permisos del archivo matricula.db
 ```
 
 En **Bash console**:
+
 ```bash
 ls -la /home/IPSDUNAH/mysite/matricula.db
 chmod 644 /home/IPSDUNAH/mysite/matricula.db
 ```
 
 ### Error: "variable de entorno no encontrada"
+
 ```
 Solución: Verifica que esté configurada en Web app > Environment variables
 ```
 
 Para verificar en Bash:
+
 ```bash
 echo $SECRET_KEY
 echo $DATABASE_PATH
 ```
 
 ### La aplicación no carga después de cambios
+
 ```
 Solución: Recarga con el botón ⚡ en Web
 ```
@@ -237,10 +249,12 @@ Cuando necesites actualizar el código:
 1. **Hacer cambios locales**
 2. **Subirlos a Git**
 3. **En PythonAnywhere > Bash console**:
+
    ```bash
    cd /home/IPSDUNAH/mysite
    git pull origin main
    ```
+
 4. **Recargar la app**: clic en ⚡ en **Web**
 
 ---
@@ -248,12 +262,16 @@ Cuando necesites actualizar el código:
 ## 💡 Tips Útiles
 
 ### Monitorizar Logs
+
 En PythonAnywhere > **Web**, desplázate hasta **Log files** y revisa:
+
 - `error.log` - Errores de la aplicación
 - `server.log` - Logs del servidor
 
 ### Consola Python Interactiva
+
 Para probar cambios sin afectar la app:
+
 ```bash
 cd /home/IPSDUNAH/mysite
 python3  # Inicia interprete Python
@@ -262,15 +280,16 @@ python3  # Inicia interprete Python
 ```
 
 ### Aumentar Límite de Solicitudes
+
 Si tienes muchos usuarios, configura en PythonAnywhere > **Web** > **CPU quota**.
 
 ---
 
 ## 📞 Soporte
 
-- **Docs de PythonAnywhere**: https://www.pythonanywhere.com/help/
-- **Foro Flask**: https://flask.palletsprojects.com/
-- **Documentación SQLite**: https://www.sqlite.org/docs.html
+- **Docs de PythonAnywhere**: <https://www.pythonanywhere.com/help/>
+- **Foro Flask**: <https://flask.palletsprojects.com/>
+- **Documentación SQLite**: <https://www.sqlite.org/docs.html>
 
 ---
 

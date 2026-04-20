@@ -6,6 +6,7 @@ from database import get_db_connection
 from utils import (
     construir_contexto_dashboard,
     normalizar_nombre_curso,
+    obtener_horarios_disponibles_curso,
     obtener_resumen_intentos_por_curso,
     registrar_evento_matricula,
 )
@@ -67,10 +68,8 @@ def process_matricula(numero_empleado, id_capacitacion, horario_elegido):
             'SELECT id, nombre, anio, mes, dia FROM capacitaciones WHERE id = ?',
             (id_capacitacion,),
         ).fetchone()
-        horario_valido = conn.execute(
-            'SELECT 1 FROM horarios_curso WHERE id_capacitacion = ? AND horario = ?',
-            (id_capacitacion, horario_elegido),
-        ).fetchone()
+        horarios_disponibles = obtener_horarios_disponibles_curso(conn, id_capacitacion)
+        horario_valido = horario_elegido in horarios_disponibles
 
         if not curso or not horario_valido:
             conn.close()
@@ -301,15 +300,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado', 'status_code': 404}
 
-        horarios = conn.execute(
-            '''
-            SELECT horario
-            FROM horarios_curso
-            WHERE id_capacitacion = ?
-            ORDER BY id ASC
-            ''',
-            (id_curso,),
-        ).fetchall()
+        horarios = obtener_horarios_disponibles_curso(conn, id_curso)
 
         matricula_activa = conn.execute(
             '''
@@ -415,7 +406,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
                 'horas_totales': curso['horas_totales'] if curso['horas_totales'] else 0,
                 'semanas_duracion': curso['semanas_duracion'] if curso['semanas_duracion'] else 1,
                 'enlace_virtual': curso['enlace_virtual'],
-                'horarios': [h['horario'] for h in horarios],
+                'horarios': horarios,
                 'matricula_activa': bool(matricula_activa),
                 'puede_marcar_asistencia': puede_marcar_asistencia,
                 'horario_matriculado': (

@@ -108,6 +108,72 @@ def validar_enlace_virtual(url):
     return bool(re.match(r'^https?://\S+$', url.strip(), re.IGNORECASE))
 
 
+def _nombre_jornada_horario(jornada):
+    jornada_norm = (jornada or '').strip().upper()
+    nombres = {
+        'UNICA': 'Unica',
+        'MATUTINA': 'Matutina',
+        'VESPERTINA': 'Vespertina',
+        'NOCTURNA': 'Nocturna',
+    }
+    return nombres.get(jornada_norm, 'Unica')
+
+
+def _es_horario_por_definir(horario):
+    texto = (horario or '').strip().lower()
+    return not texto or 'por definir' in texto
+
+
+def _etiqueta_horario_desde_sesion(jornada, hora_inicio, hora_fin):
+    inicio = (hora_inicio or '').strip()[:5]
+    fin = (hora_fin or '').strip()[:5]
+    if not inicio or not fin:
+        return None
+    return f"{_nombre_jornada_horario(jornada)} {inicio}-{fin}"
+
+
+def obtener_horarios_disponibles_curso(conn, id_curso):
+    horarios_bd = conn.execute(
+        'SELECT horario FROM horarios_curso WHERE id_capacitacion = ? ORDER BY id ASC',
+        (id_curso,),
+    ).fetchall()
+
+    horarios_norm = []
+    vistos = set()
+    for fila in horarios_bd:
+        horario = (fila['horario'] or '').strip()
+        if not horario or horario in vistos:
+            continue
+        vistos.add(horario)
+        horarios_norm.append(horario)
+
+    horarios_validos = [h for h in horarios_norm if not _es_horario_por_definir(h)]
+    if horarios_validos:
+        return horarios_validos
+
+    sesiones = conn.execute(
+        '''
+        SELECT jornada, hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
+        FROM sesiones_curso
+        WHERE id_curso = ?
+        GROUP BY jornada, hora_inicio, hora_fin
+        ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
+        ''',
+        (id_curso,),
+    ).fetchall()
+
+    horarios_sesiones = []
+    vistos_sesiones = set()
+    for fila in sesiones:
+        etiqueta = _etiqueta_horario_desde_sesion(fila['jornada'], fila['hora_inicio'], fila['hora_fin'])
+        if not etiqueta or etiqueta in vistos_sesiones:
+            continue
+        vistos_sesiones.add(etiqueta)
+        horarios_sesiones.append(etiqueta)
+
+    return horarios_sesiones
+
+
 def normalizar_nombre_curso(nombre):
     return re.sub(r'\s+', ' ', (nombre or '').strip().lower())
 
@@ -280,10 +346,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         if bloqueado:
             continue
 
-        horarios = conn.execute(
-            'SELECT horario FROM horarios_curso WHERE id_capacitacion = ?',
-            (c['id'],),
-        ).fetchall()
+        horarios_disponibles = obtener_horarios_disponibles_curso(conn, c['id'])
 
         mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
         modalidad = (c['modalidad'] or '').strip()
@@ -299,7 +362,8 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'trimestre': c['trimestre'],
                 'modalidad': modalidad,
                 'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
-                'horarios': [h['horario'] for h in horarios],
+                'horarios': horarios_disponibles,
+                'horarios_preview': horarios_disponibles[:2],
                 'mensaje_oportunidades': mensaje_oportunidades,
             }
         )

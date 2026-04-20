@@ -5,6 +5,7 @@ Sistema web de gestión de matrículas en capacitaciones para profesores de IPSD
 ## 🎯 Características
 
 ### 👨‍🏫 Funciones de Profesor
+
 - Ingreso con número de empleado
 - Visualización de capacitaciones disponibles
 - Inscripción en cursos con selección de horario
@@ -12,6 +13,7 @@ Sistema web de gestión de matrículas en capacitaciones para profesores de IPSD
 - Cancelación de inscripciones
 
 ### 👨‍💼 Funciones de Administrador
+
 - Autenticación segura
 - CRUD de capacitaciones
 - Gestión de horarios por curso
@@ -30,12 +32,14 @@ Sistema web de gestión de matrículas en capacitaciones para profesores de IPSD
 ## 📦 Instalación
 
 ### 1. Clonar el repositorio
+
 ```bash
 git clone <url-del-repositorio>
 cd Sistema-Matricula-IPSD
 ```
 
 ### 2. Crear entorno virtual (recomendado)
+
 ```bash
 python -m venv venv
 
@@ -47,26 +51,30 @@ source venv/bin/activate
 ```
 
 ### 3. Instalar dependencias
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 4. Inicializar la base de datos
+
 ```bash
 python scripts/setup_bd.py
 ```
 
 ### 5. Aplicar actualizaciones (parche de seguridad)
+
 ```bash
 python scripts/parche.py
 ```
 
 ### 6. Ejecutar la aplicación
+
 ```bash
 python app.py
 ```
 
-La aplicación estará disponible en: **http://localhost:5000**
+La aplicación estará disponible en: **<http://localhost:5000>**
 
 ## 🔑 Variables de Entorno
 
@@ -81,6 +89,7 @@ cp .env.example .env
 ```
 
 **Variables disponibles:**
+
 - `SECRET_KEY`: Clave secreta para sesiones Flask
 - `DATABASE_PATH`: Ruta de la base de datos (fallback: `/home/IPSDUNAH/mysite/matricula.db`)
 - `ADMIN_PASSWORD`: Contraseña inicial del administrador
@@ -89,10 +98,12 @@ cp .env.example .env
 ## 🔑 Credenciales Iniciales
 
 ### Portal de Profesor
+
 - Acceso: `http://localhost:5000`
 - Cualquier número de empleado de 4-12 dígitos
 
 ### Panel Administrador
+
 - URL: `http://localhost:5000/login_admin`
 - Usuario: `admin`
 - Contraseña: `IPSD@admin2026`
@@ -141,6 +152,7 @@ Sistema-Matricula-IPSD/
 ### Tablas
 
 #### `capacitaciones`
+
 - `id`: Identificador único del curso
 - `nombre`: Nombre de la capacitación
 - `anio`: Año
@@ -148,11 +160,13 @@ Sistema-Matricula-IPSD/
 - `mes`: Mes
 
 #### `horarios_curso`
+
 - `id`: Identificador
 - `id_capacitacion`: Referencia a capacitaciones
 - `horario`: Horario disponible
 
 #### `matriculas`
+
 - `id`: Identificador
 - `numero_empleado`: ID del profesor
 - `id_capacitacion`: Referencia al curso
@@ -160,6 +174,7 @@ Sistema-Matricula-IPSD/
 - `fecha_matricula`: Timestamp de inscripción
 
 #### `admin_users`
+
 - `id`: Identificador
 - `username`: Usuario administrativo
 - `password_hash`: Contraseña encriptada
@@ -182,6 +197,7 @@ Este proyecto está preparado específicamente para ejecutarse en **PythonAnywhe
 **Instrucciones completas**: Ver [docs/PYTHONANYWHERE_SETUP.md](docs/PYTHONANYWHERE_SETUP.md)
 
 **Quick Start en PythonAnywhere:**
+
 1. Configura las variables de entorno en **Web > Environment variables**
 2. Carga el código en `/home/IPSDUNAH/mysite/`
 3. Ejecuta `python3 scripts/setup_bd.py` y `python3 scripts/parche.py`
@@ -190,6 +206,7 @@ Este proyecto está preparado específicamente para ejecutarse en **PythonAnywhe
 ### Otros Servidores (Heroku, AWS, etc.)
 
 Si despliegas en otro servidor:
+
 1. Configura las variables de entorno según tu plataforma
 2. Asegúrate de que `DATABASE_PATH` apunte a una ruta válida
 3. Instala dependencias: `pip install -r requirements.txt`
@@ -198,10 +215,12 @@ Si despliegas en otro servidor:
 ## 📝 Notas de Desarrollo
 
 ### Estructura de Rutas
+
 - **Públicas**: `/`, `/dashboard`, `/matricular`, `/cancelar_matricula`
 - **Privadas**: `/login_admin`, `/admin*` (requieren autenticación)
 
 ### Validaciones
+
 - Número de empleado: 4-12 dígitos
 - ID de curso: Alfanumérico con guiones
 

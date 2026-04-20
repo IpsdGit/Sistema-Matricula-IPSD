@@ -24,6 +24,7 @@ from services.admin_service import (
     get_admin_dashboard_payload,
     get_admin_stats_payload,
     listar_sesiones_curso,
+    obtener_reporte_asistencia_curso,
     editar_sesion,
     update_matricula_resultado,
     update_admin_user_record,
@@ -337,18 +338,54 @@ def register_admin_routes(app):
         jornada = request.form.get('jornada', 'UNICA').strip().upper()
         docente_sesion = request.form.get('docente_sesion', '').strip()
         bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
-
-        hora_inicio_list = request.form.getlist('hora_inicio')
-        hora_fin_list = request.form.getlist('hora_fin')
-        bloques = []
-        for idx, inicio in enumerate(hora_inicio_list):
-            fin = hora_fin_list[idx] if idx < len(hora_fin_list) else ''
-            bloques.append({'hora_inicio': inicio, 'hora_fin': fin})
-
         hora_inicio_unica = request.form.get('hora_inicio', '').strip()
         hora_fin_unica = request.form.get('hora_fin', '').strip()
-        if not bloques and hora_inicio_unica and hora_fin_unica:
-            bloques.append({'hora_inicio': hora_inicio_unica, 'hora_fin': hora_fin_unica})
+
+        configuraciones = []
+        configuraciones.append(
+            {
+                'dias_semana': dias_semana,
+                'bloques': [{'hora_inicio': hora_inicio_unica, 'hora_fin': hora_fin_unica}],
+                'jornada': jornada,
+                'docente_sesion': docente_sesion,
+                'bloque_codigo': bloque_codigo,
+            }
+        )
+
+        dias_semana_2 = request.form.getlist('dias_semana_2')
+        hora_inicio_2 = request.form.get('hora_inicio_2', '').strip()
+        hora_fin_2 = request.form.get('hora_fin_2', '').strip()
+        jornada_2 = request.form.get('jornada_2', '').strip().upper()
+        docente_sesion_2 = request.form.get('docente_sesion_2', '').strip()
+        bloque_codigo_2 = request.form.get('bloque_codigo_2', '').strip().upper()
+
+        segunda_jornada_enviada = any(
+            [
+                dias_semana_2,
+                hora_inicio_2,
+                hora_fin_2,
+                jornada_2,
+                docente_sesion_2,
+                bloque_codigo_2,
+            ]
+        )
+
+        if segunda_jornada_enviada:
+            if not dias_semana_2 or not hora_inicio_2 or not hora_fin_2:
+                payload_error = {'ok': False, 'error': 'Para la segunda jornada debes indicar días, hora de inicio y hora de fin.'}
+                if es_ajax:
+                    return jsonify(payload_error), 400
+                return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+            configuraciones.append(
+                {
+                    'dias_semana': dias_semana_2,
+                    'bloques': [{'hora_inicio': hora_inicio_2, 'hora_fin': hora_fin_2}],
+                    'jornada': jornada_2 or 'VESPERTINA',
+                    'docente_sesion': docente_sesion_2,
+                    'bloque_codigo': bloque_codigo_2,
+                }
+            )
 
         if not id_curso:
             if es_ajax:
@@ -360,21 +397,86 @@ def register_admin_routes(app):
                 return jsonify({'ok': False, 'error': 'No autorizado'}), 403
             abort(403)
 
-        result = generar_calendario_base(
-            id_curso,
-            fecha_inicio,
-            fecha_fin,
-            dias_semana,
-            bloques,
-            jornada=jornada,
-            docente_sesion=docente_sesion,
-            bloque_codigo=bloque_codigo,
-        )
+        sesiones_creadas_total = 0
+        for config in configuraciones:
+            result = generar_calendario_base(
+                id_curso,
+                fecha_inicio,
+                fecha_fin,
+                config['dias_semana'],
+                config['bloques'],
+                jornada=config['jornada'],
+                docente_sesion=config['docente_sesion'],
+                bloque_codigo=config['bloque_codigo'],
+            )
+            if not result.get('ok'):
+                if es_ajax:
+                    return jsonify(result), 400
+                return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+            sesiones_creadas_total += int(result.get('sesiones_creadas', 0) or 0)
+
+        result = {
+            'ok': True,
+            'sesiones_creadas': sesiones_creadas_total,
+            'jornadas_generadas': len(configuraciones),
+        }
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
 
         return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
+
+    @app.route('/admin/curso/<id_curso>/asistencias')
+    @admin_requerido
+    def admin_gestion_asistencias(id_curso):
+        id_curso = (id_curso or '').strip().upper()
+        if not id_curso:
+            return redireccion_admin_vista('cursos')
+
+        if not _admin_puede_gestionar_curso(id_curso):
+            abort(403)
+
+        vista_solicitada = request.args.get('view', 'cursos').strip().lower()
+        anio_filtro = request.args.get('anio', '').strip()
+        trimestre_filtro = request.args.get('trimestre', '').strip()
+        mes_filtro = request.args.get('mes', '').strip()
+        resultado_filtro = request.args.get('resultado', '').strip().lower()
+        admin_rol = session.get('admin_rol', 'admin')
+
+        dashboard_payload = get_admin_dashboard_payload(
+            vista_solicitada,
+            anio_filtro,
+            trimestre_filtro,
+            mes_filtro,
+            resultado_filtro,
+            admin_rol,
+            session.get('admin_direccion', 'IPSD'),
+        )
+
+        reporte = obtener_reporte_asistencia_curso(id_curso)
+        if not reporte.get('ok'):
+            return redireccion_admin_vista('cursos')
+
+        return render_template(
+            'admin.html',
+            registros=dashboard_payload['registros'],
+            cursos=dashboard_payload['cursos'],
+            calendario_eventos=dashboard_payload['calendario_eventos'],
+            usuarios_admin=dashboard_payload['usuarios_admin'],
+            filtros=dashboard_payload['filtros'],
+            stats=dashboard_payload['stats'],
+            admin_user=session.get('admin_user', 'Admin'),
+            admin_rol=admin_rol,
+            admin_direccion=dashboard_payload['admin_direccion'],
+            es_superadmin=dashboard_payload['es_superadmin'],
+            direcciones=dashboard_payload['direcciones'],
+            direcciones_gestion=dashboard_payload['direcciones_gestion'],
+            vista_inicial='cursos',
+            fecha_hoy=datetime.now().strftime('%Y-%m-%d'),
+            horarios_base=HORARIOS_BASE,
+            curso_asistencias_id=id_curso,
+            curso_asistencia_reporte=reporte,
+        )
 
     @app.route('/admin/sesion/crear', methods=['POST'])
     @admin_requerido
