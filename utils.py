@@ -6,6 +6,7 @@ from functools import wraps
 from flask import abort, redirect, request, session, url_for
 
 from config import (
+    DIAS_SEMANA,
     FILTROS_HISTORIAL_PERMITIDOS,
     FILTROS_NOTIFICACION_PERMITIDOS,
     LIMITE_ABANDONO,
@@ -318,7 +319,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
 
     query_disponibles = '''
-        SELECT id, nombre, mes, anio, trimestre, modalidad FROM capacitaciones
+        SELECT id, nombre, mes, anio, trimestre, modalidad, dia FROM capacitaciones
         ORDER BY anio DESC, mes
     '''
     cursos_raw = conn.execute(query_disponibles).fetchall()
@@ -359,9 +360,11 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'nombre': c['nombre'],
                 'mes': c['mes'],
                 'anio': c['anio'],
+                'dia': c['dia'],
                 'trimestre': c['trimestre'],
                 'modalidad': modalidad,
                 'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
+                'fecha_inicio_texto': _fecha_inicio_legible_desde_partes(c['anio'], c['mes'], c['dia']),
                 'horarios': horarios_disponibles,
                 'horarios_preview': horarios_disponibles[:2],
                 'mensaje_oportunidades': mensaje_oportunidades,
@@ -409,6 +412,27 @@ def _fecha_iso_desde_partes_curso(anio, mes_nombre, dia):
         return None
 
     return fecha.strftime('%Y-%m-%d')
+
+
+def _fecha_inicio_legible_desde_partes(anio, mes_nombre, dia):
+    try:
+        anio_int = int(str(anio).strip())
+        dia_int = int(str(dia).strip())
+    except (TypeError, ValueError):
+        return None
+
+    meses_map = {nombre.lower(): idx + 1 for idx, nombre in enumerate(MESES_ES)}
+    mes_int = meses_map.get((mes_nombre or '').strip().lower())
+    if not mes_int:
+        return None
+
+    try:
+        fecha = datetime(anio_int, mes_int, dia_int)
+    except ValueError:
+        return None
+
+    dia_semana = DIAS_SEMANA[fecha.weekday()]
+    return f'{dia_semana}, {fecha.day} de {MESES_ES[fecha.month - 1]} de {fecha.year}'
 
 
 def construir_eventos_calendario_docente(conn, numero_empleado):

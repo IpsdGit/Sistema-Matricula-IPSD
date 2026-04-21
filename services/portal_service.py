@@ -78,11 +78,13 @@ def process_matricula(numero_empleado, id_capacitacion, horario_elegido):
         fecha_inicio = _fecha_inicio_curso(curso['anio'], curso['mes'], curso['dia'])
         hoy = datetime.now().date()
         if fecha_inicio and hoy > fecha_inicio:
+            contexto = construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
             conn.close()
             return {
                 'ok': False,
                 'error': f'La fecha máxima de matrícula para este curso fue el {fecha_inicio.strftime("%d/%m/%Y")}.',
                 'error_view': 'dashboard',
+                'contexto': contexto,
             }
 
         resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)

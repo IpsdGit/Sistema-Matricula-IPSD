@@ -106,73 +106,89 @@ def register_admin_routes(app):
             'dias_semana': [],
             'hora_inicio': '',
             'hora_fin': '',
-                'jornada': 'UNICA',
-                'docente_sesion': '',
-                'bloque_codigo': '',
+            'jornada': 'UNICA',
+            'docente_sesion': '',
+            'bloque_codigo': '',
+            'segunda_jornada_activa': False,
+            'dias_semana_2': [],
+            'hora_inicio_2': '',
+            'hora_fin_2': '',
+            'jornada_2': 'VESPERTINA',
+            'docente_sesion_2': '',
+            'bloque_codigo_2': '',
         }
 
         if not sesiones_curso:
             return configuracion
 
         fechas = []
-        dias_semana = set()
-        franjas = {}
-        jornadas = {}
-        docentes = {}
-        bloques = {}
+        bloques_calendario = {}
+
+        def _modo_valor(conteos):
+            if not conteos:
+                return ''
+            return sorted(conteos.items(), key=lambda item: (-item[1], item[0]))[0][0]
+
+        def _aplicar_bloque(config, key, data, sufijo=''):
+            jornada, hora_inicio, hora_fin = key
+            config[f'jornada{sufijo}'] = jornada or 'UNICA'
+            config[f'hora_inicio{sufijo}'] = hora_inicio or ''
+            config[f'hora_fin{sufijo}'] = hora_fin or ''
+            config[f'dias_semana{sufijo}'] = sorted(data['dias_semana'])
+            config[f'docente_sesion{sufijo}'] = _modo_valor(data['docentes'])
+            config[f'bloque_codigo{sufijo}'] = _modo_valor(data['bloques'])
 
         for sesion in sesiones_curso:
             fecha_iso = (sesion['fecha'] or '').strip()
             hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
             hora_fin = (sesion['hora_fin'] or '').strip()[:5]
+            jornada = (sesion['jornada'] or '').strip().upper() or 'UNICA'
+
+            clave_bloque = (jornada, hora_inicio, hora_fin)
+            if clave_bloque not in bloques_calendario:
+                bloques_calendario[clave_bloque] = {
+                    'conteo': 0,
+                    'dias_semana': set(),
+                    'docentes': {},
+                    'bloques': {},
+                }
+            bloque_actual = bloques_calendario[clave_bloque]
+            bloque_actual['conteo'] += 1
 
             if fecha_iso:
                 fechas.append(fecha_iso)
                 try:
                     dia_semana = datetime.strptime(fecha_iso, '%Y-%m-%d').weekday()
                     if 0 <= dia_semana <= 6:
-                        dias_semana.add(dia_semana)
+                        bloque_actual['dias_semana'].add(dia_semana)
                 except ValueError:
                     pass
 
-            if hora_inicio and hora_fin:
-                clave_franja = (hora_inicio, hora_fin)
-                franjas[clave_franja] = franjas.get(clave_franja, 0) + 1
-
-            jornada = (sesion['jornada'] or '').strip().upper()
-            if jornada:
-                jornadas[jornada] = jornadas.get(jornada, 0) + 1
-
             docente_sesion = (sesion['docente_sesion'] or '').strip()
             if docente_sesion:
-                docentes[docente_sesion] = docentes.get(docente_sesion, 0) + 1
+                bloque_actual['docentes'][docente_sesion] = bloque_actual['docentes'].get(docente_sesion, 0) + 1
 
             bloque_codigo = (sesion['bloque_codigo'] or '').strip().upper()
             if bloque_codigo:
-                bloques[bloque_codigo] = bloques.get(bloque_codigo, 0) + 1
+                bloque_actual['bloques'][bloque_codigo] = bloque_actual['bloques'].get(bloque_codigo, 0) + 1
 
         if fechas:
             configuracion['fecha_inicio'] = min(fechas)
             configuracion['fecha_fin'] = max(fechas)
 
-        configuracion['dias_semana'] = sorted(dias_semana)
+        if not bloques_calendario:
+            return configuracion
 
-        if franjas:
-            franja_principal = sorted(
-                franjas.items(),
-                key=lambda item: (-item[1], item[0][0], item[0][1]),
-            )[0][0]
-            configuracion['hora_inicio'] = franja_principal[0]
-            configuracion['hora_fin'] = franja_principal[1]
+        bloques_ordenados = sorted(
+            bloques_calendario.items(),
+            key=lambda item: (-item[1]['conteo'], item[0][0], item[0][1], item[0][2]),
+        )
 
-        if jornadas:
-            configuracion['jornada'] = sorted(jornadas.items(), key=lambda item: (-item[1], item[0]))[0][0]
+        _aplicar_bloque(configuracion, bloques_ordenados[0][0], bloques_ordenados[0][1])
 
-        if docentes:
-            configuracion['docente_sesion'] = sorted(docentes.items(), key=lambda item: (-item[1], item[0]))[0][0]
-
-        if bloques:
-            configuracion['bloque_codigo'] = sorted(bloques.items(), key=lambda item: (-item[1], item[0]))[0][0]
+        if len(bloques_ordenados) > 1:
+            configuracion['segunda_jornada_activa'] = True
+            _aplicar_bloque(configuracion, bloques_ordenados[1][0], bloques_ordenados[1][1], '_2')
 
         return configuracion
 

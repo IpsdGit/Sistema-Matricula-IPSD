@@ -3284,6 +3284,187 @@ Nuevas funciones de validación:
 
 ---
 
-**Última actualización**: Abril 20, 2026  
-**Versión actual**: 1.7.1 (Mejoras en Gestión de Sesiones y Asistencia)  
-**Estado**: Development - Funcionalidad completa de sesiones, asistencia, calendarios automáticos
+---
+
+# 🎨 Versión 1.7.2 - Mejoras en Configuración de Calendarios y Presentación
+
+**Fecha**: Abril 21, 2026  
+**Cambios**: 410 insertiones, 185 eliminaciones en 5 archivos
+
+## Cambio 26.1: Refactorización de lógica de obtención de configuración de sesiones
+**Fecha**: Abril 21, 2026  
+**Archivos afectados**: `routes/admin.py` (+47 líneas netas)
+
+**QUÉ**:
+Cambio en función `obtener_configuracion_sesiones_curso()`:
+- Nueva estructura de datos `bloques_calendario`: agrupa sesiones por (jornada, hora_inicio, hora_fin)
+- Nueva función helper `_modo_valor()`: calcula el valor más frecuente en una colección (moda estadística)
+- Nueva función helper `_aplicar_bloque()`: aplica configuración de bloque a dictionary (reduce duplicación)
+- Ahora soporta **segunda jornada**: si hay sesiones con horarios diferentes, se detectan automáticamente
+- Configuración de campos nuevos en diccionario de retorno:
+  - `segunda_jornada_activa`: Boolean indicando si existe segunda jornada
+  - `dias_semana_2`, `hora_inicio_2`, `hora_fin_2`: Horarios segunda jornada
+  - `jornada_2`, `docente_sesion_2`, `bloque_codigo_2`: Detalles segunda jornada
+
+**POR QUÉ**:
+- v1.7.1 solo soportaba una jornada
+- Muchos cursos tienen múltiples franjas horarias (matutina y vespertina)
+- Lógica anterior era repetitiva y difícil de mantener (11 líneas de deducción duplicadas)
+- Nuevo modelo es DRY (Don't Repeat Yourself) y escalable a N jornadas
+
+**PARA QUÉ**:
+- Soporte para cursos con múltiples jornadas simultáneas
+- Formularios pre-llenados con datos deducidos automáticamente
+- Mejor experiencia al editar calendarios con múltiples franjas
+
+---
+
+## Cambio 26.2: UI de calendario mejorada con segunda jornada
+**Fecha**: Abril 21, 2026  
+**Archivos afectados**: `templates/admin.html` (+82 líneas, -24 líneas netas)
+
+**QUÉ**:
+Cambios en panel de generación de calendarios:
+
+1. **Panel principal de generación**:
+   - Cambio: Generación automática siempre visible (no colapsable)
+   - Antes: Botón "Mostrar generación automática" con toggle
+   - Ahora: Texto "Generación automática activa" siempre mostrado
+   - Benefit: Usuarios ven opción por defecto
+
+2. **Panel de segunda jornada**:
+   - Botón "+ Agregar segunda jornada" (visible solo si no existe)
+   - Panel oculto por defecto, se muestra al clickear botón
+   - **Pre-llenado automático** de campos desde `curso_sesion_config`:
+     - `dias_semana_2` checkboxes con valores desde config
+     - `hora_inicio_2`, `hora_fin_2` con valores pre-llenados
+     - `jornada_2` select con valor pre-seleccionado
+     - `docente_sesion_2`, `bloque_codigo_2` pre-llenados
+
+3. **JavaScript mejorado**:
+   - Cambio: Listener de botón toggle refactorizado
+   - Antes: Toggle class 'hidden' + aria-expanded
+   - Ahora: Manejo directo de `.hidden` attribute (más simple)
+   - Botón se oculta después de agregar segunda jornada
+
+**POR QUÉ**:
+- Admin feedback: "Generación automática debe ser visible siempre"
+- v1.7.1 requería click extra para ver opciones
+- Pre-llenar reduce errores de admin (validación visual)
+- UX más intuitiva con agregar/ocultar
+
+**PARA QUÉ**:
+- Accesibilidad mejorada al panel de calendarios
+- Reducción de errores de entrada (pre-llenado automático)
+- Workflow más claro: crear jornada 1 → agregar jornada 2
+- Mejor onboarding para nuevos admins
+
+---
+
+## Cambio 26.3: Manejo de errores mejorado en matrícula con contexto
+**Fecha**: Abril 21, 2026  
+**Archivos afectados**: `services/portal_service.py` (-2 líneas)
+
+**QUÉ**:
+Cambio en función `process_matricula()` - manejo de error "Fecha máxima de matrícula pasada":
+- Antes: Retorna error sin contexto
+- Ahora: Incluye full `contexto` del dashboard en respuesta de error
+- Contexto contiene:
+  - Cursos disponibles
+  - Cursos ya matriculados
+  - Notificaciones
+  - Oportunidades de reintento
+
+```python
+return {
+    'ok': False,
+    'error': 'Fecha máxima pasada...',
+    'error_view': 'dashboard',
+    'contexto': construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
+}
+```
+
+**POR QUÉ**:
+- v1.7.1: cuando matrícula fallaba, dashboard se actualizaba vacío
+- Usuario no veía por qué falló, tenía que recargarse la página
+- Contexto completo permite rendering sin reload
+
+**PARA QUÉ**:
+- UX fluida: error mostrado en contexto sin recargar
+- Usuario ve inmediatamente otros cursos disponibles
+- Menos confusión, menos reloads
+
+---
+
+## Cambio 26.4: Presentación de fechas de curso mejorada
+**Fecha**: Abril 21, 2026  
+**Archivos afectados**: `templates/dashboard.html` (+9 líneas), `utils.py` (+54 líneas)
+
+**QUÉ**:
+Cambio en cómo se muestran fechas en dashboard de docentes:
+
+**Antes (v1.7.1)**:
+```html
+Horarios: 08:00 - 12:00 · 14:00 - 18:00
+```
+
+**Ahora (v1.7.2)**:
+```html
+Inicio: Lunes, 22 de Abril de 2026
+```
+
+**Implementación**:
+- Nueva función `_fecha_inicio_legible_desde_partes()` en `utils.py`:
+  - Parámetros: año, mes_nombre, día (desde tabla capacitaciones)
+  - Retorna: "Lunes, 22 de Abril de 2026"
+  - Usa `DIAS_SEMANA` (Monday → "Lunes") y `MESES_ES` (April → "Abril")
+  - Manejo de errores: retorna None si fecha inválida
+  
+- Cambios en `cargar_contexto_dashboard_docente()`:
+  - Agrega campo `dia` en SELECT (antes no se traía)
+  - Agrega `fecha_inicio_texto` al contexto de curso
+  - Mantiene `horarios` para backward compatibility
+
+**POR QUÉ**:
+- Usuarios más interesados en CUÁNDO empieza que CÓMO es horario
+- Horarios muchas veces vacíos (falta sync de sesiones)
+- Fecha más legible y más importante que horarios ambiguos
+
+**PARA QUÉ**:
+- Información más relevante al docente (cuándo empieza)
+- Mejor legibilidad con formato "día semana, fecha"
+- Menos confusión sobre horarios pendientes
+
+---
+
+## Cambio 26.5: Importaciones y dependencias actualizadas
+**Fecha**: Abril 21, 2026  
+**Archivos afectados**: `utils.py`
+
+**QUÉ**:
+- Nueva importación en `utils.py`: `from config import DIAS_SEMANA`
+- `DIAS_SEMANA` ya existía en `config.py`, ahora se importa en utils
+- Permite traducción de weekday (0-6) a español (Lunes, Martes, etc.)
+
+**PARA QUÉ**:
+- Centralización de constantes idiomáticas
+- Reutilización de mapeos de días
+
+---
+
+## Resumen de Cambios v1.7.2
+
+| Aspecto | Cambio |
+|--------|--------|
+| Refactorización lógica | Bloque-agrupamiento mejorado, soporte segunda jornada |
+| UI/UX mejoras | Panel generación siempre visible, pre-llenado automático |
+| Errores contextuales | Matrícula fallida ahora retorna dashboard completo |
+| Presentación fechas | Cambio de horarios → fecha legible "Día, DD de Mes" |
+| Importaciones | Importación centralizada de DIAS_SEMANA |
+| Líneas código | +410 insertiones, -185 eliminaciones (net +225) |
+
+---
+
+**Última actualización**: Abril 21, 2026  
+**Versión actual**: 1.7.2 (Mejoras en Configuración de Calendarios y Presentación)  
+**Estado**: Development - Segunda jornada, mejor presentación de fechas, errores contextuales

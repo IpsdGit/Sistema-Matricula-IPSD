@@ -735,13 +735,11 @@
                 Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
               </div>
             </div>
-            <button type="button" class="calendar-toggle-btn" id="btn-toggle-generacion-calendario" aria-expanded="false" aria-controls="panel-generacion-calendario">
-              Mostrar generación automática
-            </button>
+            <span style="font-size:.78rem; color:var(--text-muted);">Generación automática activa</span>
           </div>
 
           <div class="card-body" style="display:grid; gap:1rem;">
-            <div id="panel-generacion-calendario" class="calendar-panel hidden">
+            <div id="panel-generacion-calendario" class="calendar-panel">
               <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
@@ -1261,15 +1259,12 @@
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:.5rem;">
-            <button type="button" class="calendar-toggle-btn" id="btn-toggle-generacion-calendario" aria-expanded="false" aria-controls="panel-generacion-calendario">
-              Mostrar generación automática
-            </button>
-            <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
+              <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
             </div>
           </div>
 
           <div class="card-body" style="display:grid; gap:1rem;">
-            <div id="panel-generacion-calendario" class="calendar-panel hidden">
+            <div id="panel-generacion-calendario" class="calendar-panel">
               <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
@@ -1329,7 +1324,18 @@
                   </div>
                 </div>
 
-                <div style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:grid; gap:.65rem;">
+                <div style="display:flex; justify-content:flex-start;">
+                  <button
+                    type="button"
+                    id="btn-mostrar-segunda-jornada"
+                    class="btn-ghost"
+                    {% if curso_sesion_config['segunda_jornada_activa'] %}hidden{% endif %}
+                  >
+                    + Agregar segunda jornada
+                  </button>
+                </div>
+
+                <div id="panel-segunda-jornada" style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:grid; gap:.65rem;" {% if not curso_sesion_config['segunda_jornada_activa'] %}hidden{% endif %}>
                   <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
                     <strong style="font-size:.84rem; color:#1e3a8a;">Segunda jornada (opcional)</strong>
                     <span style="font-size:.75rem; color:var(--text-muted);">Completa este bloque solo si necesitas una segunda jornada.</span>
@@ -1338,24 +1344,24 @@
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Días de clase (Segunda jornada)</label>
                     <div class="calendar-days-grid">
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="0"> L</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="1"> M</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="2"> X</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="3"> J</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="4"> V</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="5"> S</label>
-                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="6"> D</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="0" {% if 0 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> L</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="1" {% if 1 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> M</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="2" {% if 2 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> X</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="3" {% if 3 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> J</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="4" {% if 4 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> V</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="5" {% if 5 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> S</label>
+                      <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="6" {% if 6 in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> D</label>
                     </div>
                   </div>
 
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:.65rem; align-items:end;">
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Hora inicio (Segunda jornada)</label>
-                      <input type="time" class="form-input" name="hora_inicio_2">
+                      <input type="time" class="form-input" name="hora_inicio_2" value="{{ curso_sesion_config['hora_inicio_2'] }}">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Hora fin (Segunda jornada)</label>
-                      <input type="time" class="form-input" name="hora_fin_2">
+                      <input type="time" class="form-input" name="hora_fin_2" value="{{ curso_sesion_config['hora_fin_2'] }}">
                     </div>
                   </div>
 
@@ -1363,19 +1369,19 @@
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Jornada secundaria</label>
                       <select class="form-select" name="jornada_2">
-                        <option value="VESPERTINA" selected>Vespertina</option>
-                        <option value="MATUTINA">Matutina</option>
-                        <option value="NOCTURNA">Nocturna</option>
-                        <option value="UNICA">Única</option>
+                        <option value="VESPERTINA" {% if curso_sesion_config['jornada_2'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
+                        <option value="MATUTINA" {% if curso_sesion_config['jornada_2'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
+                        <option value="NOCTURNA" {% if curso_sesion_config['jornada_2'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
+                        <option value="UNICA" {% if curso_sesion_config['jornada_2'] == 'UNICA' %}selected{% endif %}>Única</option>
                       </select>
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Docente Responsable (2)</label>
-                      <input type="text" class="form-input" name="docente_sesion_2" maxlength="120" placeholder="Ej. Lic. Carlos Flores">
+                      <input type="text" class="form-input" name="docente_sesion_2" value="{{ curso_sesion_config['docente_sesion_2'] }}" maxlength="120" placeholder="Ej. Lic. Carlos Flores">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Bloque / Grupo (2)</label>
-                      <input type="text" class="form-input" name="bloque_codigo_2" maxlength="20" placeholder="Ej. G2">
+                      <input type="text" class="form-input" name="bloque_codigo_2" value="{{ curso_sesion_config['bloque_codigo_2'] }}" maxlength="20" placeholder="Ej. G2">
                     </div>
                   </div>
                 </div>
@@ -2777,8 +2783,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const enlaceVirtualGroup = document.getElementById('enlace_virtual_group');
   const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
   const previewCodigo = document.getElementById('preview-codigo');
-  const toggleCalendarioBtn = document.getElementById('btn-toggle-generacion-calendario');
-  const panelCalendario = document.getElementById('panel-generacion-calendario');
+  const mostrarSegundaJornadaBtn = document.getElementById('btn-mostrar-segunda-jornada');
+  const panelSegundaJornada = document.getElementById('panel-segunda-jornada');
   const calendarEventosDataEl = document.getElementById('calendar-eventos-data');
   const calendarMonthLabel = document.getElementById('calendar-month-label');
   const calendarMonthGrid = document.getElementById('calendar-month-grid');
@@ -3219,14 +3225,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modalidadEditCurso) {
     modalidadEditCurso.addEventListener('change', actualizarEstadoEnlaceVirtualEdicion);
   }
-  if (toggleCalendarioBtn && panelCalendario) {
-    toggleCalendarioBtn.addEventListener('click', function() {
-      const oculto = panelCalendario.classList.toggle('hidden');
-      const expandido = !oculto;
-      toggleCalendarioBtn.setAttribute('aria-expanded', expandido ? 'true' : 'false');
-      toggleCalendarioBtn.textContent = expandido
-        ? 'Ocultar generación automática'
-        : 'Mostrar generación automática';
+  if (mostrarSegundaJornadaBtn && panelSegundaJornada) {
+    mostrarSegundaJornadaBtn.addEventListener('click', function() {
+      panelSegundaJornada.hidden = false;
+      mostrarSegundaJornadaBtn.hidden = true;
     });
   }
   actualizarPreviewCodigo();
