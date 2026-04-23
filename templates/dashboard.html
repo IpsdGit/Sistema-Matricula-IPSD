@@ -16,15 +16,15 @@
 
     <nav class="portal-sidebar-nav">
       <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-sidebar-link {% if seccion_activa == 'historial' %}active{% endif %}">
-        <span class="link-icon">📚</span>
+        <span class="link-icon icon-history" aria-hidden="true"></span>
         <span>Historial Formativo</span>
       </a>
       <a href="/dashboard?seccion=calendario" class="portal-sidebar-link {% if seccion_activa == 'calendario' %}active{% endif %}">
-        <span class="link-icon">🗓️</span>
+        <span class="link-icon icon-calendar" aria-hidden="true"></span>
         <span>Calendario</span>
       </a>
       <a href="/dashboard?seccion=disponibles" class="portal-sidebar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">
-        <span class="link-icon">📝</span>
+        <span class="link-icon icon-catalog" aria-hidden="true"></span>
         <span>Disponibles para matrícula</span>
       </a>
     </nav>
@@ -34,20 +34,23 @@
     <header class="portal-topbar">
       <button class="portal-menu-toggle" id="portal-menu-toggle" type="button" aria-label="Abrir menú">☰</button>
 
-      <div class="portal-topbar-title-wrap">
-        {% if seccion_activa == 'historial' %}
-        <h1 class="portal-topbar-title">Historial | Acciones Formativas</h1>
-        <p class="portal-topbar-subtitle">Seguimiento por estado</p>
-        {% elif seccion_activa == 'calendario' %}
-        <h1 class="portal-topbar-title">Calendario de Cursos</h1>
-        <p class="portal-topbar-subtitle">Vista por mes, semana y día para tus actividades</p>
-        {% elif seccion_activa == 'notificaciones' %}
-        <h1 class="portal-topbar-title">Centro de Notificaciones</h1>
-        <p class="portal-topbar-subtitle">Alertas y avisos importantes del sistema</p>
-        {% else %}
-        <h1 class="portal-topbar-title">Acciones Formativas Disponibles</h1>
-        <p class="portal-topbar-subtitle">Matrícula activa</p>
-        {% endif %}
+      <div class="portal-topbar-brand">
+        <span class="brand-dot"></span>
+        <div>
+          <strong>Portal Docente</strong>
+          <p>UNAH · 2026</p>
+        </div>
+      </div>
+
+      <nav class="portal-topbar-nav" aria-label="Navegación principal docente">
+        <a href="/dashboard?seccion=disponibles" class="portal-topbar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">Dashboard</a>
+        <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-topbar-link {% if seccion_activa == 'historial' %}active{% endif %}">Historial</a>
+        <a href="/dashboard?seccion=calendario" class="portal-topbar-link {% if seccion_activa == 'calendario' %}active{% endif %}">Calendario</a>
+      </nav>
+
+      <div class="portal-topbar-title-wrap insight-blob portal-topbar-mobile-title">
+        <h1 class="portal-topbar-title">Portal Docente UNAH</h1>
+        <p class="portal-topbar-subtitle">Navegación principal</p>
       </div>
 
       <div class="portal-topbar-actions">
@@ -57,7 +60,7 @@
           aria-label="Notificaciones"
           title="Notificaciones"
         >
-          <span>🔔</span>
+          <span class="ui-icon ui-icon-bell" aria-hidden="true"></span>
           {% if notificaciones_total %}
           <span class="portal-alert-count">{{ notificaciones_total if notificaciones_total < 100 else '99+' }}</span>
           {% endif %}
@@ -79,16 +82,31 @@
             <span class="portal-user-caret">▾</span>
           </button>
           <div class="portal-user-dropdown" id="portal-user-dropdown">
-            <a href="/logout_docente">🚪 Cerrar sesión</a>
+            <a href="/logout_docente">Cerrar sesión</a>
           </div>
         </div>
       </div>
     </header>
 
     <section class="portal-content">
+      {% if seccion_activa != 'notificaciones' %}
+      <section class="portal-hero">
+        {% if seccion_activa == 'historial' %}
+        <h1>Historial, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
+        <p>Consulta tus resultados, estados finales y trazabilidad de matrícula.</p>
+        {% elif seccion_activa == 'calendario' %}
+        <h1>Calendario, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
+        <p>Visualiza tus eventos académicos por mes, semana o día.</p>
+        {% else %}
+        <h1>Bienvenido, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
+        <p>Gestiona tus capacitaciones, monitorea tu progreso y descubre oportunidades de formación.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+
       {% if error %}
       <div class="alert-ipsd danger mb-3">
-        <span>⛔</span>
+        <span class="ui-icon ui-icon-danger" aria-hidden="true"></span>
         <span>{{ error }}</span>
       </div>
       {% endif %}
@@ -96,7 +114,7 @@
       {% if matricula_feedback %}
       <div class="portal-toast-overlay" id="portal-toast-overlay">
         <article class="portal-toast-card" role="status" aria-live="polite">
-          <div class="portal-toast-icon">✅</div>
+          <div class="portal-toast-icon" aria-hidden="true">OK</div>
           <div class="portal-toast-content">
             <h4>{{ matricula_feedback['titulo'] }}</h4>
             <p>{{ matricula_feedback['mensaje'] }}</p>
@@ -170,7 +188,7 @@
             </div>
             {% else %}
             <div class="alert-ipsd info">
-              <span>ℹ️</span>
+              <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
               <span>No hay notificaciones disponibles para este filtro.</span>
             </div>
             {% endif %}
@@ -179,7 +197,7 @@
       </section>
 
       {% elif seccion_activa == 'historial' %}
-      <div class="card-ipsd mb-3">
+      <div class="card-ipsd mb-3 portal-current-enrollments">
         <div class="card-header" style="gap:1rem; flex-wrap:wrap;">
           <div>
             <h5 style="margin:0; font-weight:700;">Mis Actividades</h5>
@@ -238,7 +256,7 @@
           </div>
           {% else %}
           <div class="alert-ipsd info" style="margin-top:1rem;">
-            <span>ℹ️</span>
+            <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
             <span>No hay elementos para mostrar con este filtro.</span>
           </div>
           {% endif %}
@@ -290,149 +308,179 @@
 
       {% elif seccion_activa == 'disponibles' %}
 
-      {% if avisos_oportunidades %}
-      <div class="card-ipsd mb-3">
-        <div class="card-header">
-          <div class="flex gap-2" style="align-items:center;">
-            <span style="font-size:1rem;">⚠️</span>
-            <h5 style="margin:0; font-weight:700;">Oportunidades por Curso</h5>
+      <div class="portal-dashboard-shell">
+        {% if avisos_oportunidades %}
+        <div class="card-ipsd mb-3 portal-alert-opportunities">
+          <div class="card-header">
+            <div class="flex gap-2" style="align-items:center;">
+              <span class="ui-icon ui-icon-warning" aria-hidden="true"></span>
+              <h5 style="margin:0; font-weight:700;">Oportunidades por Curso</h5>
+            </div>
+            <span style="font-size:.8rem; color:var(--text-muted);">Control de re-matrícula</span>
           </div>
-          <span style="font-size:.8rem; color:var(--text-muted);">Control de re-matrícula</span>
-        </div>
-        <div class="card-body" style="display:grid; gap:.55rem;">
-          {% for aviso in avisos_oportunidades %}
-          <div class="alert-ipsd {% if aviso['bloqueado'] %}danger{% else %}warning{% endif %}" style="margin:0;">
-            <span>{% if aviso['bloqueado'] %}⛔{% else %}ℹ️{% endif %}</span>
-            <span><strong>{{ aviso['curso'] }}:</strong> {{ aviso['mensaje'] }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <div class="card-ipsd mb-3">
-        <div class="card-header">
-          <div class="flex gap-2" style="align-items:center;">
-            <span style="font-size:1rem;">📋</span>
-            <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
-          </div>
-          <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
-        </div>
-        <div class="card-body">
-          {% if matriculados %}
-          <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
-            {% for curso in matriculados %}
-            <div
-              class="enrolled-pill enrolled-pill-clickable curso-modal-trigger"
-              data-curso-modal-id="{{ curso['id'] }}"
-              tabindex="0"
-              role="button"
-              aria-label="Ver detalle del curso {{ curso['nombre'] }}"
-            >
-              <span>✓</span>
-              <span>
-                <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
-                <br>
-                <span style="font-weight:400; font-size:.78rem; opacity:.85;">{{ curso['horario_elegido'] }}</span>
-                {% if curso['aprobado'] == 1 %}
-                <br>
-                <span style="font-weight:600; font-size:.75rem; color:#16a34a;">Aprobado</span>
-                {% elif curso['aprobado'] == 0 %}
-                <br>
-                <span style="font-weight:600; font-size:.75rem; color:#dc2626;">No aprobado</span>
-                {% elif curso['aprobado'] == 2 %}
-                <br>
-                <span style="font-weight:600; font-size:.75rem; color:#ea580c;">Abandonó</span>
-                {% else %}
-                <br>
-                <span style="font-weight:600; font-size:.75rem; color:#64748b;">Pendiente</span>
-                {% endif %}
-              </span>
-              <span class="enrolled-view-action">Ver detalle</span>
-              {% if curso['aprobado'] is none %}
-              <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar esta inscripción?');">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
-                <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
-                <button type="submit" class="cancel-btn" title="Cancelar matrícula">✕</button>
-              </form>
-              {% else %}
-              <span title="Matrícula cerrada" style="opacity:.55; font-size:1rem;">🔒</span>
-              {% endif %}
+          <div class="card-body" style="display:grid; gap:.55rem;">
+            {% for aviso in avisos_oportunidades %}
+            <div class="alert-ipsd {% if aviso['bloqueado'] %}danger{% else %}warning{% endif %}" style="margin:0;">
+              <span class="ui-icon {% if aviso['bloqueado'] %}ui-icon-danger{% else %}ui-icon-info{% endif %}" aria-hidden="true"></span>
+              <span><strong>{{ aviso['curso'] }}:</strong> {{ aviso['mensaje'] }}</span>
             </div>
             {% endfor %}
           </div>
-          {% else %}
-          <div class="alert-ipsd info">
-            <span>ℹ️</span>
-            <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
-          </div>
-          {% endif %}
         </div>
-      </div>
+        {% endif %}
 
-      <div class="flex-between mb-3">
-        <h3 style="margin:0; font-size:1.2rem;">Acciones Formativas Disponibles</h3>
-        <span class="badge-pill secondary">{{ cursos|length }} disponible(s)</span>
-      </div>
-
-      {% if cursos %}
-      <div class="curso-grid">
-        {% for curso in cursos %}
-        <div class="curso-card" id="curso-{{ curso['id'] }}">
-          <div class="curso-header"></div>
-          <div class="curso-body">
-            <div class="curso-id">{{ curso['id'] }}</div>
-            <div class="curso-title">{{ curso['nombre'] }}</div>
-            <div class="curso-meta-row">
-              <span class="curso-modalidad-badge {{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
-                <span class="curso-modalidad-token">{{ curso['modalidad_icono'] }}</span>
-                {{ curso['modalidad'] }}
-              </span>
+        <div class="portal-overview-grid">
+          <div class="card-ipsd mb-3 portal-current-enrollments portal-overview-main">
+            <div class="card-header">
+              <div class="flex gap-2" style="align-items:center;">
+                <span class="ui-icon ui-icon-courses" aria-hidden="true"></span>
+                <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
+              </div>
+              <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
             </div>
-            <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
-            <div style="font-size:.76rem; margin-top:.28rem; color:#1e3a8a; font-weight:600;">
-              {% if curso['fecha_inicio_texto'] %}
-                Inicio: {{ curso['fecha_inicio_texto'] }}
+            <div class="card-body">
+              {% if matriculados %}
+              <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
+                {% for curso in matriculados %}
+                <div
+                  class="enrolled-pill enrolled-pill-clickable curso-modal-trigger"
+                  data-curso-modal-id="{{ curso['id'] }}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Ver detalle del curso {{ curso['nombre'] }}"
+                >
+                  <div class="enrolled-pill-content">
+                    <span class="ui-icon ui-icon-check" aria-hidden="true"></span>
+                    <span>
+                      <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
+                      <br>
+                      <span style="font-weight:400; font-size:.78rem; opacity:.85;">{{ curso['horario_elegido'] }}</span>
+                      {% if curso['aprobado'] == 1 %}
+                      <br>
+                      <span style="font-weight:600; font-size:.75rem; color:#16a34a;">Aprobado</span>
+                      {% elif curso['aprobado'] == 0 %}
+                      <br>
+                      <span style="font-weight:600; font-size:.75rem; color:#dc2626;">No aprobado</span>
+                      {% elif curso['aprobado'] == 2 %}
+                      <br>
+                      <span style="font-weight:600; font-size:.75rem; color:#ea580c;">Abandonó</span>
+                      {% else %}
+                      <br>
+                      <span style="font-weight:600; font-size:.75rem; color:#64748b;">Pendiente</span>
+                      {% endif %}
+                    </span>
+                    <div class="enrolled-pill-progress" aria-hidden="true"></div>
+                  </div>
+                  <span class="enrolled-view-action">Ver detalle</span>
+                  {% if curso['aprobado'] is none %}
+                  <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar esta inscripción?');">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+                    <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                    <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
+                    <button type="submit" class="cancel-btn" title="Cancelar matrícula">✕</button>
+                  </form>
+                  {% else %}
+                  <span class="ui-icon ui-icon-lock" title="Matrícula cerrada" aria-hidden="true"></span>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
               {% else %}
-                Fecha de inicio por confirmar
+              <div class="alert-ipsd info">
+                <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
+                <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
+              </div>
               {% endif %}
             </div>
-            {% if curso['mensaje_oportunidades'] %}
-            <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
-            {% endif %}
-            <div class="curso-footer">
-              <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+          </div>
 
-                <div class="form-group" style="margin-bottom:.8rem;">
-                  <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
-                  <select class="form-select" name="horario_elegido" required>
-                    <option value="" disabled selected>Selecciona un horario...</option>
-                    {% for horario in curso['horarios'] %}
-                    <option value="{{ horario }}">{{ horario }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+          <aside class="portal-kpi-stack" aria-label="Indicadores docentes">
+            <article class="portal-kpi-card portal-kpi-gold">
+              <span class="portal-kpi-icon portal-kpi-icon-cert" aria-hidden="true"></span>
+              <strong>{{ resumen_historial['aprobadas'] if resumen_historial else 0 }}</strong>
+              <small>CERTIFICADOS</small>
+            </article>
+            <article class="portal-kpi-card portal-kpi-blue">
+              <span class="portal-kpi-icon portal-kpi-icon-event" aria-hidden="true"></span>
+              <strong>{{ calendario_eventos_docente|default([], true)|length }}</strong>
+              <small>EVENTOS PRÓXIMOS</small>
+            </article>
+          </aside>
+        </div>
 
-                <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
-                  Matricularme
-                </button>
-              </form>
+        <div class="flex-between mb-3 portal-section-heading">
+          <h3 style="margin:0; font-size:1.2rem;">Oferta Académica Disponible</h3>
+          <span class="badge-pill secondary">{{ cursos|length }} disponible(s)</span>
+        </div>
+
+        {% if cursos %}
+        <div class="curso-grid portal-catalog-grid">
+          {% for curso in cursos %}
+          <div class="curso-card" id="curso-{{ curso['id'] }}">
+            <div class="curso-visual" aria-hidden="true"></div>
+            <div class="curso-body">
+              <div class="curso-id">{{ curso['id'] }}</div>
+              <div class="curso-title">{{ curso['nombre'] }}</div>
+              <div class="curso-meta-row">
+                <span class="curso-modalidad-badge {{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
+                  <span class="curso-modalidad-token">{{ curso['modalidad_icono'] }}</span>
+                  {{ curso['modalidad'] }}
+                </span>
+              </div>
+              <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
+              <div style="font-size:.76rem; margin-top:.28rem; color:#1e3a8a; font-weight:600;">
+                {% if curso['fecha_inicio_texto'] %}
+                  Inicio: {{ curso['fecha_inicio_texto'] }}
+                {% else %}
+                  Fecha de inicio por confirmar
+                {% endif %}
+              </div>
+              {% if curso['mensaje_oportunidades'] %}
+              <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
+              {% endif %}
+              <div class="curso-footer">
+                <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+                  <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+
+                  <div class="form-group" style="margin-bottom:.8rem;">
+                    <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
+                    <select class="form-select" name="horario_elegido" required>
+                      <option value="" disabled selected>Selecciona un horario...</option>
+                      {% for horario in curso['horarios'] %}
+                      <option value="{{ horario }}">{{ horario }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
+                    Matricularme
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <div class="curso-card curso-card-more" aria-hidden="true">
+            <div class="curso-card-more-inner">
+              <span class="curso-card-more-icon" aria-hidden="true"></span>
+              <p>Explorar más áreas de conocimiento</p>
+              <small>Ver catálogo completo</small>
             </div>
           </div>
         </div>
-        {% endfor %}
+        {% else %}
+        <div class="alert-ipsd success" style="max-width:560px;">
+          <span class="ui-icon ui-icon-success" aria-hidden="true"></span>
+          <span><strong>Sin cursos habilitados por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
+        </div>
+        {% endif %}
+
+        <div class="portal-footer-note">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS · 2026</div>
       </div>
-      {% else %}
-      <div class="alert-ipsd success" style="max-width:560px;">
-        <span>✅</span>
-        <span><strong>Sin cursos habilitados por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
-      </div>
-      {% endif %}
 
       {% endif %}
     </section>
