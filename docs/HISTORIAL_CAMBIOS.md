@@ -3622,3 +3622,68 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Abril 22, 2026  
 **Versión actual**: 1.7.3 (Refinamiento de Asistencia, Jornadas y Gestión de Calendario)  
 **Estado**: Development - Reportes avanzados de asistencia, filtros por jornada y mejoras de experiencia admin
+
+---
+
+# ⚡ Versión 1.7.4 - Vista de Asistencias y Rediseño del Portal Docente
+
+**Fecha**: Abril 23, 2026  
+**Cambios**: 2 commits principales (`90db3ef`, `38a4477`) con mejoras en la vista de asistencias y el diseño del portal docente
+
+## Cambio 28.1: Mejoras en la vista y reporte de asistencias
+**Fecha**: Abril 23, 2026  
+**Archivos afectados**: `templates/admin.html`, `services/admin_service.py`, `services/portal_service.py`, `routes/admin.py`, `database.py`, `scripts/setup_bd.py`, `static/style.css`
+
+**QUÉ**:
+- Interfaz de asistencias enriquecida con un modal de detalle que muestra:
+  - Mapa visual por docente (`mapa-dot`) con estado por sesión (presente / ausente / futura)
+  - Campos nuevos en el reporte: `ultima_marcacion`, `fechas_ausentes`, `mapa_asistencia`
+  - Separación de docentes con asistencia registrada y pendientes
+- Backend: `obtener_reporte_asistencia_curso()` devuelve detalle por sesión (`id_sesion`, `fecha`, `estado`) y construye estructuras listas para render (listas ordenadas, mapas y resúmenes)
+- Rutas y feedback: `routes/admin.py` incorpora mensajes `flash` claros para errores y éxito al generar calendarios
+- Base de datos y scripts: ajustes menores en migraciones y en `scripts/setup_bd.py` para mantener índices y nuevas columnas sincronizadas
+- Estilos: nuevas clases CSS para indicadores y badges (`mapa-dot`, `badge-pill.warning`) para reflejar estados de asistencia
+
+**POR QUÉ**:
+- Los administradores requerían una vista más legible y accionable para detectar patrones de inasistencia
+- Era necesario que el reporte mostrara no sólo contadores sino contexto temporal (última marcación) y un mapa rápido de avance
+
+**PARA QUÉ**:
+- Supervisión más eficiente y rápida detección de ausencias recurrentes
+- Facilitar acciones correctivas y comunicación dirigida con docentes pendientes
+
+---
+
+## Cambio 28.2: Diseño "Portal Orgánico UNAH" (rediseño dashboard docente)
+**Fecha**: Abril 23, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `services/portal_service.py`
+
+**QUÉ**:
+- Rediseño visual del `dashboard` del docente con nuevos estilos y pequeñas reorganizaciones de tarjetas e información primaria (inicio, mensajes, accesos rápidos)
+- Ajustes en `services/portal_service.py` para adaptar el contexto (nuevas claves de contexto y compatibilidad con la nueva presentación)
+- Cambios CSS relacionados con la paleta, espaciado y componentes de tarjeta para alinearse con el nuevo diseño orgánico
+
+**POR QUÉ**:
+- Mejorar legibilidad, accesibilidad y coherencia visual con la identidad institucional (Portal Orgánico UNAH)
+
+**PARA QUÉ**:
+- Mejor experiencia docente: información más relevante a primera vista
+- Preparar el diseño para futuras mejoras de navegación y accesos contextuales
+
+---
+
+## Resumen de Cambios v1.7.4
+
+| Aspecto | Cambio |
+|--------|--------|
+| UI Asistencias | Modal detallado con mapa visual y métricas temporales |
+| Backend Asistencias | Reporte enriquecido: `ultima_marcacion`, `fechas_ausentes`, `mapa_asistencia` |
+| UX Admin | Mensajes `flash` y confirmaciones al generar calendarios |
+| Portal Docente | Rediseño visual (Portal Orgánico UNAH) y ajustes de contexto |
+| DB / Scripts | Migraciones y setup ajustados para nuevas columnas/índices |
+
+---
+
+**Última actualización**: Abril 23, 2026  
+**Versión actual**: 1.7.4 (Vista de Asistencias y Rediseño del Portal Docente)  
+**Estado**: Development - UI y reportes de asistencia refinados; portal docente rediseñado
