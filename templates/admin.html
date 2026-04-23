@@ -594,6 +594,25 @@
     font-weight: 600;
   }
 
+  .mapa-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .mapa-dot.presente {
+    background: #16a34a;
+  }
+
+  .mapa-dot.ausente {
+    background: #ef4444;
+  }
+
+  .mapa-dot.futura {
+    background: #cbd5e1;
+  }
+
   @media (max-width: 900px) {
     .calendar-toolbar {
       grid-template-columns: 1fr;
@@ -670,6 +689,9 @@
             <span class="top-user-caret">▾</span>
           </button>
           <div class="top-user-dropdown" id="top-user-dropdown">
+            {% if curso_sesiones_id or curso_asistencias_id %}
+            <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}">📊 Ver asistencias</a>
+            {% endif %}
             <a href="/logout_admin">🚪 Cerrar sesión</a>
           </div>
         </div>
@@ -835,7 +857,7 @@
                     </td>
                     <td style="text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
-                        {% if sesion['estado'] == 0 %}
+                        {% if sesion['estado'] != 1 %}
                         <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
@@ -904,93 +926,6 @@
         </div>
         {% endif %}
 
-        {% if curso_asistencias_id and curso_asistencia_reporte and curso_asistencia_reporte['ok'] %}
-        {% set curso_reporte = curso_asistencia_reporte['curso'] %}
-        <div class="modal-overlay active" id="modal-asistencia-curso" aria-hidden="false" data-close-url="{{ url_for('admin') }}?view=cursos">
-          <div class="modal-box" style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
-            <div class="card-ipsd animate-fade-up-3" style="box-shadow:none; border-radius:0; border:none;">
-              <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
-                <div>
-                  <span style="font-weight:700; font-size:.95rem;">📊 Asistencias por Acción Formativa</span>
-                  <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
-                    Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
-                  </div>
-                  <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
-                    {{ curso_reporte['mes'] }}/{{ curso_reporte['anio'] }} · Trim. {{ curso_reporte['trimestre'] }} · {{ curso_reporte['modalidad'] or 'Modalidad no definida' }}
-                  </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:.5rem;">
-                  <span class="badge-pill primary text-xs">{{ curso_asistencia_reporte['total_inscritos'] }} inscrito(s)</span>
-                  <span class="badge-pill secondary text-xs">{{ curso_asistencia_reporte['total_sesiones'] }} sesión(es)</span>
-                  <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
-                </div>
-              </div>
-
-              <div class="card-body" style="display:grid; gap:1rem;">
-                {% for jornada in curso_asistencia_reporte['jornadas'] %}
-                <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
-                      <strong style="font-size:.87rem; color:#0f172a;">{{ jornada['nombre'] }}</strong>
-                      <span class="badge-pill secondary text-xs">{{ jornada['total_sesiones'] }} sesión(es)</span>
-                      <span class="badge-pill primary text-xs">{{ jornada['total_inscritos'] }} inscrito(s)</span>
-                    </div>
-                    <div style="font-size:.79rem; color:var(--text-muted);">
-                      Cobertura global: <strong>{{ jornada['porcentaje_cobertura'] }}%</strong> · Registros: {{ jornada['total_asistencias'] }}
-                    </div>
-                  </div>
-
-                  <div style="overflow-x:auto;">
-                    <table class="table-ipsd">
-                      <thead>
-                        <tr>
-                          <th>Empleado</th>
-                          <th>Docente</th>
-                          <th>Horario Elegido</th>
-                          <th>Estado Matrícula</th>
-                          <th>Asistencias</th>
-                          <th>Cobertura</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for docente in jornada['docentes'] %}
-                        <tr>
-                          <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
-                          <td>{{ docente['nombre_completo'] }}</td>
-                          <td style="font-size:.8rem;">{{ docente['horario_elegido'] }}</td>
-                          <td>
-                            {% if docente['estado_matricula'] == 'Aprobado' %}
-                              <span class="badge-pill success text-xs">Aprobado</span>
-                            {% elif docente['estado_matricula'] == 'No aprobado' %}
-                              <span class="badge-pill danger text-xs">No aprobado</span>
-                            {% elif docente['estado_matricula'] == 'Abandono' %}
-                              <span class="badge-pill secondary text-xs">Abandono</span>
-                            {% else %}
-                              <span class="badge-pill primary text-xs">Pendiente</span>
-                            {% endif %}
-                          </td>
-                          <td>{{ docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}</td>
-                          <td>
-                            <span class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 60 %}primary{% else %}secondary{% endif %} text-xs">
-                              {{ docente['porcentaje'] }}%
-                            </span>
-                          </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                          <td colspan="6" style="text-align:center; color:var(--text-muted); padding:1.2rem;">No hay docentes inscritos para esta jornada.</td>
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
       </section>
 
       <!-- GRÁFICOS -->
@@ -1053,7 +988,6 @@
                       <option value="I" selected>I</option>
                       <option value="II">II</option>
                       <option value="III">III</option>
-                      <option value="IV">IV</option>
                     </select>
                   </div>
                 </div>
@@ -1077,7 +1011,7 @@
                   </div>
                   {% else %}
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Dirección del Curso</label>
+                    <label class="form-label">Dirección Responsable de Curso</label>
                     <input type="text" class="form-input" value="{{ admin_direccion }}" readonly>
                   </div>
                   {% endif %}
@@ -1137,7 +1071,7 @@
           <!-- Lista de Cursos -->
           <div class="card-ipsd">
             <div class="card-header">
-              <span style="font-weight:700; font-size:.95rem;">📋 Cursos Registrados</span>
+              <span style="font-weight:700; font-size:.95rem;">📋Acciones Formativas Registradas</span>
               <span class="badge-pill secondary text-xs">{{ cursos|length }}</span>
             </div>
             <div style="overflow-x:auto; max-height:490px; overflow-y:auto;">
@@ -1259,7 +1193,7 @@
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:.5rem;">
-              <a href="{{ url_for('admin') }}?view=cursos" class="btn-ghost" style="text-decoration:none;">Cerrar</a>
+              <a href="{{ url_for('admin') }}?view=cursos" class="btn-danger-ipsd" style="text-decoration:none;">Cerrar</a>
             </div>
           </div>
 
@@ -1319,8 +1253,8 @@
                     <input type="text" class="form-input" name="docente_sesion" value="{{ curso_sesion_config['docente_sesion'] }}" maxlength="120" placeholder="Ej. Mgtr. Ana López">
                   </div>
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Bloque / Grupo</label>
-                    <input type="text" class="form-input" name="bloque_codigo" value="{{ curso_sesion_config['bloque_codigo'] }}" maxlength="20" placeholder="Ej. G1">
+                    <label class="form-label">Edición</label>
+                    <input type="text" class="form-input" name="edicion" value="{{ curso_sesion_config['edicion'] }}" maxlength="20" placeholder="Ej. G1">
                   </div>
                 </div>
 
@@ -1328,17 +1262,20 @@
                   <button
                     type="button"
                     id="btn-mostrar-segunda-jornada"
-                    class="btn-ghost"
-                    {% if curso_sesion_config['segunda_jornada_activa'] %}hidden{% endif %}
+                    class="btn-primary-ipsd"
+                    style="height:34px; padding:.35rem .8rem;"
                   >
-                    + Agregar segunda jornada
+                    + Agregar jornada
                   </button>
                 </div>
 
-                <div id="panel-segunda-jornada" style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:grid; gap:.65rem;" {% if not curso_sesion_config['segunda_jornada_activa'] %}hidden{% endif %}>
+                <div id="panel-segunda-jornada" style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:none; gap:.65rem;">
                   <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
                     <strong style="font-size:.84rem; color:#1e3a8a;">Segunda jornada (opcional)</strong>
-                    <span style="font-size:.75rem; color:var(--text-muted);">Completa este bloque solo si necesitas una segunda jornada.</span>
+                    <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+                      <span style="font-size:.75rem; color:var(--text-muted);">Completa este bloque solo si necesitas otra jornada.</span>
+                      <button type="button" id="btn-eliminar-segunda-jornada" class="btn-ghost" style="height:30px; padding:.25rem .6rem;">Eliminar jornada</button>
+                    </div>
                   </div>
 
                   <div class="form-group" style="margin-bottom:0;">
@@ -1369,10 +1306,10 @@
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Jornada secundaria</label>
                       <select class="form-select" name="jornada_2">
-                        <option value="VESPERTINA" {% if curso_sesion_config['jornada_2'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
-                        <option value="MATUTINA" {% if curso_sesion_config['jornada_2'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
-                        <option value="NOCTURNA" {% if curso_sesion_config['jornada_2'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
                         <option value="UNICA" {% if curso_sesion_config['jornada_2'] == 'UNICA' %}selected{% endif %}>Única</option>
+                        <option value="MATUTINA" {% if curso_sesion_config['jornada_2'] == 'MATUTINA' %}selected{% endif %}>Matutina</option>
+                        <option value="VESPERTINA" {% if curso_sesion_config['jornada_2'] == 'VESPERTINA' %}selected{% endif %}>Vespertina</option>
+                        <option value="NOCTURNA" {% if curso_sesion_config['jornada_2'] == 'NOCTURNA' %}selected{% endif %}>Nocturna</option>
                       </select>
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
@@ -1380,8 +1317,8 @@
                       <input type="text" class="form-input" name="docente_sesion_2" value="{{ curso_sesion_config['docente_sesion_2'] }}" maxlength="120" placeholder="Ej. Lic. Carlos Flores">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
-                      <label class="form-label">Bloque / Grupo (2)</label>
-                      <input type="text" class="form-input" name="bloque_codigo_2" value="{{ curso_sesion_config['bloque_codigo_2'] }}" maxlength="20" placeholder="Ej. G2">
+                      <label class="form-label">Edición</label>
+                      <input type="text" class="form-input" name="edicion_2" value="{{ curso_sesion_config['edicion_2'] }}" maxlength="20" placeholder="Ej. G2">
                     </div>
                   </div>
                 </div>
@@ -1414,8 +1351,8 @@
                     <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
                     <td>
                       {{ sesion['jornada'] or 'UNICA' }}
-                      {% if sesion['bloque_codigo'] %}
-                      <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['bloque_codigo'] }}</span>
+                      {% if sesion['edicion'] %}
+                      <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['edicion'] }}</span>
                       {% endif %}
                     </td>
                     <td>{{ sesion['docente_sesion'] or '—' }}</td>
@@ -1433,7 +1370,7 @@
                     </td>
                     <td style="text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
-                        {% if sesion['estado'] == 0 %}
+                        {% if sesion['estado'] != 1 %}
                         <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
@@ -1479,7 +1416,7 @@
                           data-hora-fin="{{ sesion['hora_fin'] }}"
                           data-jornada="{{ sesion['jornada'] or 'UNICA' }}"
                           data-docente-sesion="{{ sesion['docente_sesion'] or '' }}"
-                          data-bloque-codigo="{{ sesion['bloque_codigo'] or '' }}"
+                          data-edicion="{{ sesion['edicion'] or '' }}"
                           data-estado="{{ sesion['estado'] }}">
                           ✏️
                         </button>
@@ -1920,6 +1857,175 @@
         </div>
       </section>
 
+      {% if curso_asistencias_id and curso_asistencia_reporte and curso_asistencia_reporte['ok'] %}
+      {% set curso_reporte = curso_asistencia_reporte['curso'] %}
+      <div class="modal-overlay active" id="modal-asistencia-curso" aria-hidden="false" data-close-url="{{ url_for('admin') }}?view=cursos">
+        <div class="modal-box" style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
+          <div class="card-ipsd animate-fade-up-3" style="box-shadow:none; border-radius:0; border:none;">
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+              <div>
+                <span style="font-weight:700; font-size:.95rem;">📊 Asistencias por Acción Formativa</span>
+                <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
+                  Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
+                </div>
+                <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
+                  {{ curso_reporte['mes'] }}/{{ curso_reporte['anio'] }} · Trim. {{ curso_reporte['trimestre'] }} · {{ curso_reporte['modalidad'] or 'Modalidad no definida' }}
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:.5rem;">
+                <span class="badge-pill primary text-xs">{{ curso_asistencia_reporte['total_inscritos'] }} inscrito(s)</span>
+                <span class="badge-pill secondary text-xs">{{ curso_asistencia_reporte['total_sesiones'] }} sesión(es)</span>
+                <a href="{{ url_for('admin') }}?view=cursos" class="btn-danger-ipsd" style="text-decoration:none;">Cerrar</a>
+              </div>
+            </div>
+
+            <div class="card-body" style="display:grid; gap:1rem;">
+              {% set resumen = namespace(con=0, pen=0) %}
+              {% for jornada in curso_asistencia_reporte['jornadas'] %}
+                {% for docente in jornada['docentes'] %}
+                  {% if (docente['asistencias'] or 0) > 0 %}
+                    {% set resumen.con = resumen.con + 1 %}
+                  {% else %}
+                    {% set resumen.pen = resumen.pen + 1 %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+
+              <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
+                    <strong style="font-size:.87rem; color:#0f172a;">Con asistencia registrada</strong>
+                    <span class="badge-pill primary text-xs">{{ resumen.con }} docente(s)</span>
+                  </div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                  <table class="table-ipsd">
+                    <thead>
+                      <tr>
+                        <th>Empleado</th>
+                        <th>Docente</th>
+                        <th>Jornada</th>
+                        <th>Detalle Asistencia</th>
+                        <th>Mapa Visual</th>
+                        <th style="text-align:center;">Días marcados / programados</th>
+                        <th style="text-align:center;">Progreso</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% set filas_con = namespace(total=0) %}
+                      {% for jornada in curso_asistencia_reporte['jornadas'] %}
+                        {% for docente in jornada['docentes'] %}
+                          {% if (docente['asistencias'] or 0) > 0 %}
+                          {% set filas_con.total = filas_con.total + 1 %}
+                          <tr>
+                            <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
+                            <td>{{ docente['nombre_completo'] }}</td>
+                            <td><span class="badge-pill secondary text-xs">{{ jornada['nombre'] }}</span></td>
+                            <td style="font-size:.8rem;">{{ docente['ultima_marcacion'] or 'Sin marcación registrada' }}</td>
+                            <td>
+                              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                {% for punto in docente['mapa_asistencia']|default([]) %}
+                                <span
+                                  title="{{ punto['estado'] }}"
+                                  class="mapa-dot {{ punto['estado'] }}">
+                                </span>
+                                {% endfor %}
+                              </div>
+                            </td>
+                            <td style="text-align:center;">{{ docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}</td>
+                            <td style="text-align:center;">
+                              <span class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 50 %}warning{% else %}danger{% endif %} text-xs">
+                                {{ docente['porcentaje'] }}%
+                              </span>
+                            </td>
+                          </tr>
+                          {% endif %}
+                        {% endfor %}
+                      {% endfor %}
+                      {% if filas_con.total == 0 %}
+                      <tr>
+                        <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.2rem;">Aún no hay docentes con asistencia marcada.</td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="calendar-panel" style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
+                    <strong style="font-size:.87rem; color:#0f172a;">Pendientes sin asistencia</strong>
+                    <span class="badge-pill secondary text-xs">{{ resumen.pen }} docente(s)</span>
+                  </div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                  <table class="table-ipsd">
+                    <thead>
+                      <tr>
+                        <th>Empleado</th>
+                        <th>Docente</th>
+                        <th>Jornada</th>
+                        <th>Detalle Asistencia</th>
+                        <th>Mapa Visual</th>
+                        <th style="text-align:center;">Días marcados / programados</th>
+                        <th style="text-align:center;">Progreso</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% set filas_pen = namespace(total=0) %}
+                      {% for jornada in curso_asistencia_reporte['jornadas'] %}
+                        {% for docente in jornada['docentes'] %}
+                          {% if (docente['asistencias'] or 0) == 0 %}
+                          {% set filas_pen.total = filas_pen.total + 1 %}
+                          <tr>
+                            <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
+                            <td>{{ docente['nombre_completo'] }}</td>
+                            <td><span class="badge-pill secondary text-xs">{{ jornada['nombre'] }}</span></td>
+                            <td style="font-size:.8rem;">
+                              {% if docente['fechas_ausentes'] and docente['fechas_ausentes']|length > 0 %}
+                                {{ docente['fechas_ausentes']|join(', ') }}
+                              {% else %}
+                                Sin ausencias registradas aún
+                              {% endif %}
+                            </td>
+                            <td>
+                              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                {% for punto in docente['mapa_asistencia']|default([]) %}
+                                <span
+                                  title="{{ punto['estado'] }}"
+                                  class="mapa-dot {{ punto['estado'] }}">
+                                </span>
+                                {% endfor %}
+                              </div>
+                            </td>
+                            <td style="text-align:center;">{{ docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}</td>
+                            <td style="text-align:center;">
+                              <span class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 50 %}warning{% else %}danger{% endif %} text-xs">
+                                {{ docente['porcentaje'] }}%
+                              </span>
+                            </td>
+                          </tr>
+                          {% endif %}
+                        {% endfor %}
+                      {% endfor %}
+                      {% if filas_pen.total == 0 %}
+                      <tr>
+                        <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.2rem;">No hay docentes pendientes de asistencia.</td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
     </div><!-- /admin-content -->
   </main>
 
@@ -2160,8 +2266,8 @@
           <input type="text" class="form-input" id="edit-sesion-docente" name="docente_sesion" maxlength="120" placeholder="Responsable">
         </div>
         <div>
-          <label class="form-label" style="font-size:.8rem;">Bloque / Grupo</label>
-          <input type="text" class="form-input" id="edit-sesion-bloque" name="bloque_codigo" maxlength="20" placeholder="G1">
+          <label class="form-label" style="font-size:.8rem;">Edición</label>
+          <input type="text" class="form-input" id="edit-sesion-edicion" name="edicion" maxlength="20" placeholder="G1">
         </div>
       </div>
 
@@ -2366,9 +2472,9 @@ function abrirModalEditarSesion(data) {
   const horaFin = document.getElementById('edit-sesion-hora-fin');
   const jornada = document.getElementById('edit-sesion-jornada');
   const docente = document.getElementById('edit-sesion-docente');
-  const bloque = document.getElementById('edit-sesion-bloque');
+  const edicion = document.getElementById('edit-sesion-edicion');
 
-  if (!idCurso || !idSesion || !fecha || !horaInicio || !horaFin || !jornada || !docente || !bloque) {
+  if (!idCurso || !idSesion || !fecha || !horaInicio || !horaFin || !jornada || !docente || !edicion) {
     return;
   }
 
@@ -2379,7 +2485,7 @@ function abrirModalEditarSesion(data) {
   horaFin.value = (data.horaFin || '').slice(0, 5);
   jornada.value = data.jornada || 'UNICA';
   docente.value = data.docenteSesion || '';
-  bloque.value = data.bloqueCodigo || '';
+  edicion.value = data.edicion || '';
 
   abrirModal('modal-editar-sesion');
 }
@@ -2709,7 +2815,7 @@ document.addEventListener('DOMContentLoaded', function() {
         horaFin: this.dataset.horaFin,
         jornada: this.dataset.jornada,
         docenteSesion: this.dataset.docenteSesion,
-        bloqueCodigo: this.dataset.bloqueCodigo,
+        edicion: this.dataset.edicion,
       });
     });
   });
@@ -2784,6 +2890,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
   const previewCodigo = document.getElementById('preview-codigo');
   const mostrarSegundaJornadaBtn = document.getElementById('btn-mostrar-segunda-jornada');
+  const eliminarSegundaJornadaBtn = document.getElementById('btn-eliminar-segunda-jornada');
   const panelSegundaJornada = document.getElementById('panel-segunda-jornada');
   const calendarEventosDataEl = document.getElementById('calendar-eventos-data');
   const calendarMonthLabel = document.getElementById('calendar-month-label');
@@ -3226,10 +3333,55 @@ document.addEventListener('DOMContentLoaded', function() {
     modalidadEditCurso.addEventListener('change', actualizarEstadoEnlaceVirtualEdicion);
   }
   if (mostrarSegundaJornadaBtn && panelSegundaJornada) {
+    const camposSegundaJornada = panelSegundaJornada.querySelectorAll('input, select, textarea');
+
+    const actualizarEstadoSegundaJornada = function(visible) {
+      panelSegundaJornada.style.display = visible ? 'grid' : 'none';
+      camposSegundaJornada.forEach(function(campo) {
+        campo.disabled = !visible;
+      });
+    };
+
+    actualizarEstadoSegundaJornada(false);
+
     mostrarSegundaJornadaBtn.addEventListener('click', function() {
-      panelSegundaJornada.hidden = false;
+      actualizarEstadoSegundaJornada(true);
       mostrarSegundaJornadaBtn.hidden = true;
     });
+
+    if (eliminarSegundaJornadaBtn) {
+      eliminarSegundaJornadaBtn.addEventListener('click', function() {
+        camposSegundaJornada.forEach(function(campo) {
+          if (campo.tagName === 'INPUT') {
+            const tipo = (campo.type || '').toLowerCase();
+            if (tipo === 'checkbox' || tipo === 'radio') {
+              campo.checked = false;
+            } else {
+              campo.value = '';
+            }
+            return;
+          }
+
+          if (campo.tagName === 'SELECT') {
+            if (campo.name === 'jornada_2') {
+              if (campo.querySelector('option[value="VESPERTINA"]')) {
+                campo.value = 'VESPERTINA';
+              } else {
+                campo.selectedIndex = 0;
+              }
+            } else {
+              campo.selectedIndex = 0;
+            }
+            return;
+          }
+
+          campo.value = '';
+        });
+
+        actualizarEstadoSegundaJornada(false);
+        mostrarSegundaJornadaBtn.hidden = false;
+      });
+    }
   }
   actualizarPreviewCodigo();
   actualizarEstadoEnlaceVirtual();

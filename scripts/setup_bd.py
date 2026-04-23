@@ -100,13 +100,14 @@ def inicializar_bd():
             hora_fin TEXT NOT NULL,
             jornada TEXT NOT NULL DEFAULT 'UNICA',
             docente_sesion TEXT,
-            bloque_codigo TEXT,
+            edicion TEXT,
             estado INTEGER NOT NULL DEFAULT 0,
             token_asistencia TEXT,
             FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
         )
     ''')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_edicion ON sesiones_curso (id_curso, edicion)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS registro_asistencia (

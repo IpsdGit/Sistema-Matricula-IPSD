@@ -1094,7 +1094,7 @@ def listar_sesiones_curso(id_curso):
         conn = get_db_connection()
         sesiones = conn.execute(
             '''
-            SELECT id_sesion, id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia
+            SELECT id_sesion, id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia
             FROM sesiones_curso
             WHERE id_curso = ?
             ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
@@ -1107,7 +1107,7 @@ def listar_sesiones_curso(id_curso):
         return {'ok': False, 'error': 'No se pudieron cargar las sesiones'}
 
 
-def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', edicion=''):
     id_curso_limpio = (id_curso or '').strip().upper()
     fecha_obj = _normalizar_fecha_iso(fecha)
     hora_inicio_norm = _normalizar_hora_24(hora_inicio)
@@ -1122,7 +1122,7 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
 
     jornada_norm = _normalizar_jornada(jornada)
     docente_sesion_norm = (docente_sesion or '').strip()
-    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
@@ -1149,7 +1149,7 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
 
         cursor = conn.execute(
             '''
-            INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia)
+            INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia)
             VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
             ''',
             (
@@ -1159,7 +1159,7 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
                 hora_fin_norm,
                 jornada_norm,
                 docente_sesion_norm or None,
-                bloque_codigo_norm or None,
+                edicion_norm or None,
             ),
         )
         _recalcular_duracion_desde_sesiones(conn, id_curso_limpio)
@@ -1172,7 +1172,7 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
         return {'ok': False, 'error': 'No se pudo crear la sesión'}
 
 
-def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', edicion=''):
     fecha_obj = _normalizar_fecha_iso(fecha)
     hora_inicio_norm = _normalizar_hora_24(hora_inicio)
     hora_fin_norm = _normalizar_hora_24(hora_fin)
@@ -1189,7 +1189,7 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
 
     jornada_norm = _normalizar_jornada(jornada)
     docente_sesion_norm = (docente_sesion or '').strip()
-    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
@@ -1228,7 +1228,7 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
         conn.execute(
             '''
             UPDATE sesiones_curso
-            SET fecha = ?, hora_inicio = ?, hora_fin = ?, jornada = ?, docente_sesion = ?, bloque_codigo = ?
+            SET fecha = ?, hora_inicio = ?, hora_fin = ?, jornada = ?, docente_sesion = ?, edicion = ?
             WHERE id_sesion = ?
             ''',
             (
@@ -1237,7 +1237,7 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
                 hora_fin_norm,
                 jornada_norm,
                 docente_sesion_norm or None,
-                bloque_codigo_norm or None,
+                edicion_norm or None,
                 id_sesion_int,
             ),
         )
@@ -1288,7 +1288,7 @@ def eliminar_sesion(id_sesion):
         return {'ok': False, 'error': 'No se pudo eliminar la sesión'}
 
 
-def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', bloque_codigo=''):
+def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', edicion=''):
     id_curso_limpio = (id_curso or '').strip().upper()
     fecha_inicio_obj = _normalizar_fecha_iso(fecha_inicio)
     fecha_fin_obj = _normalizar_fecha_iso(fecha_fin)
@@ -1308,7 +1308,7 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
 
     jornada_norm = _normalizar_jornada(jornada)
     docente_sesion_norm = (docente_sesion or '').strip()
-    bloque_codigo_norm = (bloque_codigo or '').strip().upper()
+    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
@@ -1341,7 +1341,7 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
 
                     conn.execute(
                         '''
-                        INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, bloque_codigo, estado, token_asistencia)
+                        INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia)
                         VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
                         ''',
                         (
@@ -1351,7 +1351,7 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
                             hora_fin_norm,
                             jornada_norm,
                             docente_sesion_norm or None,
-                            bloque_codigo_norm or None,
+                            edicion_norm or None,
                         ),
                     )
                     sesiones_creadas += 1
@@ -1389,7 +1389,7 @@ def obtener_reporte_asistencia_curso(id_curso):
 
         sesiones = conn.execute(
             '''
-            SELECT jornada, hora_inicio, hora_fin, fecha
+            SELECT id_sesion, jornada, hora_inicio, hora_fin, fecha, estado
             FROM sesiones_curso
             WHERE id_curso = ?
             ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
@@ -1398,11 +1398,15 @@ def obtener_reporte_asistencia_curso(id_curso):
         ).fetchall()
 
         jornadas_sesiones = {}
+        sesiones_curso_ordenadas = []
         total_sesiones_curso = 0
         for sesion in sesiones:
+            id_sesion = int(sesion['id_sesion']) if sesion['id_sesion'] is not None else None
             jornada = _normalizar_jornada(sesion['jornada'])
             hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
             hora_fin = (sesion['hora_fin'] or '').strip()[:5]
+            fecha_iso = (sesion['fecha'] or '').strip()
+            estado_sesion = int(sesion['estado'] or 0)
             if not jornada:
                 jornada = 'UNICA'
 
@@ -1413,6 +1417,17 @@ def obtener_reporte_asistencia_curso(id_curso):
                     'total_sesiones': 0,
                     'rangos': set(),
                 }
+
+            sesiones_curso_ordenadas.append(
+                {
+                    'id_sesion': id_sesion,
+                    'jornada': jornada,
+                    'fecha': fecha_iso,
+                    'hora_inicio': hora_inicio,
+                    'hora_fin': hora_fin,
+                    'estado': estado_sesion,
+                }
+            )
 
             jornadas_sesiones[jornada]['total_sesiones'] += 1
             if hora_inicio and hora_fin:
@@ -1458,6 +1473,63 @@ def obtener_reporte_asistencia_curso(id_curso):
             jornada = _normalizar_jornada(fila['jornada'])
             asistencia_por_docente_jornada[(numero_empleado, jornada)] = int(fila['total_asistencias'] or 0)
 
+        asistencia_detalle_raw = conn.execute(
+            '''
+            SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
+            FROM registro_asistencia ra
+            JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+            WHERE s.id_curso = ?
+            ''',
+            (id_curso_limpio,),
+        ).fetchall()
+
+        asistencias_por_docente_sesion = {}
+        ultima_marcacion_por_docente = {}
+        for fila in asistencia_detalle_raw:
+            numero_empleado = (fila['numero_empleado'] or '').strip()
+            if not numero_empleado:
+                continue
+
+            try:
+                id_sesion_asistencia = int(fila['id_sesion'])
+            except (TypeError, ValueError):
+                continue
+
+            if numero_empleado not in asistencias_por_docente_sesion:
+                asistencias_por_docente_sesion[numero_empleado] = set()
+            asistencias_por_docente_sesion[numero_empleado].add(id_sesion_asistencia)
+
+            fecha_marcado = (fila['fecha_marcado'] or '').strip()
+            hora_marcado = (fila['hora_marcado'] or '').strip()[:5]
+            marca_dt = None
+            if fecha_marcado and hora_marcado:
+                try:
+                    marca_dt = datetime.strptime(f"{fecha_marcado} {hora_marcado}", '%Y-%m-%d %H:%M')
+                except ValueError:
+                    marca_dt = None
+
+            if marca_dt:
+                actual = ultima_marcacion_por_docente.get(numero_empleado)
+                if not actual or marca_dt > actual:
+                    ultima_marcacion_por_docente[numero_empleado] = marca_dt
+
+        def _formatear_fecha_mes(fecha_iso):
+            fecha_limpia = (fecha_iso or '').strip()
+            if not fecha_limpia:
+                return None
+            try:
+                fecha_obj = datetime.strptime(fecha_limpia, '%Y-%m-%d')
+                mes_nombre = MESES_ES[fecha_obj.month - 1].capitalize()
+                return f"{fecha_obj.day:02d}/{mes_nombre}"
+            except (ValueError, IndexError):
+                return fecha_limpia
+
+        def _formatear_ultima_marcacion(marca_dt):
+            if not marca_dt:
+                return None
+            mes_nombre = MESES_ES[marca_dt.month - 1].capitalize()
+            return f"{marca_dt.day:02d}/{mes_nombre} - {marca_dt.strftime('%H:%M')}"
+
         grupos = {}
         for codigo in ORDEN_JORNADAS_REPORTE:
             if codigo == 'POR_CONFIRMAR' or codigo in jornadas_sesiones:
@@ -1499,6 +1571,26 @@ def obtener_reporte_asistencia_curso(id_curso):
             if total_sesiones_jornada > 0:
                 porcentaje_docente = round((asistencias_docente / total_sesiones_jornada) * 100, 1)
 
+            sesiones_docente = asistencias_por_docente_sesion.get(numero_empleado, set())
+            mapa_asistencia = []
+            fechas_ausentes = []
+            for sesion in sesiones_curso_ordenadas:
+                id_sesion = sesion['id_sesion']
+                estado_sesion = int(sesion['estado'] or 0)
+                if id_sesion and id_sesion in sesiones_docente:
+                    mapa_asistencia.append({'estado': 'presente'})
+                    continue
+
+                if estado_sesion == 2:
+                    mapa_asistencia.append({'estado': 'ausente'})
+                    fecha_formateada = _formatear_fecha_mes(sesion['fecha'])
+                    if fecha_formateada:
+                        fechas_ausentes.append(fecha_formateada)
+                else:
+                    mapa_asistencia.append({'estado': 'futura'})
+
+            ultima_marcacion = _formatear_ultima_marcacion(ultima_marcacion_por_docente.get(numero_empleado))
+
             estado_matricula = fila['aprobado']
             if estado_matricula == 1:
                 estado_texto = 'Aprobado'
@@ -1518,6 +1610,9 @@ def obtener_reporte_asistencia_curso(id_curso):
                     'sesiones_programadas': total_sesiones_jornada,
                     'porcentaje': porcentaje_docente,
                     'estado_matricula': estado_texto,
+                    'ultima_marcacion': ultima_marcacion,
+                    'fechas_ausentes': fechas_ausentes,
+                    'mapa_asistencia': mapa_asistencia,
                 }
             )
 
@@ -1542,6 +1637,23 @@ def obtener_reporte_asistencia_curso(id_curso):
 
         total_inscritos = sum(grupo['total_inscritos'] for grupo in jornadas_ordenadas)
 
+        docentes_con_asistencia = []
+        docentes_pendientes_asistencia = []
+        for grupo in jornadas_ordenadas:
+            for docente in grupo['docentes']:
+                registro = {
+                    **docente,
+                    'jornada_codigo': grupo['codigo'],
+                    'jornada_nombre': grupo['nombre'],
+                }
+                if int(docente['asistencias'] or 0) > 0:
+                    docentes_con_asistencia.append(registro)
+                else:
+                    docentes_pendientes_asistencia.append(registro)
+
+        docentes_con_asistencia.sort(key=lambda item: (item['nombre_completo'].lower(), item['numero_empleado']))
+        docentes_pendientes_asistencia.sort(key=lambda item: (item['nombre_completo'].lower(), item['numero_empleado']))
+
         conn.close()
         return {
             'ok': True,
@@ -1558,6 +1670,8 @@ def obtener_reporte_asistencia_curso(id_curso):
             'jornadas': jornadas_ordenadas,
             'total_sesiones': total_sesiones_curso,
             'total_inscritos': total_inscritos,
+            'docentes_con_asistencia': docentes_con_asistencia,
+            'docentes_pendientes_asistencia': docentes_pendientes_asistencia,
         }
     except sqlite3.Error:
         return {'ok': False, 'error': 'No se pudo cargar el reporte de asistencias'}
@@ -1584,9 +1698,9 @@ def abrir_asistencia_sesion(id_sesion):
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada'}
 
-        if sesion['estado'] != 0:
+        if sesion['estado'] == 1:
             conn.close()
-            return {'ok': False, 'error': 'Solo se puede abrir asistencia en sesiones cerradas'}
+            return {'ok': False, 'error': 'La asistencia ya está habilitada en esta sesión'}
 
         token = _generar_token_asistencia_unico(conn)
         conn.execute(

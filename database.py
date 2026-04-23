@@ -241,7 +241,7 @@ def asegurar_migraciones_minimas():
                 hora_fin TEXT NOT NULL,
                 jornada TEXT NOT NULL DEFAULT 'UNICA',
                 docente_sesion TEXT,
-                bloque_codigo TEXT,
+                edicion TEXT,
                 estado INTEGER NOT NULL DEFAULT 0,
                 token_asistencia TEXT,
                 FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
@@ -255,14 +255,56 @@ def asegurar_migraciones_minimas():
             cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN jornada TEXT NOT NULL DEFAULT 'UNICA'")
         if 'docente_sesion' not in columnas_sesiones:
             cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN docente_sesion TEXT')
-        if 'bloque_codigo' not in columnas_sesiones:
-            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN bloque_codigo TEXT')
+        if 'edicion' not in columnas_sesiones:
+            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN edicion TEXT')
+        if 'bloque_codigo' in columnas_sesiones:
+            cursor.execute(
+                '''
+                UPDATE sesiones_curso
+                SET edicion = UPPER(TRIM(bloque_codigo))
+                WHERE (edicion IS NULL OR TRIM(edicion) = '')
+                  AND bloque_codigo IS NOT NULL
+                  AND TRIM(bloque_codigo) <> ''
+                '''
+            )
+
+            cursor.execute('ALTER TABLE sesiones_curso RENAME TO sesiones_curso_legacy')
+            cursor.execute(
+                '''
+                CREATE TABLE sesiones_curso (
+                    id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id_curso TEXT NOT NULL,
+                    fecha TEXT NOT NULL,
+                    hora_inicio TEXT NOT NULL,
+                    hora_fin TEXT NOT NULL,
+                    jornada TEXT NOT NULL DEFAULT 'UNICA',
+                    docente_sesion TEXT,
+                    edicion TEXT,
+                    estado INTEGER NOT NULL DEFAULT 0,
+                    token_asistencia TEXT,
+                    FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+                )
+                '''
+            )
+            cursor.execute(
+                '''
+                INSERT INTO sesiones_curso (
+                    id_sesion, id_curso, fecha, hora_inicio, hora_fin,
+                    jornada, docente_sesion, edicion, estado, token_asistencia
+                )
+                SELECT
+                    id_sesion, id_curso, fecha, hora_inicio, hora_fin,
+                    jornada, docente_sesion, edicion, estado, token_asistencia
+                FROM sesiones_curso_legacy
+                '''
+            )
+            cursor.execute('DROP TABLE sesiones_curso_legacy')
 
         cursor.execute(
             '''
             UPDATE sesiones_curso
             SET jornada = CASE
-                WHEN UPPER(TRIM(COALESCE(jornada, ''))) IN ('MATUTINA', 'VESPERTINA', 'NOCTURNA', 'UNICA')
+                WHEN UPPER(TRIM(COALESCE(jornada, ''))) IN ('MATUTINA', 'VESPERTINA', 'NOCTURNA')
                     THEN UPPER(TRIM(jornada))
                 ELSE 'UNICA'
             END
@@ -272,7 +314,7 @@ def asegurar_migraciones_minimas():
             'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)'
         )
         cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_bloque ON sesiones_curso (id_curso, bloque_codigo)'
+            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_edicion ON sesiones_curso (id_curso, edicion)'
         )
 
         cursor.execute(

@@ -108,14 +108,14 @@ def register_admin_routes(app):
             'hora_fin': '',
             'jornada': 'UNICA',
             'docente_sesion': '',
-            'bloque_codigo': '',
+            'edicion': '',
             'segunda_jornada_activa': False,
             'dias_semana_2': [],
             'hora_inicio_2': '',
             'hora_fin_2': '',
             'jornada_2': 'VESPERTINA',
             'docente_sesion_2': '',
-            'bloque_codigo_2': '',
+            'edicion_2': '',
         }
 
         if not sesiones_curso:
@@ -136,7 +136,7 @@ def register_admin_routes(app):
             config[f'hora_fin{sufijo}'] = hora_fin or ''
             config[f'dias_semana{sufijo}'] = sorted(data['dias_semana'])
             config[f'docente_sesion{sufijo}'] = _modo_valor(data['docentes'])
-            config[f'bloque_codigo{sufijo}'] = _modo_valor(data['bloques'])
+            config[f'edicion{sufijo}'] = _modo_valor(data['ediciones'])
 
         for sesion in sesiones_curso:
             fecha_iso = (sesion['fecha'] or '').strip()
@@ -150,7 +150,7 @@ def register_admin_routes(app):
                     'conteo': 0,
                     'dias_semana': set(),
                     'docentes': {},
-                    'bloques': {},
+                    'ediciones': {},
                 }
             bloque_actual = bloques_calendario[clave_bloque]
             bloque_actual['conteo'] += 1
@@ -168,9 +168,9 @@ def register_admin_routes(app):
             if docente_sesion:
                 bloque_actual['docentes'][docente_sesion] = bloque_actual['docentes'].get(docente_sesion, 0) + 1
 
-            bloque_codigo = (sesion['bloque_codigo'] or '').strip().upper()
-            if bloque_codigo:
-                bloque_actual['bloques'][bloque_codigo] = bloque_actual['bloques'].get(bloque_codigo, 0) + 1
+            edicion = (sesion['edicion'] or '').strip().upper()
+            if edicion:
+                bloque_actual['ediciones'][edicion] = bloque_actual['ediciones'].get(edicion, 0) + 1
 
         if fechas:
             configuracion['fecha_inicio'] = min(fechas)
@@ -353,7 +353,7 @@ def register_admin_routes(app):
         dias_semana = request.form.getlist('dias_semana')
         jornada = request.form.get('jornada', 'UNICA').strip().upper()
         docente_sesion = request.form.get('docente_sesion', '').strip()
-        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+        edicion = request.form.get('edicion', '').strip().upper()
         hora_inicio_unica = request.form.get('hora_inicio', '').strip()
         hora_fin_unica = request.form.get('hora_fin', '').strip()
 
@@ -364,7 +364,7 @@ def register_admin_routes(app):
                 'bloques': [{'hora_inicio': hora_inicio_unica, 'hora_fin': hora_fin_unica}],
                 'jornada': jornada,
                 'docente_sesion': docente_sesion,
-                'bloque_codigo': bloque_codigo,
+                'edicion': edicion,
             }
         )
 
@@ -373,16 +373,15 @@ def register_admin_routes(app):
         hora_fin_2 = request.form.get('hora_fin_2', '').strip()
         jornada_2 = request.form.get('jornada_2', '').strip().upper()
         docente_sesion_2 = request.form.get('docente_sesion_2', '').strip()
-        bloque_codigo_2 = request.form.get('bloque_codigo_2', '').strip().upper()
+        edicion_2 = request.form.get('edicion_2', '').strip().upper()
 
         segunda_jornada_enviada = any(
             [
                 dias_semana_2,
                 hora_inicio_2,
                 hora_fin_2,
-                jornada_2,
                 docente_sesion_2,
-                bloque_codigo_2,
+                edicion_2,
             ]
         )
 
@@ -391,6 +390,7 @@ def register_admin_routes(app):
                 payload_error = {'ok': False, 'error': 'Para la segunda jornada debes indicar días, hora de inicio y hora de fin.'}
                 if es_ajax:
                     return jsonify(payload_error), 400
+                flash(payload_error['error'], 'danger')
                 return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
 
             configuraciones.append(
@@ -399,7 +399,7 @@ def register_admin_routes(app):
                     'bloques': [{'hora_inicio': hora_inicio_2, 'hora_fin': hora_fin_2}],
                     'jornada': jornada_2 or 'VESPERTINA',
                     'docente_sesion': docente_sesion_2,
-                    'bloque_codigo': bloque_codigo_2,
+                    'edicion': edicion_2,
                 }
             )
 
@@ -423,11 +423,12 @@ def register_admin_routes(app):
                 config['bloques'],
                 jornada=config['jornada'],
                 docente_sesion=config['docente_sesion'],
-                bloque_codigo=config['bloque_codigo'],
+                edicion=config['edicion'],
             )
             if not result.get('ok'):
                 if es_ajax:
                     return jsonify(result), 400
+                flash(result.get('error') or 'No se pudo generar el calendario base.', 'danger')
                 return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
             sesiones_creadas_total += int(result.get('sesiones_creadas', 0) or 0)
 
@@ -439,6 +440,11 @@ def register_admin_routes(app):
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
+
+        flash(
+            f"Calendario generado: {sesiones_creadas_total} sesión(es) en {len(configuraciones)} jornada(s).",
+            'success',
+        )
 
         return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
 
@@ -510,7 +516,7 @@ def register_admin_routes(app):
         hora_fin = request.form.get('hora_fin', '').strip()
         jornada = request.form.get('jornada', 'UNICA').strip().upper()
         docente_sesion = request.form.get('docente_sesion', '').strip()
-        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+        edicion = request.form.get('edicion', '').strip().upper()
 
         if not id_curso:
             if es_ajax:
@@ -529,7 +535,7 @@ def register_admin_routes(app):
             hora_fin,
             jornada=jornada,
             docente_sesion=docente_sesion,
-            bloque_codigo=bloque_codigo,
+            edicion=edicion,
         )
         if es_ajax:
             status = 200 if result.get('ok') else 400
@@ -553,7 +559,7 @@ def register_admin_routes(app):
         hora_fin = request.form.get('hora_fin', '').strip()
         jornada = request.form.get('jornada', 'UNICA').strip().upper()
         docente_sesion = request.form.get('docente_sesion', '').strip()
-        bloque_codigo = request.form.get('bloque_codigo', '').strip().upper()
+        edicion = request.form.get('edicion', '').strip().upper()
         id_curso_form = request.form.get('id_curso', '').strip().upper()
 
         id_curso = id_curso_form or _obtener_curso_de_sesion(id_sesion)
@@ -574,7 +580,7 @@ def register_admin_routes(app):
             hora_fin,
             jornada=jornada,
             docente_sesion=docente_sesion,
-            bloque_codigo=bloque_codigo,
+            edicion=edicion,
         )
         if es_ajax:
             status = 200 if result.get('ok') else 400

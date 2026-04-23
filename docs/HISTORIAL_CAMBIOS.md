@@ -3465,6 +3465,160 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Abril 21, 2026  
-**Versión actual**: 1.7.2 (Mejoras en Configuración de Calendarios y Presentación)  
-**Estado**: Development - Segunda jornada, mejor presentación de fechas, errores contextuales
+---
+
+# 🚀 Versión 1.7.3 - Refinamiento de Asistencia, Jornadas y Gestión de Calendario
+
+**Fecha**: Abril 22, 2026  
+**Cambios**: 2 commits principales (`975d334`, `8d35517`) con mejoras funcionales en reportes, filtros de jornadas y experiencia de administración
+
+## Cambio 27.1: Migración semántica de bloque a edición en sesiones
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+- En la estructura de `sesiones_curso`, el campo `bloque_codigo` pasa a `edicion`.
+- La migración automática ahora crea `edicion` si no existe.
+- Se actualiza índice de base de datos de `idx_sesiones_curso_bloque` a `idx_sesiones_curso_edicion`.
+- Validación de jornada ajustada para mantener los valores permitidos y limpieza de datos legacy.
+
+**POR QUÉ**:
+- El término "edición" representa mejor la organización académica que "bloque".
+- Se necesitaba consistencia entre base de datos, formularios y reportes.
+
+**PARA QUÉ**:
+- Mejor claridad de dominio funcional.
+- Consultas e índices alineados con el nuevo modelo de negocio.
+
+---
+
+## Cambio 27.2: Generación de calendario con feedback robusto en admin
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `routes/admin.py`
+
+**QUÉ**:
+- En la creación de segunda jornada se mejora la validación y respuesta para flujos no AJAX.
+- Se agregan mensajes `flash` de error cuando fallan validaciones de jornada secundaria.
+- Se agrega `flash` de éxito al finalizar generación de calendario:
+  - Total de sesiones creadas.
+  - Total de jornadas procesadas.
+
+**POR QUÉ**:
+- En algunos errores el usuario admin no recibía retroalimentación visible en pantalla.
+- Era necesario confirmar de forma explícita el resultado de la operación de calendario.
+
+**PARA QUÉ**:
+- Reducir incertidumbre del usuario tras enviar formularios.
+- Mejorar trazabilidad visual del resultado de cada acción.
+
+---
+
+## Cambio 27.3: Reporte de asistencia enriquecido con mapa visual y detalle temporal
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `services/admin_service.py`, `templates/admin.html`, `static/style.css`
+
+**QUÉ**:
+- `obtener_reporte_asistencia_curso()` ahora incluye más datos de sesiones:
+  - `id_sesion`, `fecha`, `estado`, orden consolidado por curso.
+- Se integra detalle granular de asistencias por docente y por sesión.
+- Nuevos campos por docente:
+  - `ultima_marcacion`
+  - `fechas_ausentes`
+  - `mapa_asistencia` (presente/ausente/futura)
+- Nuevo agrupamiento derivado:
+  - `docentes_con_asistencia`
+  - `docentes_pendientes_asistencia`
+- Se incorporan estados visuales con colores:
+  - `success`, `warning`, `danger`
+  - puntos de mapa (`mapa-dot`) para línea temporal de asistencia.
+
+**POR QUÉ**:
+- El reporte anterior era funcional, pero no permitía lectura rápida de patrones.
+- Se requería separar docentes con avance real vs. pendientes.
+
+**PARA QUÉ**:
+- Supervisión más eficiente por parte del equipo administrativo.
+- Detección temprana de ausencias y seguimiento académico.
+
+---
+
+## Cambio 27.4: Filtro de sesiones por jornada del docente en portal
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `services/portal_service.py`
+
+**QUÉ**:
+- Se importa `_resolver_jornada_desde_horario` para inferir jornada del docente desde su horario elegido.
+- En el detalle de curso del docente se añade cálculo de jornada contextual (`jornada_docente`).
+- Consulta de sesiones ahora filtra por:
+  - Jornada del docente.
+  - Sesiones `UNICA` como sesiones compartidas.
+
+**POR QUÉ**:
+- Antes se listaban sesiones no siempre relevantes para el horario seleccionado por el docente.
+
+**PARA QUÉ**:
+- Mostrar únicamente sesiones pertinentes al docente autenticado.
+- Reducir ruido en el panel de seguimiento y marcación de asistencia.
+
+---
+
+## Cambio 27.5: UX de segunda jornada y ajustes de interfaz admin
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- Botón de segunda jornada refinado:
+  - Texto simplificado a "+ Agregar jornada".
+  - Estado inicial oculto del panel con activación controlada por JS.
+- Nuevo botón "Eliminar jornada" para limpiar campos y desactivar bloque secundario.
+- JavaScript actualizado para:
+  - Habilitar/deshabilitar campos según visibilidad.
+  - Resetear inputs/selects al eliminar jornada.
+- Ajustes de copy y etiquetas:
+  - "Bloque / Grupo" cambia a "Edición" en formularios de sesión.
+  - Ajustes menores de textos en listados y etiquetas administrativas.
+
+**POR QUÉ**:
+- Se necesitaba control explícito para agregar o retirar la segunda jornada sin recargar la vista.
+- Etiquetas anteriores no reflejaban el nuevo lenguaje del sistema.
+
+**PARA QUÉ**:
+- Flujo más claro en configuración de calendarios múltiples.
+- Menor probabilidad de enviar campos secundarios no deseados.
+
+---
+
+## Cambio 27.6: Regla de apertura de asistencia más flexible
+**Fecha**: Abril 22, 2026  
+**Archivos afectados**: `services/admin_service.py`, `templates/admin.html`
+
+**QUÉ**:
+- En `abrir_asistencia_sesion()` se ajusta la regla:
+  - Antes: solo permitía abrir desde estado cerrado inicial.
+  - Ahora: bloquea exclusivamente si ya está abierta (`estado == 1`) y permite reapertura en otros estados válidos.
+- En interfaz se alinea la lógica del botón "Abrir" para que aparezca cuando no está en estado abierto.
+
+**POR QUÉ**:
+- El flujo operativo requería reactivar asistencia en escenarios de corrección administrativa.
+
+**PARA QUÉ**:
+- Mayor flexibilidad operativa sin perder control de estados.
+
+---
+
+## Resumen de Cambios v1.7.3
+
+| Aspecto | Cambio |
+|--------|--------|
+| Modelo de datos | Renombrado funcional de `bloque_codigo` a `edicion` |
+| Admin calendario | Validaciones y feedback `flash` más claros |
+| Asistencia | Reporte enriquecido con mapas visuales y últimas marcaciones |
+| Portal docente | Filtro de sesiones por jornada relevante |
+| UX administración | Agregar/eliminar segunda jornada con control dinámico |
+| Estado de sesión | Apertura de asistencia más flexible |
+
+---
+
+**Última actualización**: Abril 22, 2026  
+**Versión actual**: 1.7.3 (Refinamiento de Asistencia, Jornadas y Gestión de Calendario)  
+**Estado**: Development - Reportes avanzados de asistencia, filtros por jornada y mejoras de experiencia admin

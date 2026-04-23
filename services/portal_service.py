@@ -3,6 +3,7 @@ from datetime import datetime
 
 from config import LIMITE_ABANDONO, LIMITE_REPROBADO, MESES_ES
 from database import get_db_connection
+from services.admin_service import _resolver_jornada_desde_horario
 from utils import (
     construir_contexto_dashboard,
     normalizar_nombre_curso,
@@ -332,6 +333,40 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
         resultado_final_matricula = bool(matricula_activa and matricula_activa['aprobado'] is not None)
         puede_marcar_asistencia = bool(matricula_activa) and not resultado_final_matricula and estado_historial not in estados_finales
 
+        jornadas_sesiones_raw = conn.execute(
+            '''
+            SELECT jornada, hora_inicio, hora_fin
+            FROM sesiones_curso
+            WHERE id_curso = ?
+            ''',
+            (id_curso,),
+        ).fetchall()
+
+        jornadas_sesiones = {}
+        for fila in jornadas_sesiones_raw:
+            jornada = (fila['jornada'] or '').strip().upper() or 'UNICA'
+            hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
+            hora_fin = (fila['hora_fin'] or '').strip()[:5]
+            if jornada not in jornadas_sesiones:
+                jornadas_sesiones[jornada] = {'rangos': set()}
+            if hora_inicio and hora_fin:
+                jornadas_sesiones[jornada]['rangos'].add((hora_inicio, hora_fin))
+
+        horario_referencia = (
+            matricula_activa['horario_elegido']
+            if matricula_activa and matricula_activa['horario_elegido']
+            else (historial_ultimo['horario_elegido'] if historial_ultimo else '')
+        )
+        jornada_docente_codigo = _resolver_jornada_desde_horario(horario_referencia, jornadas_sesiones)
+        nombres_jornada = {
+            'UNICA': 'Unica',
+            'MATUTINA': 'Matutina',
+            'VESPERTINA': 'Vespertina',
+            'NOCTURNA': 'Nocturna',
+            'POR_CONFIRMAR': 'Por confirmar',
+        }
+        jornada_docente = nombres_jornada.get(jornada_docente_codigo, 'Por confirmar')
+
         sesiones = conn.execute(
             '''
             SELECT
@@ -352,9 +387,10 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             LEFT JOIN registro_asistencia ra
                 ON ra.id_sesion = s.id_sesion AND ra.numero_empleado = ?
             WHERE s.id_curso = ?
+              AND (s.jornada = ? OR s.jornada = 'UNICA')
             ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
             ''',
-            (numero_empleado, id_curso),
+            (numero_empleado, id_curso, jornada_docente_codigo),
         ).fetchall()
         conn.close()
 
@@ -421,6 +457,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             },
             'sesiones_pasadas': sesiones_pasadas,
             'sesiones_futuras': sesiones_futuras,
+            'jornada_docente': jornada_docente,
         }
     except sqlite3.Error:
         return {'ok': False, 'error': 'No se pudo cargar el detalle del curso', 'status_code': 500}

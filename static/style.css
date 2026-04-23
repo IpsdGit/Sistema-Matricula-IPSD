@@ -334,6 +334,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 .badge-pill.success  { background: #dcfce7; color: #15803d; }
 .badge-pill.primary  { background: #dbeafe; color: var(--primary-dark); }
 .badge-pill.secondary{ background: #f1f5f9; color: #475569; }
+.badge-pill.warning  { background: #ffedd5; color: #c2410c; }
 .badge-pill.danger   { background: #fee2e2; color: #dc2626; }
 
 /* ─── TABLAS ─── */
