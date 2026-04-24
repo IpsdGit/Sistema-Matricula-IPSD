@@ -43,13 +43,13 @@
       </div>
 
       <nav class="portal-topbar-nav" aria-label="Navegación principal docente">
-        <a href="/dashboard?seccion=disponibles" class="portal-topbar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">Dashboard</a>
+        <a href="/dashboard?seccion=disponibles" class="portal-topbar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">Inicio</a>
         <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}" class="portal-topbar-link {% if seccion_activa == 'historial' %}active{% endif %}">Historial</a>
         <a href="/dashboard?seccion=calendario" class="portal-topbar-link {% if seccion_activa == 'calendario' %}active{% endif %}">Calendario</a>
       </nav>
 
       <div class="portal-topbar-title-wrap insight-blob portal-topbar-mobile-title">
-        <h1 class="portal-topbar-title">Portal Docente UNAH</h1>
+        <span class="portal-topbar-title">Portal Docente UNAH</span>
         <p class="portal-topbar-subtitle">Navegación principal</p>
       </div>
 
@@ -89,16 +89,13 @@
     </header>
 
     <section class="portal-content">
-      {% if seccion_activa != 'notificaciones' %}
+      {% if seccion_activa != 'notificaciones' and seccion_activa != 'historial' %}
       <section class="portal-hero">
-        {% if seccion_activa == 'historial' %}
-        <h1>Historial, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
-        <p>Consulta tus resultados, estados finales y trazabilidad de matrícula.</p>
-        {% elif seccion_activa == 'calendario' %}
-        <h1>Calendario, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
+        {% if seccion_activa == 'calendario' %}
+        <h2>Calendario, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h2>
         <p>Visualiza tus eventos académicos por mes, semana o día.</p>
         {% else %}
-        <h1>Bienvenido, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h1>
+        <h2>Bienvenido, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h2>
         <p>Gestiona tus capacitaciones, monitorea tu progreso y descubre oportunidades de formación.</p>
         {% endif %}
       </section>
@@ -197,70 +194,153 @@
       </section>
 
       {% elif seccion_activa == 'historial' %}
-      <div class="card-ipsd mb-3 portal-current-enrollments">
-        <div class="card-header" style="gap:1rem; flex-wrap:wrap;">
+      <div class="historial-section">
+
+        <!-- Header + filtros -->
+        <div class="historial-header-bento">
           <div>
-            <h5 style="margin:0; font-weight:700;">Mis Actividades</h5>
-            <p style="margin:.2rem 0 0; color:var(--text-muted); font-size:.85rem;">Estados finales y trazabilidad de matrícula</p>
+            <h1 class="historial-bento-title">Historial de Actividades</h1>
+            <p class="historial-bento-subtitle">Visualiza tu progreso académico y cada capacitación completada en tu trayectoria formativa.</p>
           </div>
-          <div class="historial-pill-stats">
-            <span class="badge-pill secondary">Total: {{ resumen_historial['todas'] }}</span>
-            <span class="badge-pill success">Aprobadas: {{ resumen_historial['aprobadas'] }}</span>
-            <span class="badge-pill danger">No Aprobadas: {{ resumen_historial['no_aprobadas'] }}</span>
-            <span class="badge-pill secondary">Canceladas: {{ resumen_historial['canceladas'] }}</span>
+          <div class="historial-filter-pills-wrap">
+            <a href="/dashboard?seccion=historial&filtro_historial=todas" class="historial-filter-pill {% if filtro_historial == 'todas' %}active{% endif %}">Todas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=aprobadas" class="historial-filter-pill {% if filtro_historial == 'aprobadas' %}active{% endif %}">Aprobadas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=no_aprobadas" class="historial-filter-pill {% if filtro_historial == 'no_aprobadas' %}active{% endif %}">No Aprobadas</a>
+            <a href="/dashboard?seccion=historial&filtro_historial=canceladas" class="historial-filter-pill {% if filtro_historial == 'canceladas' %}active{% endif %}">Canceladas</a>
           </div>
         </div>
-        <div class="card-body">
-          <div class="historial-tabs">
-            <a href="/dashboard?seccion=historial&filtro_historial=todas" class="historial-tab {% if filtro_historial == 'todas' %}active{% endif %}">Todas</a>
-            <a href="/dashboard?seccion=historial&filtro_historial=aprobadas" class="historial-tab {% if filtro_historial == 'aprobadas' %}active{% endif %}">Aprobadas</a>
-            <a href="/dashboard?seccion=historial&filtro_historial=no_aprobadas" class="historial-tab {% if filtro_historial == 'no_aprobadas' %}active{% endif %}">No Aprobadas</a>
-            <a href="/dashboard?seccion=historial&filtro_historial=canceladas" class="historial-tab {% if filtro_historial == 'canceladas' %}active{% endif %}">Canceladas</a>
+
+        {% if historial_acciones %}
+        <div class="historial-bento-grid">
+
+          {# --- Tarjeta destacada (primer elemento) --- #}
+          {% set item0 = historial_acciones[0] %}
+          {% set ec0 = 'aprobada' if item0['estado_categoria'] == 'aprobadas' else ('abandono' if item0['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if item0['estado_categoria'] == 'no_aprobadas' else ('cancelada' if item0['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
+          <div class="historial-bento-featured curso-modal-trigger"
+               data-curso-modal-id="{{ item0['id_capacitacion'] }}"
+               tabindex="0" role="button"
+               aria-label="Ver detalle de {{ item0['nombre_curso'] }}">
+            <div class="historial-glass-card historial-glass-card--featured">
+              <div class="historial-card-top">
+                <span class="historial-status-pill historial-status-pill--{{ ec0 }}">
+                  <span class="historial-status-dot"></span>
+                  {{ item0['estado_nombre'] }}
+                </span>
+                <span class="historial-course-id-small">ID: {{ item0['id_capacitacion'] }}</span>
+              </div>
+              <h3 class="historial-glass-title">{{ item0['nombre_curso'] }}</h3>
+              <p class="historial-glass-desc">{{ item0['horario_elegido'] or 'Jornada por confirmar' }}</p>
+              <div class="historial-glass-footer">
+                <div class="historial-glass-date">
+                  <span class="historial-glass-date-label">Fecha del evento</span>
+                  <span class="historial-glass-date-value">{{ item0['fecha_evento'][:10] if item0['fecha_evento'] else 'Sin fecha' }}</span>
+                </div>
+                <span class="historial-arrow-icon">→</span>
+              </div>
+            </div>
           </div>
 
-          {% if historial_acciones %}
-          <div class="historial-grid">
-            {% for accion in historial_acciones %}
-            <article
-              class="historial-card curso-modal-trigger"
-              data-curso-modal-id="{{ accion['id_capacitacion'] }}"
-              tabindex="0"
-              role="button"
-              aria-label="Ver detalle del curso {{ accion['nombre_curso'] }}"
-            >
-              <div class="historial-card-head">
-                <span class="historial-course-id">{{ accion['id_capacitacion'] }}</span>
-                {% set estado_class = 'estado-pendiente' %}
-                {% if accion['estado_categoria'] == 'aprobadas' %}
-                  {% set estado_class = 'estado-aprobada' %}
-                {% elif accion['estado_codigo'] == 'ABANDONO' %}
-                  {% set estado_class = 'estado-abandono' %}
-                {% elif accion['estado_categoria'] == 'no_aprobadas' %}
-                  {% set estado_class = 'estado-no-aprobada' %}
-                {% elif accion['estado_categoria'] == 'canceladas' %}
-                  {% set estado_class = 'estado-cancelada' %}
-                {% endif %}
-                <span class="historial-estado {{ estado_class }}">{{ accion['estado_nombre'] }}</span>
+          {# --- Tarjeta resumen (oscura) --- #}
+          {% set total = resumen_historial['todas'] %}
+          {% set aprobadas = resumen_historial['aprobadas'] %}
+          {% set pct = ((aprobadas / total) * 100) | int if total > 0 else 0 %}
+          <div class="historial-bento-summary-cell">
+            <div class="historial-glass-card historial-glass-card--dark">
+              <span class="historial-summary-label">📊 Resumen de Actividades</span>
+              <div class="historial-summary-stats">
+                <div class="historial-summary-stat">
+                  <span class="historial-summary-num">{{ total }}</span>
+                  <span class="historial-summary-sub">Total</span>
+                </div>
+                <div class="historial-summary-stat">
+                  <span class="historial-summary-num historial-summary-num--gold">{{ aprobadas }}</span>
+                  <span class="historial-summary-sub">Aprobadas</span>
+                </div>
+                <div class="historial-summary-stat">
+                  <span class="historial-summary-num">{{ resumen_historial['no_aprobadas'] }}</span>
+                  <span class="historial-summary-sub">No aprobadas</span>
+                </div>
+                <div class="historial-summary-stat">
+                  <span class="historial-summary-num">{{ resumen_historial['canceladas'] }}</span>
+                  <span class="historial-summary-sub">Canceladas</span>
+                </div>
               </div>
-              <h4 class="historial-course-name">{{ accion['nombre_curso'] }}</h4>
-              <div class="historial-modalidad-row">
-                <span class="curso-modalidad-badge {{ 'virtual' if accion['modalidad_icono'] == 'V' else 'presencial' }}">
-                  <span class="curso-modalidad-token">{{ accion['modalidad_icono'] }}</span>
-                  {{ accion['modalidad'] }}
-                </span>
+              <div class="historial-summary-progress-wrap">
+                <div class="historial-summary-progress-header">
+                  <div>
+                    <span class="historial-summary-hours-label">Tasa de aprobación</span>
+                    <span class="historial-summary-hours-value">{{ aprobadas }} <span>/ {{ total }}</span></span>
+                  </div>
+                  <span class="historial-summary-pct">{{ pct }}%</span>
+                </div>
+                <div class="historial-progress-bar">
+                  <div class="historial-progress-fill" data-pct="{{ pct }}"></div>
+                </div>
               </div>
-              <p class="historial-meta">Horario: {{ accion['horario_elegido'] or 'No definido' }}</p>
-              <p class="historial-meta">Fecha: {{ accion['fecha_evento'][:16] if accion['fecha_evento'] else 'Sin fecha' }}</p>
-            </article>
-            {% endfor %}
+            </div>
           </div>
-          {% else %}
-          <div class="alert-ipsd info" style="margin-top:1rem;">
-            <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
-            <span>No hay elementos para mostrar con este filtro.</span>
+
+          {# --- Tarjetas pequeñas (elementos 2-4) --- #}
+          {% for accion in historial_acciones[1:4] %}
+          {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas' else ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
+          <div class="historial-bento-small curso-modal-trigger"
+               data-curso-modal-id="{{ accion['id_capacitacion'] }}"
+               tabindex="0" role="button"
+               aria-label="Ver detalle de {{ accion['nombre_curso'] }}">
+            <div class="historial-glass-card">
+              <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm" style="margin-bottom:.75rem;">
+                <span class="historial-status-dot"></span>{{ accion['estado_nombre'] }}
+              </span>
+              <h4 class="historial-glass-title historial-glass-title--sm">{{ accion['nombre_curso'] }}</h4>
+              <p class="historial-glass-meta">
+                {{ accion['id_capacitacion'] }}<br>
+                {{ accion['fecha_evento'][:10] if accion['fecha_evento'] else 'Sin fecha' }}
+              </p>
+              <span class="historial-arrow-icon" style="margin-top:auto; display:block;">→</span>
+            </div>
+          </div>
+          {% endfor %}
+
+          {# --- Sección lista (elementos 5+) --- #}
+          {% if historial_acciones | length > 4 %}
+          <div class="historial-bento-full">
+            <h2 class="historial-list-section-title">
+              <span class="ui-icon ui-icon-history" aria-hidden="true"></span>
+              Actividades Anteriores
+            </h2>
+            <div class="historial-list-stack">
+              {% for accion in historial_acciones[4:] %}
+              {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas' else ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
+              <div class="historial-list-item curso-modal-trigger"
+                   data-curso-modal-id="{{ accion['id_capacitacion'] }}"
+                   tabindex="0" role="button"
+                   aria-label="Ver detalle de {{ accion['nombre_curso'] }}">
+                <div class="historial-list-item-left">
+                  <div class="historial-list-icon historial-list-icon--{{ ec }}">
+                    <span class="ui-icon {% if ec == 'aprobada' %}ui-icon-success{% elif ec in ('no-aprobada','abandono') %}ui-icon-danger{% elif ec == 'cancelada' %}ui-icon-warning{% else %}ui-icon-info{% endif %}" aria-hidden="true"></span>
+                  </div>
+                  <div>
+                    <p class="historial-list-name">{{ accion['nombre_curso'] }}</p>
+                    <p class="historial-list-meta">{{ accion['id_capacitacion'] }} · {{ accion['fecha_evento'][:10] if accion['fecha_evento'] else 'Sin fecha' }}</p>
+                  </div>
+                </div>
+                <div class="historial-list-item-right">
+                  <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm">{{ accion['estado_nombre'] }}</span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
           </div>
           {% endif %}
+
         </div>
+        {% else %}
+        <div class="alert-ipsd info" style="margin-top:1rem;">
+          <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
+          <span>No hay elementos para mostrar con este filtro.</span>
+        </div>
+        {% endif %}
+
       </div>
 
       {% elif seccion_activa == 'calendario' %}
@@ -340,49 +420,50 @@
             </div>
             <div class="card-body">
               {% if matriculados %}
-              <div class="flex" style="flex-wrap:wrap; gap:.75rem;">
+              <div class="enroll-card-grid">
                 {% for curso in matriculados %}
+                {% set alt = loop.index is divisibleby 2 %}
                 <div
-                  class="enrolled-pill enrolled-pill-clickable curso-modal-trigger"
+                  class="enroll-card {% if alt %}enroll-card--alt{% endif %} curso-modal-trigger"
                   data-curso-modal-id="{{ curso['id'] }}"
                   tabindex="0"
                   role="button"
                   aria-label="Ver detalle del curso {{ curso['nombre'] }}"
                 >
-                  <div class="enrolled-pill-content">
-                    <span class="ui-icon ui-icon-check" aria-hidden="true"></span>
-                    <span>
-                      <strong>{{ curso['id'] }}</strong> · {{ curso['nombre'] }}
-                      <br>
-                      <span style="font-weight:400; font-size:.78rem; opacity:.85;">{{ curso['horario_elegido'] }}</span>
-                      {% if curso['aprobado'] == 1 %}
-                      <br>
-                      <span style="font-weight:600; font-size:.75rem; color:#16a34a;">Aprobado</span>
-                      {% elif curso['aprobado'] == 0 %}
-                      <br>
-                      <span style="font-weight:600; font-size:.75rem; color:#dc2626;">No aprobado</span>
-                      {% elif curso['aprobado'] == 2 %}
-                      <br>
-                      <span style="font-weight:600; font-size:.75rem; color:#ea580c;">Abandonó</span>
-                      {% else %}
-                      <br>
-                      <span style="font-weight:600; font-size:.75rem; color:#64748b;">Pendiente</span>
-                      {% endif %}
-                    </span>
-                    <div class="enrolled-pill-progress" aria-hidden="true"></div>
+                  <div class="enroll-card-orb" aria-hidden="true"></div>
+                  <div class="enroll-card-top">
+                    {% if curso['aprobado'] == 1 %}
+                    <span class="enroll-status-badge enroll-status-badge--approved">Aprobado</span>
+                    {% elif curso['aprobado'] == 0 %}
+                    <span class="enroll-status-badge enroll-status-badge--failed">No Aprobado</span>
+                    {% elif curso['aprobado'] == 2 %}
+                    <span class="enroll-status-badge enroll-status-badge--abandon">Abandonó</span>
+                    {% else %}
+                    <span class="enroll-status-badge enroll-status-badge--pending">En Curso</span>
+                    {% endif %}
+                    <span class="enroll-card-num">#{{ curso['id'] }}</span>
                   </div>
-                  <span class="enrolled-view-action">Ver detalle</span>
-                  {% if curso['aprobado'] is none %}
-                  <form action="/cancelar_matricula" method="POST" style="margin:0; padding:0; display:flex;" onsubmit="return confirm('¿Seguro que deseas cancelar esta inscripción?');">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                    <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
-                    <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
-                    <button type="submit" class="cancel-btn" title="Cancelar matrícula">✕</button>
-                  </form>
-                  {% else %}
-                  <span class="ui-icon ui-icon-lock" title="Matrícula cerrada" aria-hidden="true"></span>
-                  {% endif %}
+                  <h3 class="enroll-card-title">{{ curso['nombre'] }}</h3>
+                  <p class="enroll-card-meta">{{ curso['horario_elegido'] or 'Horario por confirmar' }}</p>
+                  <div class="enroll-card-footer">
+                    <span class="enroll-view-btn" aria-hidden="true">
+                      Ver Detalles →
+                    </span>
+                    {% if curso['aprobado'] is none %}
+                    <form action="/cancelar_matricula" method="POST" class="enroll-cancel-form enroll-cancel-intercept"
+                          data-course-name="{{ curso['nombre'] }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="numero_empleado" value="{{ empleado }}">
+                      <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                      <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
+                      <button type="submit" class="enroll-cancel-btn" title="Cancelar matrícula">×</button>
+                    </form>
+                    {% else %}
+                    <span class="enroll-lock-icon" title="Matrícula cerrada" aria-hidden="true">
+                      <span class="ui-icon ui-icon-lock"></span>
+                    </span>
+                    {% endif %}
+                  </div>
                 </div>
                 {% endfor %}
               </div>
@@ -418,35 +499,35 @@
         <div class="curso-grid portal-catalog-grid">
           {% for curso in cursos %}
           <div class="curso-card" id="curso-{{ curso['id'] }}">
-            <div class="curso-visual" aria-hidden="true"></div>
+            <div class="curso-visual" aria-hidden="true">
+              <span class="curso-visual-badge curso-visual-badge--{{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
+                <span class="curso-visual-badge-token">{{ curso['modalidad_icono'] }}</span>
+                {{ curso['modalidad'] }}
+              </span>
+            </div>
             <div class="curso-body">
               <div class="curso-id">{{ curso['id'] }}</div>
               <div class="curso-title">{{ curso['nombre'] }}</div>
-              <div class="curso-meta-row">
-                <span class="curso-modalidad-badge {{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
-                  <span class="curso-modalidad-token">{{ curso['modalidad_icono'] }}</span>
-                  {{ curso['modalidad'] }}
-                </span>
-              </div>
               <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
-              <div style="font-size:.76rem; margin-top:.28rem; color:#1e3a8a; font-weight:600;">
-                {% if curso['fecha_inicio_texto'] %}
+              <div class="curso-date-block">
+                <p class="curso-date-line">
+                  {% if curso['fecha_inicio_texto'] %}
                   Inicio: {{ curso['fecha_inicio_texto'] }}
-                {% else %}
+                  {% else %}
                   Fecha de inicio por confirmar
+                  {% endif %}
+                </p>
+                {% if curso['mensaje_oportunidades'] %}
+                <p class="curso-oportunidad-line">{{ curso['mensaje_oportunidades'] }}</p>
                 {% endif %}
               </div>
-              {% if curso['mensaje_oportunidades'] %}
-              <div style="font-size:.76rem; margin-top:.35rem; color:#9a3412; font-weight:600;">{{ curso['mensaje_oportunidades'] }}</div>
-              {% endif %}
               <div class="curso-footer">
                 <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="numero_empleado" value="{{ empleado }}">
                   <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
-
                   <div class="form-group" style="margin-bottom:.8rem;">
-                    <label class="form-label" style="font-size:.72rem;">Jornada preferida</label>
+                    <label class="curso-jornada-label">Jornada Preferida</label>
                     <select class="form-select" name="horario_elegido" required>
                       <option value="" disabled selected>Selecciona un horario...</option>
                       {% for horario in curso['horarios'] %}
@@ -454,7 +535,6 @@
                       {% endfor %}
                     </select>
                   </div>
-
                   <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
                     Matricularme
                   </button>
@@ -543,6 +623,31 @@
 
 <div class="portal-overlay" id="portal-overlay"></div>
 
+<!-- ── MODAL: Confirmar cancelación de matrícula ── -->
+<div class="modal-overlay" id="enroll-cancel-confirm-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cancel-confirm-title">
+  <div class="modal-box cancel-confirm-box">
+    <div class="cancel-confirm-icon-wrap" aria-hidden="true">
+      <span class="cancel-confirm-icon-inner">⚠</span>
+    </div>
+    <h3 class="cancel-confirm-heading" id="cancel-confirm-title">Cancelar Inscripción</h3>
+    <p class="cancel-confirm-desc">
+      ¿Confirmas que deseas cancelar tu inscripción en<br>
+      <strong id="cancel-confirm-course-name"></strong>?
+    </p>
+    <p class="cancel-confirm-note">
+      Esta acción es reversible: puedes volver a inscribirte si hay cupos disponibles.
+    </p>
+    <div class="cancel-confirm-actions">
+      <button type="button" class="btn-ghost cancel-confirm-dismiss" onclick="cerrarModal('enroll-cancel-confirm-modal')">
+        Mantener inscripción
+      </button>
+      <button type="button" class="cancel-confirm-submit">
+        Sí, cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
 <script type="application/json" id="docente-calendar-data">{{ calendario_eventos_docente|default([], true)|tojson }}</script>
 
 <script>
@@ -617,6 +722,61 @@
         if (toastOverlay) {
           toastOverlay.classList.add('hidden');
         }
+      }
+    });
+  })();
+</script>
+
+<script>
+  /* Aplica el ancho de la barra de progreso del historial desde data-pct.
+     Se usa requestAnimationFrame para que el transition CSS se active tras el primer paint. */
+  (function () {
+    var fills = document.querySelectorAll('.historial-progress-fill[data-pct]');
+    fills.forEach(function (el) {
+      var pct = parseFloat(el.dataset.pct) || 0;
+      requestAnimationFrame(function () {
+        el.style.width = Math.min(Math.max(pct, 0), 100) + '%';
+      });
+    });
+  })();
+</script>
+
+<script>
+  /* Intercepción del formulario de cancelación → modal glassmorphism */
+  (function () {
+    var confirmModal  = document.getElementById('enroll-cancel-confirm-modal');
+    var courseNameEl  = document.getElementById('cancel-confirm-course-name');
+    var confirmBtn    = confirmModal ? confirmModal.querySelector('.cancel-confirm-submit') : null;
+    var pendingForm   = null;
+
+    if (!confirmModal || !confirmBtn) return;
+
+    document.querySelectorAll('.enroll-cancel-intercept').forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        pendingForm = form;
+
+        var courseName = (form.dataset.courseName || '').trim();
+        if (courseNameEl) courseNameEl.textContent = courseName || 'esta capacitación';
+
+        confirmModal.classList.add('active');
+        confirmModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+
+    confirmBtn.addEventListener('click', function () {
+      if (pendingForm) {
+        cerrarModal('enroll-cancel-confirm-modal');
+        pendingForm.submit();
+        pendingForm = null;
+      }
+    });
+
+    /* Cerrar al clic en el fondo del overlay */
+    confirmModal.addEventListener('click', function (e) {
+      if (e.target === confirmModal) {
+        cerrarModal('enroll-cancel-confirm-modal');
       }
     });
   })();

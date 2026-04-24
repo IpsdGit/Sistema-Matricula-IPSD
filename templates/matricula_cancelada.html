@@ -32,16 +32,12 @@
     </div>
 
     <div class="flex gap-2 mt-3" style="justify-content:center;">
-      <a href="/" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);">
+      <a href="/dashboard" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);">
         Inicio
       </a>
-      <form action="/dashboard" method="POST">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-        <button type="submit" class="btn-primary-ipsd">
-          Ver mis cursos
-        </button>
-      </form>
+      <a href="/dashboard?seccion=disponibles" class="btn-primary-ipsd" style="text-decoration:none; justify-content:center;">
+        Ver mis cursos
+      </a>
     </div>
   </div>
 </div>

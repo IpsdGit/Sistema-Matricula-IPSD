@@ -3687,3 +3687,124 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Abril 23, 2026  
 **Versión actual**: 1.7.4 (Vista de Asistencias y Rediseño del Portal Docente)  
 **Estado**: Development - UI y reportes de asistencia refinados; portal docente rediseñado
+
+---
+
+# 💎 Versión 1.8.0 - Modernización del Portal Docente (Bento Grid & Glassmorphism)
+
+**Fecha**: Abril 24, 2026  
+**Cambios**: Modernización total de la arquitectura visual del Dashboard del Docente, optimización de interacciones y navegación.
+
+## Cambio 29.1: Arquitectura de Bento Grid y Glassmorphism en el Dashboard
+**Fecha**: Abril 24, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`
+
+**QUÉ**:
+- Implementación de un layout basado en **Bento Grid** para organizar la información del docente (Perfil, Estadísticas, Accesos Rápidos, Calendario e Historial).
+- Aplicación de estética **Glassmorphism** (fondos translúcidos con desenfoque de fondo y bordes sutiles) en todos los contenedores principales.
+- Introducción de micro-interacciones y transiciones suaves al interactuar con los elementos del dashboard.
+
+**POR QUÉ**:
+- Se buscaba una interfaz más moderna, profesional y alineada con las tendencias actuales de diseño web (premium aesthetics).
+- Mejorar la jerarquía visual de la información, permitiendo al docente escanear sus datos más rápido.
+
+**PARA QUÉ**:
+- Proporcionar una experiencia de usuario "wow" y de alta gama.
+- Facilitar la lectura de estadísticas y el acceso a las funciones más utilizadas.
+
+---
+
+## Cambio 29.2: Rediseño de Tarjetas de Capacitación y Sistema de Badges
+**Fecha**: Abril 24, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`
+
+**QUÉ**:
+- Rediseño estructural de las tarjetas de curso (`curso-card`):
+  - Inclusión de badges de modalidad (Virtual/Presencial) integrados en el área visual superior.
+  - Reorganización de la jerarquía de textos (ID, Título, Período, Fecha).
+  - Optimización de los selectores de jornada y botones de acción.
+- Animación dinámica de barras de progreso en el historial de capacitaciones mediante `requestAnimationFrame`.
+
+**POR QUÉ**:
+- Las tarjetas anteriores se sentían congestionadas y la modalidad no era lo suficientemente visible.
+- El feedback visual del progreso histórico era estático y poco atractivo.
+
+**PARA QUÉ**:
+- Mejorar la legibilidad de la oferta académica.
+- Aumentar el engagement visual mediante animaciones fluidas y estados claros.
+
+---
+
+## Cambio 29.3: Interacción de Cancelación mediante Modal Moderno
+**Fecha**: Abril 24, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`
+
+**QUÉ**:
+- Reemplazo de los diálogos de confirmación estándar por un **Modal de Glassmorphism** personalizado para la cancelación de matrículas.
+- Intercepción de formularios mediante JavaScript para mostrar el modal con contexto dinámico (nombre del curso a cancelar).
+- Implementación de controles de accesibilidad (`aria-modal`, `role="dialog"`) y gestión de foco.
+
+**POR QUÉ**:
+- Los diálogos nativos del navegador (`confirm()`) rompen la estética premium del portal.
+- Se requería una confirmación más clara que explicara las consecuencias (reversibilidad) de la acción.
+
+**PARA QUÉ**:
+- Mantener la coherencia estética en todo el flujo de usuario.
+- Reducir errores de cancelación accidental mediante una confirmación más intencional.
+
+---
+
+## Cambio 29.4: Optimización de Navegación Post-Cancelación
+**Fecha**: Abril 24, 2026  
+**Archivos afectados**: `templates/matricula_cancelada.html`
+
+**QUÉ**:
+- Refactorización de los enlaces de retorno en la página de confirmación de cancelación.
+- Cambio de formularios POST redundantes por enlaces directos GET hacia `/dashboard` con parámetros de sección.
+- Ajuste de estilos para mantener la consistencia con el nuevo sistema visual.
+
+**POR QUÉ**:
+- El uso de POST para navegar hacia atrás causaba advertencias de "Reenvío de formulario" en el navegador al usar las flechas de navegación.
+- Se perdía la persistencia del estado de la sección en algunos casos.
+
+**PARA QUÉ**:
+- Hacer la navegación más fluida y natural para el usuario.
+- Evitar errores técnicos del navegador durante la navegación entre estados de matrícula.
+
+---
+
+## Cambio 29.5: Refactorización Técnica y Accesibilidad
+**Fecha**: Abril 24, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `app.py`
+
+**QUÉ**:
+- Resolución de duplicaciones en selectores CSS para mejorar la mantenibilidad.
+- Corrección de la jerarquía de encabezados (H1-H6) para cumplimiento de estándares SEO y accesibilidad.
+- Optimización de la lógica de sesión en `app.py` para asegurar persistencia durante la navegación entre secciones.
+- Limpieza de código muerto y comentarios obsoletos tras el rediseño.
+
+**POR QUÉ**:
+- El crecimiento del archivo CSS estaba generando conflictos de especificidad.
+- La navegación anterior presentaba inconsistencias en la detección del usuario activo tras ciertas operaciones.
+
+**PARA QUÉ**:
+- Asegurar un código más limpio, escalable y accesible.
+- Garantizar que la aplicación cumpla con las mejores prácticas de desarrollo web moderno.
+
+---
+
+## Resumen de Cambios v1.8.0
+
+| Aspecto | Cambio |
+|--------|--------|
+| UI/UX | Bento Grid layout con efectos de Glassmorphism |
+| Componentes | Rediseño de tarjetas de curso y sistema de badges visuales |
+| Interacciones | Nuevo modal de confirmación de cancelación con estética premium |
+| Backend/Nav | Optimización de flujos GET y persistencia de sesión |
+| Calidad | Refactorización CSS y corrección de jerarquía de encabezados (Accesibilidad) |
+
+---
+
+**Última actualización**: Abril 24, 2026  
+**Versión actual**: 1.8.0 (Modernización del Portal Docente - Bento Grid & Glassmorphism)  
+**Estado**: Development - Dashboard rediseñado con estética premium y UX optimizada
