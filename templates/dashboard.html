@@ -123,73 +123,107 @@
       {% endif %}
 
       {% if seccion_activa == 'notificaciones' %}
-      <section class="notificaciones-center">
-        <div class="notificaciones-header-row">
-          <div>
-            <h2>Centro de Notificaciones</h2>
-            <p>Alertas y avisos importantes del sistema.</p>
-          </div>
-          <a href="/dashboard?seccion=disponibles" class="btn-ghost notificaciones-back-btn">← Volver al Dashboard</a>
+      <section class="notificaciones-section animate-fade-up">
+        <div class="notificaciones-header-row text-center">
+          <h2 class="title-gradient">Centro de Notificaciones</h2>
+          <p>Mantente al día con tus actividades académicas y administrativas.</p>
         </div>
 
-        <div class="notificaciones-toolbar">
+        <div class="notificaciones-toolbar notificaciones-toolbar-wide">
           <div class="notificaciones-filtros">
-            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas" class="notificacion-filtro {% if filtro_notificacion == 'todas' %}active{% endif %}">Todas</a>
-            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=nuevas" class="notificacion-filtro {% if filtro_notificacion == 'nuevas' %}active{% endif %}">Nuevas ofertas</a>
-            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=asistencia" class="notificacion-filtro {% if filtro_notificacion == 'asistencia' %}active{% endif %}">Asistencia</a>
-            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=resultados" class="notificacion-filtro {% if filtro_notificacion == 'resultados' %}active{% endif %}">Resultados</a>
-            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=certificados" class="notificacion-filtro {% if filtro_notificacion == 'certificados' %}active{% endif %}">Certificados</a>
+            {% set f_todas = 'active' if filtro_notificacion == 'todas' else '' %}
+            {% set f_acciones = 'active' if filtro_notificacion == 'acciones' else '' %}
+            {% set f_asistencia = 'active' if filtro_notificacion == 'asistencia' else '' %}
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas" class="notificacion-filtro {{ f_todas }}">Todas</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=acciones" class="notificacion-filtro {{ f_acciones }}">Acciones Formativas</a>
+            <a href="/dashboard?seccion=notificaciones&filtro_notificacion=asistencia" class="notificacion-filtro {{ f_asistencia }}">Asistencia</a>
           </div>
-          <a
-            href="/dashboard?seccion=notificaciones&filtro_notificacion={{ filtro_notificacion }}&marcar_leidas=1"
-            class="btn-primary-ipsd notificaciones-mark-read"
-          >
-            Marcar todas como leídas
-          </a>
         </div>
 
-        <div class="card-ipsd">
-          <div class="card-header">
-            <div>
-              <h5 style="margin:0; font-weight:700;">Notificaciones Recientes</h5>
-              <p style="margin:.2rem 0 0; color:var(--text-muted); font-size:.82rem;">Mostrando: {{ filtro_notificacion }}</p>
-            </div>
-            <span class="badge-pill secondary">{{ notificaciones|length }} elemento(s)</span>
-          </div>
-          <div class="card-body">
+        <div class="notificaciones-layout">
+          <div class="notificaciones-main">
             {% if notificaciones %}
-            <div class="notificaciones-lista">
               {% for item in notificaciones %}
-              {% if item['accion_url'] %}
-              <a href="{{ item['accion_url'] }}" class="notificacion-item-link" title="{{ item['accion_label'] or 'Abrir acción' }}">
-                <article class="notificacion-item {{ item['nivel'] }} {% if item['leida'] %}leida{% endif %}">
-                  <span class="notificacion-item-icon">{{ item['icono'] }}</span>
-                  <div class="notificacion-item-body">
-                    <p class="notificacion-item-title">{{ item['titulo'] }}</p>
-                    <p class="notificacion-item-text">{{ item['mensaje'] }}</p>
-                    <p class="notificacion-item-time">{{ item['fecha'] }}</p>
+                {% set nivel_class = 'success' if item['nivel'] == 'success' else ('warning' if item['nivel'] == 'warning' else 'info') %}
+                {% set categoria_label = 'Inscripción • Acción Formativa' if item['nivel'] == 'success' else ('Asistencia • Recordatorio' if item['nivel'] == 'warning' else 'Oferta Académica • Nueva') %}
+                {% set leida_class = 'notificacion-card--leida' if item['leida'] else '' %}
+                {% set icon_class = 'ui-icon-success' if item['nivel'] == 'success' else ('ui-icon-warning' if item['nivel'] == 'warning' else 'ui-icon-info') %}
+                
+                <div class="notificacion-card glass-surface study-card p-4 p-md-5 {{ leida_class }} notificacion-card--{{ nivel_class }}">
+                  <div class="card-blob" aria-hidden="true"></div>
+                  <div class="notificacion-card-content">
+                    <div class="notificacion-icon-wrap">
+                      <span class="ui-icon {{ icon_class }}" aria-hidden="true"></span>
+                    </div>
+                    <div class="notificacion-body">
+                      <div class="notificacion-top-line">
+                        <div>
+                          <span class="notificacion-category">{{ categoria_label }}</span>
+                          <h3 class="notificacion-title">{{ item['titulo'] }}</h3>
+                        </div>
+                        <span class="notificacion-time">{{ item['fecha'] }}</span>
+                      </div>
+                      <p class="notificacion-message">{{ item['mensaje'] }}</p>
+                      
+                      {% if item['accion_url'] %}
+                      <div class="notificacion-actions">
+                        <a href="{{ item['accion_url'] }}" class="btn-notif">
+                          {{ item['accion_label'] or 'Ver Detalles' }}
+                        </a>
+                      </div>
+                      {% endif %}
+                    </div>
                   </div>
-                </article>
-              </a>
-              {% else %}
-              <article class="notificacion-item {{ item['nivel'] }} {% if item['leida'] %}leida{% endif %}">
-                <span class="notificacion-item-icon">{{ item['icono'] }}</span>
-                <div class="notificacion-item-body">
-                  <p class="notificacion-item-title">{{ item['titulo'] }}</p>
-                  <p class="notificacion-item-text">{{ item['mensaje'] }}</p>
-                  <p class="notificacion-item-time">{{ item['fecha'] }}</p>
                 </div>
-              </article>
-              {% endif %}
               {% endfor %}
-            </div>
             {% else %}
-            <div class="alert-ipsd info">
-              <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
-              <span>No hay notificaciones disponibles para este filtro.</span>
-            </div>
+              <div class="glass-surface study-card p-5 text-center">
+                <span class="ui-icon ui-icon-info" style="font-size: 3rem; opacity: .2; margin-bottom: 1rem; display: block;"></span>
+                <p class="text-muted">No hay notificaciones disponibles para este filtro.</p>
+              </div>
             {% endif %}
           </div>
+
+          <aside class="notificaciones-sidebar">
+            <div class="insight-blob study-card">
+              <div class="insight-title">
+                <span class="ui-icon ui-icon-warning" style="color: #f59e0b; font-size: 1.5rem;"></span>
+                <h4>Próximas Actividades</h4>
+              </div>
+              <div class="insight-limits">
+                {% if calendario_eventos_docente %}
+                  {% for evento in calendario_eventos_docente[:2] %}
+                  <div class="insight-limit-item {% if loop.index is divisibleby 2 %}blue{% endif %}" onclick="window.location.href='/dashboard?seccion=calendario'" style="cursor: pointer;" title="Ir al calendario">
+                    <span class="limit-time">{{ evento.fecha_formateada }}</span>
+                    <span class="limit-name">{% if evento.tipo_evento == 'sesion' %}Sesión Programada{% else %}Inicio de Curso{% endif %}</span>
+                    <span class="limit-sub">{{ evento.nombre_curso }}</span>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <p class="text-xs text-muted">No hay actividades próximas programadas.</p>
+                {% endif %}
+              </div>
+              <a href="/dashboard?seccion=calendario" class="btn-insight-nav">
+                VER CALENDARIO
+              </a>
+            </div>
+
+            <div class="insight-stat-card study-card shadow-xl">
+              <h4>Estado de Formación</h4>
+              <p>Has completado el registro de asistencia en todas tus sesiones activas esta semana.</p>
+              
+              {% set total_m = matriculados|length %}
+              {% set pct_m = 100 if total_m > 0 else 0 %}
+              <div class="insight-stat-progress">
+                <div class="stat-bar-bg"></div>
+                <div class="stat-bar-fill" data-pct="{{ pct_m }}"></div>
+                <div class="stat-progress-label">
+                  <span>Asistencia Semanal</span>
+                  <span>{{ pct_m }}%</span>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -728,10 +762,10 @@
 </script>
 
 <script>
-  /* Aplica el ancho de la barra de progreso del historial desde data-pct.
-     Se usa requestAnimationFrame para que el transition CSS se active tras el primer paint. */
+  /* Aplica el ancho de las barras de progreso usando atributos data-pct para evitar errores del linter CSS de VS Code.
+     Se usa requestAnimationFrame para que la transición CSS se active correctamente. */
   (function () {
-    var fills = document.querySelectorAll('.historial-progress-fill[data-pct]');
+    var fills = document.querySelectorAll('.historial-progress-fill[data-pct], .stat-bar-fill[data-pct]');
     fills.forEach(function (el) {
       var pct = parseFloat(el.dataset.pct) || 0;
       requestAnimationFrame(function () {

@@ -129,18 +129,24 @@ def register_portal_routes(app):
         if not resultado['ok']:
             return render_template('index.html', error=resultado['error'])
 
-        if request.method == 'GET' and seccion_activa == 'notificaciones' and request.args.get('marcar_leidas') == '1':
-            ids_actuales = [n['id'] for n in resultado['contexto'].get('notificaciones_todas', [])]
-            leidas = set(session.get('docente_notificaciones_leidas', []))
-            leidas.update(ids_actuales)
-            session['docente_notificaciones_leidas'] = sorted(leidas)
-            return redirect(
-                url_for(
-                    'dashboard',
-                    seccion='notificaciones',
-                    filtro_notificacion=filtro_notificacion,
-                )
-            )
+        if request.method == 'GET' and seccion_activa == 'notificaciones':
+            notifs_todas = resultado['contexto'].get('notificaciones_todas', [])
+            if notifs_todas:
+                ids_actuales = [n['id'] for n in notifs_todas]
+                leidas = set(session.get('docente_notificaciones_leidas', []))
+                
+                # Check if there are new unread notifications
+                if not leidas.issuperset(ids_actuales):
+                    leidas.update(ids_actuales)
+                    session['docente_notificaciones_leidas'] = sorted(leidas)
+                    session.modified = True
+                    
+            # Always update the context in-place so it reflects immediately
+            for n in notifs_todas:
+                n['leida'] = True
+            for n in resultado['contexto'].get('notificaciones', []):
+                n['leida'] = True
+            resultado['contexto']['notificaciones_total'] = 0
 
         resultado['contexto']['nombre_docente'] = session.get('nombre_docente')
         resultado['contexto']['correo_docente'] = session.get('correo_docente')

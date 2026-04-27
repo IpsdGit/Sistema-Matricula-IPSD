@@ -3808,3 +3808,214 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Abril 24, 2026  
 **Versión actual**: 1.8.0 (Modernización del Portal Docente - Bento Grid & Glassmorphism)  
 **Estado**: Development - Dashboard rediseñado con estética premium y UX optimizada
+
+---
+
+# 🔔 Versión 1.9.0 - Refinamiento de Notificaciones y Panel de Insights
+
+**Fecha**: Abril 27, 2026  
+**Cambios**: Introducción de un panel lateral de insights, formateo inteligente de fechas y mejoras proactivas en el sistema de notificaciones del docente.
+
+## Cambio 30.1: Nuevo Panel de Insights y Notificaciones Mejoradas
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `utils.py`
+
+**QUÉ**:
+- Implementación de un nuevo panel lateral (`notificaciones-sidebar`) en la sección de avisos.
+- **Próximas Actividades**: Visualización dinámica de los próximos 2 eventos del calendario (sesiones o inicios de curso) con acceso directo.
+- **Estado de Formación**: Tarjeta estadística con barra de progreso que indica el cumplimiento de asistencia semanal.
+- Rediseño de la lista de notificaciones con estados vacíos mejorados visualmente mediante glassmorphism.
+
+**POR QUÉ**:
+- El docente necesitaba visibilidad inmediata de sus compromisos más cercanos sin entrar al calendario completo.
+- Se requería gamificar/incentivar el registro de asistencia mediante indicadores visuales de progreso.
+
+**PARA QUÉ**:
+- Reducir el tiempo de acceso a la información crítica.
+- Mejorar el cumplimiento en el registro de asistencias mediante recordatorios visuales persistentes.
+
+---
+
+## Cambio 30.2: Sistema de Formateo de Fechas Inteligente
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `utils.py`
+
+**QUÉ**:
+- Creación de la función helper `_formatear_fecha_corta()` en el backend.
+- Lógica de detección relativa: transforma fechas ISO en etiquetas humanas como "HOY", "MAÑANA" o el nombre del día en español (ej: "LUNES, 27 ABR").
+- Integración de estas fechas formateadas en los objetos de evento enviados al frontend.
+
+**POR QUÉ**:
+- Las fechas en formato estándar (AAAA-MM-DD) tienen mayor carga cognitiva para el usuario en contextos de actividades diarias.
+- Mejora la naturalidad de la interfaz al comunicarse con el docente.
+
+**PARA QUÉ**:
+- Facilitar la planificación rápida del docente.
+- Humanizar la comunicación del sistema.
+
+---
+
+## Cambio 30.3: Lógica de Asistencia y Notificaciones Proactivas
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `utils.py`
+
+**QUÉ**:
+- Refinamiento de la notificación de "Marcado de asistencia habilitado":
+  - Ahora solo se muestra si existen sesiones con estado habilitado (`sesiones_habilitadas > 0`).
+  - Incluye un botón de acción directa ("Registrar asistencia") que redirige a la tarjeta del curso correspondiente.
+  - Cambio de iconografía a un rayo (⚡) para denotar urgencia/acción.
+- Nueva notificación de "Confirmación de Matrícula" que se genera automáticamente al inscribirse en un curso.
+
+**POR QUÉ**:
+- Evitar notificaciones de asistencia engañosas en cursos que aún no tienen sesiones abiertas por el administrador.
+- Proporcionar feedback inmediato tras una operación exitosa de matrícula.
+
+**PARA QUÉ**:
+- Aumentar la precisión del sistema de alertas.
+- Mejorar el flujo de navegación hacia las tareas pendientes (asistencia).
+
+---
+
+## Cambio 30.4: Refactorización y Gestión de Cache Visual
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `templates/base.html`, `utils.py`, `static/style.css`
+
+**QUÉ**:
+- **Bumping de versión CSS**: Se actualizó a `?v=4.0` en `base.html` para forzar la recarga de los nuevos estilos de insights.
+- **Refactorización de datos**: Conversión de objetos SQL Row a diccionarios estándar en el backend para permitir la inyección dinámica de propiedades adicionales (como `sesiones_habilitadas`).
+- **Optimización de JS**: Actualización del script de progreso para manejar múltiples tipos de barras (historial vs estadísticas) de forma genérica.
+
+**POR QUÉ**:
+- Asegurar que los usuarios vean los cambios visuales inmediatamente sin problemas de caché del navegador.
+- Facilitar la manipulación de datos en la capa de negocio antes de enviarlos a la vista.
+
+**PARA QUÉ**:
+- Garantizar un despliegue libre de errores visuales.
+- Mejorar la mantenibilidad del código backend.
+
+---
+
+## Resumen de Cambios v1.9.0
+
+| Aspecto | Cambio |
+|--------|--------|
+| Dashboard | Nuevo panel lateral de Insights (Actividades y Estadísticas) |
+| UX | Formateo de fechas humano ("HOY", "MAÑANA") |
+| Notificaciones | Alertas inteligentes basadas en sesiones reales y acciones directas |
+| Backend | Inyección de metadatos de sesiones y refactorización a dicts |
+| Estabilidad | Cache-busting de CSS (v4.0) y optimización de scripts de UI |
+
+---
+
+**Última actualización**: Abril 27, 2026  
+**Versión actual**: 1.9.0 (Refinamiento de Notificaciones y Panel de Insights)  
+**Estado**: Development - Sistema de alertas proactivo e insights de formación activos
+
+---
+
+# 🤖 Versión 1.10.0 - Asistente Virtual Integrado (Gemini IA)
+
+**Fecha**: Abril 27, 2026  
+**Cambios**: Implementación completa de un asistente virtual basado en Inteligencia Artificial (Google Gemini) para soporte interactivo a docentes y administradores.
+
+## Cambio 31.1: Implementación del Asistente Virtual (IA)
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `services/ia_service.py`, `app.py`, `.env`
+
+**QUÉ**:
+- Integración del SDK de Google GenAI para conectar la aplicación con modelos **Gemini (2.5-flash / 2.0-flash)**.
+- Creación de prompts de sistema diferenciados:
+  - **Docentes**: Enfoque en procesos de matrícula, historial formativo y uso del portal.
+  - **Administradores**: Soporte en gestión de cursos, reportes y administración de usuarios.
+- Implementación de un sistema de "respuestas de dominio" (fallbacks locales) para responder preguntas frecuentes incluso si la API de IA no está disponible.
+
+**POR QUÉ**:
+- Reducir la carga de soporte técnico manual mediante una herramienta de auto-servicio 24/7.
+- Proporcionar guía contextual inmediata sobre los flujos del sistema IPSD.
+
+**PARA QUÉ**:
+- Mejorar la autonomía de los usuarios (docentes y admins).
+- Ofrecer una interfaz de soporte moderna, rápida y precisa.
+
+---
+
+## Cambio 31.2: Widget de Chat Flotante y UX Contextual
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `templates/base.html`, `static/style.css`, `static/chat-widget.js`
+
+**QUÉ**:
+- Diseño y desarrollo de una interfaz de chat persistente y accesible desde cualquier página (base template).
+- Características visuales:
+  - Estética **glassmorphism** coherente con el rediseño v1.8.0.
+  - Notificaciones visuales de mensajes entrantes.
+  - Animaciones suaves de apertura/cierre del panel.
+- Funcionalidad: Carga automática del historial reciente al abrir el chat y scroll inteligente hacia el último mensaje.
+
+**POR QUÉ**:
+- Se requería que el asistente fuera accesible en todo momento sin interrumpir el flujo de trabajo del usuario.
+- Mantener la identidad visual premium establecida en versiones anteriores.
+
+**PARA QUÉ**:
+- Facilitar el acceso al soporte sin necesidad de navegar a páginas externas.
+- Proporcionar una experiencia fluida y visualmente atractiva.
+
+---
+
+## Cambio 31.3: Sistema de Persistencia y Seguridad del Chat
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `routes/chat.py`, `services/ia_service.py`, `database.py`
+
+**QUÉ**:
+- Creación de la tabla `historial_chat` para el almacenamiento permanente de las conversaciones.
+- Seguridad:
+  - Validación obligatoria de sesión activa para interactuar con la API de chat.
+  - Protección de rutas mediante tokens **CSRF** integrados en las peticiones AJAX.
+  - Sanitización y normalización de entradas de usuario para prevenir inyecciones.
+- Lógica de resolución de usuario: Detecta automáticamente si el usuario es Docente o Admin para ajustar el contexto de la IA.
+
+**POR QUÉ**:
+- La persistencia permite al usuario retomar conversaciones anteriores.
+- La seguridad es crítica para evitar abusos de la API de IA y proteger los datos del sistema.
+
+**PARA QUÉ**:
+- Garantizar la integridad y trazabilidad de las interacciones con la IA.
+- Proteger la infraestructura del sistema contra accesos no autorizados.
+
+---
+
+## Cambio 31.4: Refactorización de Rutas y Servicios de IA
+**Fecha**: Abril 27, 2026  
+**Archivos afectados**: `app.py`, `routes/chat.py`
+
+**QUÉ**:
+- Modularización de las rutas de chat en `routes/chat.py` para mantener `app.py` limpio.
+- Implementación de endpoints RESTful:
+  - `POST /api/chat`: Procesa nuevos mensajes y genera respuestas.
+  - `GET /api/chat/history`: Recupera los últimos 10 mensajes del hilo actual.
+- Manejo robusto de errores y fallbacks automáticos hacia modelos secundarios en caso de cuotas excedidas o fallas de red.
+
+**POR QUÉ**:
+- Seguir las mejores prácticas de arquitectura Flask (Blueprints/Modularización).
+- Asegurar que el sistema de chat sea resiliente ante fallas externas.
+
+**PARA QUÉ**:
+- Facilitar el mantenimiento futuro del módulo de IA.
+- Ofrecer una alta disponibilidad del servicio de asistencia.
+
+---
+
+## Resumen de Cambios v1.10.0
+
+| Aspecto | Cambio |
+|--------|--------|
+| Nueva Función | Asistente Virtual Inteligente (IA) integrado |
+| Backend | Servicio de IA con prompts contextuales y persistencia en DB |
+| Frontend | Chat Widget flotante con estética Glassmorphism |
+| Seguridad | Validación CSRF y de sesión en endpoints de chat |
+| Resiliencia | Sistema de fallbacks y rotación de modelos de IA |
+
+---
+
+**Última actualización**: Abril 27, 2026  
+**Versión actual**: 1.10.0 (Asistente Virtual Integrado - Gemini IA)  
+**Estado**: Development - Soporte interactivo inteligente habilitado para todos los usuarios

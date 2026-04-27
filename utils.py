@@ -308,13 +308,19 @@ def generar_id_curso(conn, direccion, modalidad):
 
 def cargar_contexto_dashboard_docente(conn, numero_empleado):
     query_matriculados = '''
-        SELECT c.id, c.nombre, c.mes, c.anio, m.horario_elegido, m.id as matricula_id, m.aprobado
+        SELECT c.id, c.nombre, c.mes, c.anio, m.horario_elegido, m.id as matricula_id, m.aprobado,
+               (SELECT COUNT(*) FROM sesiones_curso s WHERE s.id_curso = c.id AND s.estado = 1) as sesiones_habilitadas
         FROM matriculas m
         JOIN capacitaciones c ON m.id_capacitacion = c.id
         WHERE m.numero_empleado = ?
         ORDER BY m.id DESC
     '''
     cursos_matriculados = conn.execute(query_matriculados, (numero_empleado,)).fetchall()
+    
+    # Convertir a dict para poder mutarlo o acceder más fácil
+    cursos_matriculados_list = []
+    for fila in cursos_matriculados:
+        cursos_matriculados_list.append(dict(fila))
 
     resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
 
@@ -391,7 +397,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
             }
         )
 
-    return cursos_disponibles, cursos_matriculados, avisos_oportunidades
+    return cursos_disponibles, cursos_matriculados_list, avisos_oportunidades
 
 
 def _fecha_iso_desde_partes_curso(anio, mes_nombre, dia):
@@ -483,6 +489,22 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
         params_vinculados,
     ).fetchall()
 
+    def _formatear_fecha_corta(fecha_str, hora_str=None):
+        try:
+            dt = datetime.strptime(fecha_str, '%Y-%m-%d')
+            dia = DIAS_SEMANA[dt.weekday()].upper()
+            if dt.date() == datetime.now().date():
+                dia = "HOY"
+            elif dt.date() == (datetime.now() + __import__('datetime').timedelta(days=1)).date():
+                dia = "MAÑANA"
+            
+            res = f"{dia}, {dt.day} {MESES_ES[dt.month-1][:3].upper()}"
+            if hora_str:
+                res += f" {hora_str[:5]}"
+            return res
+        except:
+            return f"{fecha_str} {hora_str or ''}"
+
     eventos = []
     for curso in cursos_vinculados:
         fecha_iso = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
@@ -499,6 +521,7 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
                 'tipo_evento': 'curso',
                 'estado': None,
                 'modalidad': curso['modalidad'] or '',
+                'fecha_formateada': _formatear_fecha_corta(fecha_iso, None)
             }
         )
 
@@ -517,6 +540,7 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
                 'tipo_evento': 'sesion',
                 'estado': sesion['estado'],
                 'modalidad': sesion['modalidad'] or '',
+                'fecha_formateada': _formatear_fecha_corta(fecha_iso, sesion['hora_inicio'])
             }
         )
 
@@ -608,6 +632,18 @@ def construir_notificaciones_docente(
                 fecha=fecha,
                 clave=f"res-ab-{fila['id']}",
             )
+        elif estado == 'PENDIENTE':
+            agregar(
+                tipo='matricula',
+                titulo='Confirmación de Matrícula',
+                mensaje=f"Te has inscrito exitosamente en la Acción Formativa: \"{fila['nombre_curso']}\".",
+                nivel='success',
+                icono='✅',
+                fecha=fecha,
+                clave=f"mat-pend-{fila['id']}",
+                accion_url='/dashboard?seccion=calendario',
+                accion_label='Ver Calendario'
+            )
 
     for curso in cursos_disponibles[:4]:
         agregar(
@@ -632,16 +668,18 @@ def construir_notificaciones_docente(
             clave='oferta-resumen',
         )
 
-    cursos_pendientes = [c for c in cursos_matriculados if c['aprobado'] is None]
+    cursos_pendientes = [c for c in cursos_matriculados if c['aprobado'] is None and c.get('sesiones_habilitadas', 0) > 0]
     for curso in cursos_pendientes[:4]:
         agregar(
             tipo='asistencia',
             titulo='Marcado de asistencia habilitado',
             mensaje=f"Puedes registrar asistencia en {curso['nombre']} ({curso['id']}).",
             nivel='warning',
-            icono='🗓️',
+            icono='⚡',
             fecha='Acción requerida',
             clave=f"asis-{curso['matricula_id']}",
+            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+            accion_label='Registrar asistencia',
         )
 
     for aviso in avisos_oportunidades[:6]:
