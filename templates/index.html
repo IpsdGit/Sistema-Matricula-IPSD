@@ -10,7 +10,7 @@
       <!-- Lado izquierdo: info -->
       <div class="hero-content">
         <div class="hero-badge animate-fade-up">
-          <span>🎓</span> Sistema de Matrícula Docente
+          <span><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">school</span></span> Sistema de Matrícula Docente
         </div>
         <h1 class="animate-fade-up-1">
           Portal de<br>
@@ -44,14 +44,14 @@
       <div class="animate-fade-up-2">
         <div class="login-card">
           <div style="text-align:center; margin-bottom:1.8rem;">
-            <div style="width:64px; height:64px; background:linear-gradient(135deg,#2563eb,#7c3aed); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto .9rem;">🎓</div>
+            <div style="width:64px; height:64px; background:linear-gradient(135deg,#2563eb,#7c3aed); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto .9rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">school</span></div>
             <h2 style="color:#fff; font-size:1.3rem; margin:0 0 .3rem;">Acceso Docente</h2>
             <p style="color:#94a3b8; font-size:.875rem; margin:0;">Ingresa tu correo institucional y número de empleado</p>
           </div>
 
           {% if error %}
           <div class="alert-ipsd danger" style="margin-bottom:1.2rem;" id="error-alert">
-            <span>⚠️</span>
+            <span><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">warning</span>️</span>
             <span>{{ error }}</span>
           </div>
           {% endif %}
@@ -98,7 +98,7 @@
           <div style="margin-top:1.5rem; padding-top:1.2rem; border-top:1px solid rgba(255,255,255,.1); text-align:center;">
             <a href="/login_admin" style="color:#64748b; font-size:.8rem; text-decoration:none; transition:color .2s;"
                onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#64748b'">
-              🔒 Acceso Administrador
+              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span> Acceso Administrador
             </a>
           </div>
         </div>

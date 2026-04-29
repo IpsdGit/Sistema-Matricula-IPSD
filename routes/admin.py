@@ -253,6 +253,12 @@ def register_admin_routes(app):
             session.get('admin_direccion', 'IPSD'),
         )
 
+        from services.certificate_service import obtener_plantillas_por_direccion, obtener_todas_las_plantillas
+        if admin_rol == 'superadmin':
+            plantillas = obtener_todas_las_plantillas()
+        else:
+            plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
+
         return render_template(
             'admin.html',
             registros=dashboard_payload['registros'],
@@ -270,6 +276,7 @@ def register_admin_routes(app):
             vista_inicial=dashboard_payload['vista_inicial'],
             fecha_hoy=datetime.now().strftime('%Y-%m-%d'),
             horarios_base=HORARIOS_BASE,
+            plantillas=plantillas,
         )
 
     @app.route('/admin/curso/<id_curso>/sesiones')
@@ -696,6 +703,9 @@ def register_admin_routes(app):
         modalidad = request.form.get('modalidad', '').strip()
         enlace_virtual = request.form.get('enlace_virtual', '').strip()
         cupos_maximos_raw = request.form.get('cupos_maximos', '').strip()
+        id_plantilla_certificado = request.form.get('id_plantilla_certificado')
+        if id_plantilla_certificado and not id_plantilla_certificado.isdigit():
+            id_plantilla_certificado = None
         es_superadmin = session.get('admin_rol') == 'superadmin'
 
         if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
@@ -758,6 +768,7 @@ def register_admin_routes(app):
             direccion_curso=direccion_curso,
             fechas_objetivo=fechas_objetivo,
             franjas_horarias=[],
+            id_plantilla_certificado=id_plantilla_certificado,
         )
         if not create_result['ok']:
             if create_result.get('validation_error'):
@@ -788,6 +799,9 @@ def register_admin_routes(app):
         modalidad = request.form.get('modalidad', '').strip()
         enlace_virtual = request.form.get('enlace_virtual', '').strip()
         cupos_maximos_raw = request.form.get('cupos_maximos', '').strip()
+        id_plantilla_certificado = request.form.get('id_plantilla_certificado')
+        if id_plantilla_certificado and not id_plantilla_certificado.isdigit():
+            id_plantilla_certificado = None
 
         if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
             tipo_accion = 'CURSO'
@@ -847,6 +861,7 @@ def register_admin_routes(app):
             cupos_maximos=cupos_maximos,
             enlace_virtual=enlace_virtual,
             dia_semana=dia_semana,
+            id_plantilla_certificado=id_plantilla_certificado,
         )
         if not update_result['ok']:
             return redireccion_admin_vista('cursos')

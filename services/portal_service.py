@@ -292,7 +292,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
         curso = conn.execute(
             '''
             SELECT id, nombre, anio, trimestre, mes, dia, modalidad, enlace_virtual, duracion_tipo,
-                   tipo_accion, horas_totales, semanas_duracion
+                   tipo_accion, horas_totales, semanas_duracion, id_plantilla_certificado
             FROM capacitaciones
             WHERE id = ?
             LIMIT 1
@@ -452,6 +452,8 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
                     matricula_activa['horario_elegido'] if matricula_activa and matricula_activa['horario_elegido']
                     else (historial_ultimo['horario_elegido'] if historial_ultimo else None)
                 ),
+                'matricula_id': matricula_activa['id'] if matricula_activa else None,
+                'plantilla_disponible': bool(curso['id_plantilla_certificado']),
                 'estado_matricula': historial_ultimo['estado_codigo'] if historial_ultimo else None,
                 'estado_matricula_nombre': historial_ultimo['estado_nombre'] if historial_ultimo else None,
                 'fecha_ultimo_estado': historial_ultimo['fecha_evento'] if historial_ultimo else None,

@@ -869,11 +869,13 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 
 .ui-icon::before {
   content: '';
+  font-family: 'Material Symbols Outlined';
   width: 100%;
   height: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 .ui-icon-bell {
@@ -882,8 +884,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-bell::before {
-  content: '🔔';
-  font-size: .82rem;
+  content: 'notifications';
+  font-size: 1.1rem;
 }
 
 .ui-icon-danger {
@@ -892,8 +894,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-danger::before {
-  content: '⚠';
-  font-size: .78rem;
+  content: 'warning';
+  font-size: 1.1rem;
   color: #dc2626;
 }
 
@@ -903,8 +905,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-warning::before {
-  content: '⚡';
-  font-size: .76rem;
+  content: 'bolt';
+  font-size: 1.1rem;
 }
 
 .ui-icon-info {
@@ -913,8 +915,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-info::before {
-  content: 'ℹ';
-  font-size: .82rem;
+  content: 'info';
+  font-size: 1.1rem;
 }
 
 .ui-icon-success {
@@ -923,8 +925,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-success::before {
-  content: '✓';
-  font-size: .82rem;
+  content: 'check_circle';
+  font-size: 1.1rem;
 }
 
 .ui-icon-courses {
@@ -933,8 +935,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-courses::before {
-  content: '📚';
-  font-size: .76rem;
+  content: 'library_books';
+  font-size: 1.1rem;
 }
 
 .ui-icon-check {
@@ -943,8 +945,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-check::before {
-  content: '✓';
-  font-size: .78rem;
+  content: 'check';
+  font-size: 1.1rem;
 }
 
 .ui-icon-lock {
@@ -956,8 +958,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 }
 
 .ui-icon-lock::before {
-  content: '🔒';
-  font-size: .72rem;
+  content: 'lock';
+  font-size: 1rem;
 }
 
 .icon-history,
@@ -976,19 +978,24 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
   color: #001b3e;
 }
 
+.icon-history::after,
+.icon-calendar::after,
+.icon-catalog::after {
+  font-family: 'Material Symbols Outlined';
+  font-size: 1.1rem;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 .icon-history::after {
-  content: '📋';
-  font-size: .88rem;
+  content: 'history';
 }
 
 .icon-calendar::after {
-  content: '📅';
-  font-size: .88rem;
+  content: 'calendar_month';
 }
 
 .icon-catalog::after {
-  content: '📂';
-  font-size: .88rem;
+  content: 'view_list';
 }
 
 .portal-alert-btn {
@@ -2222,6 +2229,404 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 .modal-desc  { color: var(--text-muted); font-size: .9rem; text-align: center; margin-bottom: 1.5rem; line-height: 1.6; }
 .modal-actions { display: flex; gap: .75rem; }
 .modal-actions button { flex: 1; }
+
+/* ─── CSD — COURSE SESSION DETAIL MODAL ─── */
+.csd-modal-box {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 28px;
+  width: min(92vw, 840px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0, 23, 54, 0.18), 0 8px 24px rgba(0, 23, 54, 0.08);
+  transform: scale(.96) translateY(16px);
+  transition: transform .32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s ease;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+}
+.modal-overlay.active .csd-modal-box {
+  transform: scale(1) translateY(0);
+}
+
+/* Header */
+.csd-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(196, 198, 208, .4);
+  border-radius: 28px 28px 0 0;
+  padding: 1.4rem 1.8rem 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.csd-header-left { flex: 1; }
+
+.csd-header-badges {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .6rem;
+}
+
+.csd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .28rem .8rem;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.csd-badge--id {
+  background: rgba(212, 227, 255, .9);
+  color: #001b3e;
+  border: 1px solid rgba(0, 44, 86, .18);
+}
+
+.csd-badge--status {
+  background: rgba(255, 223, 153, .9);
+  color: #5a4300;
+  border: 1px solid rgba(90, 67, 0, .18);
+}
+
+.csd-badge--status.csd-status-aprobado {
+  background: rgba(220, 252, 231, .9);
+  color: #166534;
+  border-color: rgba(22, 101, 52, .2);
+}
+
+.csd-badge--status.csd-status-cancelado {
+  background: rgba(254, 226, 226, .9);
+  color: #991b1b;
+  border-color: rgba(153, 27, 27, .2);
+}
+
+.csd-title {
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -.025em;
+  color: #001736;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.csd-close-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 198, 208, .6);
+  background: rgba(242, 244, 246, .8);
+  color: #43474f;
+  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .2s ease, transform .2s ease;
+}
+.csd-close-btn:hover {
+  background: rgba(224, 227, 229, .9);
+  transform: rotate(90deg);
+}
+
+/* Bento info grid */
+.csd-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .7rem;
+  padding: 1rem 1.8rem;
+  border-bottom: 1px solid rgba(196, 198, 208, .3);
+}
+
+@media (max-width: 600px) {
+  .csd-info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.csd-info-cell {
+  background: rgba(247, 249, 251, .8);
+  border: 1px solid rgba(196, 198, 208, .45);
+  border-radius: 16px;
+  padding: .9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.csd-info-label {
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #43474f;
+}
+
+.csd-info-value {
+  font-size: .96rem;
+  font-weight: 700;
+  color: #001736;
+}
+
+/* Body: two-column layout */
+.csd-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) 3fr;
+  gap: 1.2rem;
+  padding: 1.2rem 1.8rem 1.8rem;
+}
+
+@media (max-width: 680px) {
+  .csd-body { grid-template-columns: 1fr; }
+}
+
+/* LEFT column */
+.csd-left {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+
+/* QR / Attendance block */
+.csd-qr-block {
+  background: rgba(247, 249, 251, .8);
+  border: 1px solid rgba(196, 198, 208, .45);
+  border-radius: 22px;
+  padding: 1.4rem 1.2rem 1.2rem;
+  position: relative;
+  overflow: hidden;
+  color: #001736;
+  box-shadow: 0 8px 24px rgba(0, 23, 54, .06);
+}
+
+.csd-qr-block-glow {
+  display: none;
+}
+
+.csd-qr-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #001736;
+  margin: 0 0 .7rem;
+  position: relative;
+  z-index: 1;
+}
+
+.csd-qr-session-info {
+  font-size: .78rem;
+  color: #43474f;
+  margin-bottom: .8rem;
+  position: relative;
+  z-index: 1;
+}
+
+.csd-qr-wrap {
+  background: #fff;
+  border-radius: 14px;
+  padding: .65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .9rem;
+  position: relative;
+  z-index: 1;
+  max-width: 180px;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid rgba(196, 198, 208, .45);
+}
+
+.csd-attend-btn {
+  width: 100%;
+  background: #002b5c;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: .72rem .9rem;
+  font-size: .88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  transition: background .2s ease, transform .2s ease;
+  position: relative;
+  z-index: 1;
+}
+.csd-attend-btn:hover { background: #264779; transform: translateY(-1px); }
+.csd-attend-btn:active { transform: translateY(0) scale(.97); }
+
+.csd-attend-feedback {
+  font-size: .78rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: .5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Certificate block */
+.csd-cert-block {
+  background: rgba(224, 227, 229, .6);
+  border: 1px solid rgba(196, 198, 208, .5);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  opacity: .8;
+}
+
+.csd-cert-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(196, 198, 208, .6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.csd-cert-title {
+  font-size: .88rem;
+  font-weight: 700;
+  color: #43474f;
+  margin: 0;
+}
+
+.csd-cert-sub {
+  font-size: .76rem;
+  color: #747780;
+  margin: .15rem 0 0;
+}
+
+/* RIGHT column */
+.csd-right { display: flex; flex-direction: column; }
+
+.csd-section-title {
+  font-size: .84rem;
+  font-weight: 800;
+  color: #001736;
+  margin: 0 0 .6rem;
+  letter-spacing: -.01em;
+}
+
+.csd-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+/* Session item — generated by JS */
+.csd-session-item {
+  background: rgba(247, 249, 251, .85);
+  border: 1px solid rgba(196, 198, 208, .5);
+  border-radius: 16px;
+  padding: .8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.csd-session-item:hover {
+  box-shadow: 0 8px 24px rgba(0, 23, 54, .06);
+  transform: translateY(-1px);
+}
+
+.csd-session-left {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+}
+
+.csd-session-date-chip {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(212, 227, 255, .65);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.csd-session-date-chip .chip-month {
+  font-size: .56rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #264779;
+}
+.csd-session-date-chip .chip-day {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #001736;
+}
+
+.csd-session-info { min-width: 0; }
+
+.csd-session-name {
+  font-size: .88rem;
+  font-weight: 700;
+  color: #191c1e;
+  margin: 0 0 .15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.csd-session-meta {
+  font-size: .74rem;
+  color: #747780;
+  margin: 0;
+}
+
+/* Attendance badges on sessions */
+.csd-session-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.csd-session-badge--asistio {
+  background: rgba(16, 124, 65, .1);
+  color: #107c41;
+}
+.csd-session-badge--ausente {
+  background: rgba(186, 26, 26, .1);
+  color: #ba1a1a;
+}
+.csd-session-badge--pendiente {
+  background: rgba(255, 223, 153, .6);
+  color: #5a4300;
+}
+
+
 
 /* ─── CURSO CARDS (Dashboard profesor) ─── */
 .curso-grid {

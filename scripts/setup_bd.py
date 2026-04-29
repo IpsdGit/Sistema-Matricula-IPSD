@@ -28,7 +28,21 @@ def inicializar_bd():
     conexion = sqlite3.connect(DB_PATH)
     cursor = conexion.cursor()
 
-    # Agregamos las 3 columnas nuevas: anio, trimestre, mes
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS plantillas_certificados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            direccion_codigo TEXT NOT NULL,
+            nombre_plantilla TEXT NOT NULL, 
+            tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
+            ruta_fondo_img TEXT NOT NULL, 
+            firmante_nombre TEXT NOT NULL, 
+            firmante_cargo TEXT NOT NULL, 
+            activo INTEGER DEFAULT 1,
+            FOREIGN KEY(direccion_codigo) REFERENCES direcciones(codigo)
+        )
+    ''')
+
+    # Agregamos las 3 columnas nuevas: anio, trimestre, mes, y el id_plantilla_certificado
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS capacitaciones (
             id TEXT PRIMARY KEY,
@@ -43,7 +57,8 @@ def inicializar_bd():
             duracion_tipo TEXT NOT NULL DEFAULT 'un_dia',
             tipo_accion TEXT NOT NULL DEFAULT 'CURSO',
             horas_totales INTEGER NOT NULL DEFAULT 20,
-            semanas_duracion INTEGER NOT NULL DEFAULT 1
+            semanas_duracion INTEGER NOT NULL DEFAULT 1,
+            id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)
         )
     ''')
 

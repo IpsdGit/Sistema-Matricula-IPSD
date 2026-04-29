@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const qrBoxEl = document.getElementById('curso-sesion-qr');
   const feedbackEl = document.getElementById('curso-sesion-feedback');
   const marcarBtn = document.getElementById('btn-marcar-asistencia');
+  const certContainerEl = document.getElementById('csd-cert-container');
 
   let sesionAbiertaActual = null;
 
@@ -250,96 +251,205 @@ document.addEventListener('DOMContentLoaded', function() {
     return 'Curso';
   }
 
-  function renderInfoCurso(curso) {
-    if (!infoEl) return;
+  function renderCertificado(curso) {
+    if (!certContainerEl) return;
+    
+    if (curso.estado_matricula === 'APROBADA') {
+      if (curso.plantilla_disponible) {
+        certContainerEl.innerHTML = `
+          <div style="display: flex; align-items: center; gap: .85rem;">
+            <div class="csd-cert-icon" style="background: rgba(16, 185, 129, .2); color: #047857;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">military_tech</span></div>
+            <div>
+              <p class="csd-cert-title" style="color: #065f46;">Certificado Listo</p>
+              <p class="csd-cert-sub">Tu certificado ya está disponible</p>
+            </div>
+          </div>
+          <a href="/descargar_certificado/${curso.matricula_id}" target="_blank" style="text-decoration: none;">
+            <button type="button" class="btn-primary-ipsd" style="font-size: .8rem; padding: .4rem .8rem; background: #059669; border: none;">
+              Descargar
+            </button>
+          </a>
+        `;
+      } else {
+        certContainerEl.innerHTML = `
+          <div style="display: flex; align-items: center; gap: .85rem;">
+            <div class="csd-cert-icon" style="background: rgba(226, 232, 240, .8); color: #64748b;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">military_tech</span></div>
+            <div>
+              <p class="csd-cert-title" style="color:#334155;">Certificado no configurado</p>
+              <p class="csd-cert-sub">Pendiente de emisión por la dirección</p>
+            </div>
+          </div>
+          <div class="csd-cert-lock" style="color: #94a3b8; padding-right: 0.5rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">info</span></div>
+        `;
+      }
+    } else {
+      certContainerEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: .85rem;">
+          <div class="csd-cert-icon" style="background: rgba(255, 223, 153, .4); color: #775a00;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">military_tech</span></div>
+          <div>
+            <p class="csd-cert-title">Certificado no disponible</p>
+            <p class="csd-cert-sub">Se habilita al aprobar</p>
+          </div>
+        </div>
+        <div class="csd-cert-lock" style="color: #747780; padding-right: 0.5rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span></div>
+      `;
+    }
+  }
 
+  function renderInfoCurso(curso) {
     const modalidad = curso.modalidad || 'No definida';
-    const periodo = `${curso.mes || '-'} ${curso.anio || ''}`.trim();
-    const horario = curso.horario_matriculado || 'No definido';
+    const periodo = `${curso.mes || ''} ${curso.anio || ''}`.trim() + (curso.trimestre ? ` · Trim. ${curso.trimestre}` : '');
+    const horario = curso.horario_matriculado || 'Por confirmar';
     const horasTotales = Number(curso.horas_totales || 0);
     const semanasDuracion = Number(curso.semanas_duracion || 1);
-    const enlaceHtml = (modalidad === 'Virtual' && curso.enlace_virtual)
-      ? `<a href="${curso.enlace_virtual}" target="_blank" rel="noopener noreferrer" style="font-size:.82rem; color:var(--primary); font-weight:700; text-decoration:none;">Abrir enlace virtual</a>`
-      : '<span style="font-size:.82rem; color:var(--text-muted);">No aplica</span>';
+    const duracion = `${horasTotales}h · ${semanasDuracion} semana(s)`;
 
-    infoEl.innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.6rem;">
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Codigo</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${curso.id || '-'}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Modalidad</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${modalidad}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Tipo de accion</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${textoTipoAccion(curso.tipo_accion)}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Duracion</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${horasTotales}h · ${semanasDuracion} semana(s)</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Periodo</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${periodo} · Trim. ${curso.trimestre || '-'}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Jornada</div>
-          <div style="font-size:.88rem; font-weight:700; color:#0f172a;">${horario}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Estado</div>
-          <div>${estadoMatriculaBadge(curso.estado_matricula, curso.estado_matricula_nombre)}</div>
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:.6rem .7rem; background:#f8fafc; grid-column:1 / -1;">
-          <div style="font-size:.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:.18rem;">Acceso Virtual</div>
-          ${enlaceHtml}
-        </div>
-      </div>
-    `;
+    // Fill bento info cells
+    const elMod = document.getElementById('csd-info-modalidad');
+    const elPer = document.getElementById('csd-info-periodo');
+    const elDur = document.getElementById('csd-info-duracion');
+    const elJor = document.getElementById('csd-info-jornada');
+    if (elMod) elMod.textContent = modalidad;
+    if (elPer) elPer.textContent = periodo || '—';
+    if (elDur) elDur.textContent = duracion;
+    if (elJor) elJor.textContent = horario;
+
+    // Badge ID
+    const badgeId = document.getElementById('csd-badge-id');
+    if (badgeId) badgeId.textContent = curso.id || '—';
+
+    // Badge status
+    const badgeStatus = document.getElementById('csd-badge-status');
+    if (badgeStatus) {
+      const estado = curso.estado_matricula || '';
+      badgeStatus.className = 'csd-badge csd-badge--status';
+      if (estado === 'APROBADA') {
+        badgeStatus.textContent = 'APROBADO';
+        badgeStatus.classList.add('csd-status-aprobado');
+      } else if (estado === 'CANCELADA' || estado === 'NO_APROBADA' || estado === 'ABANDONO') {
+        badgeStatus.textContent = curso.estado_matricula_nombre || estado;
+        badgeStatus.classList.add('csd-status-cancelado');
+      } else {
+        badgeStatus.textContent = curso.estado_matricula_nombre || 'EN CURSO';
+      }
+    }
   }
 
   function renderTablaSesiones(container, sesiones) {
     if (!container) return;
 
     if (!sesiones || sesiones.length === 0) {
-      container.innerHTML = '<p class="curso-sesiones-empty">Sin sesiones para mostrar.</p>';
+      container.innerHTML = '<p class="curso-sesiones-empty" style="font-size:.8rem; color:#747780; padding:.5rem 0;">Sin sesiones para mostrar.</p>';
       return;
     }
 
-    const rows = sesiones.map(s => {
-      const asistencia = s.asistencia_marcada
-        ? '<span class="badge-pill success text-xs">Marcada</span>'
-        : '<span class="badge-pill secondary text-xs">Pendiente</span>';
+    const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+    const items = sesiones.map(s => {
+      // Parse date chip
+      let chipMonth = '—', chipDay = '—';
+      if (s.fecha) {
+        const partes = s.fecha.split('-');
+        if (partes.length === 3) {
+          chipMonth = MESES_CORTOS[parseInt(partes[1], 10) - 1] || '—';
+          chipDay = String(parseInt(partes[2], 10));
+        }
+      }
+
+      const hora = (s.hora_inicio && s.hora_fin)
+        ? `${s.hora_inicio.slice(0,5)} - ${s.hora_fin.slice(0,5)}`
+        : 'Hora no definida';
+
+      const docente = s.docente_sesion ? `<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">person</span> ${s.docente_sesion}` : `<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">schedule</span> ${hora}`;
+
+      let badgeHtml;
+      if (s.asistencia_marcada) {
+        badgeHtml = '<span class="csd-session-badge csd-session-badge--asistio">✓ ASISTIÓ</span>';
+      } else if (s.estado_texto === 'Finalizada') {
+        badgeHtml = '<span class="csd-session-badge csd-session-badge--ausente">✕ AUSENTE</span>';
+      } else {
+        badgeHtml = '<span class="csd-session-badge csd-session-badge--pendiente">⏳ PENDIENTE</span>';
+      }
+
+      const tema = s.tema_sesion || s.jornada || 'Sesión programada';
 
       return `
-        <tr>
-          <td>${s.fecha || '—'}</td>
-          <td>${s.hora_inicio || '—'} - ${s.hora_fin || '—'}</td>
-          <td>${s.jornada || 'UNICA'}</td>
-          <td>${s.docente_sesion || '—'}</td>
-          <td>${estadoBadge(s.estado_texto || 'Cerrada')}</td>
-          <td>${asistencia}</td>
-        </tr>
+        <div class="csd-session-item">
+          <div class="csd-session-left">
+            <div class="csd-session-date-chip">
+              <span class="chip-month">${chipMonth}</span>
+              <span class="chip-day">${chipDay}</span>
+            </div>
+            <div class="csd-session-info">
+              <p class="csd-session-name">${tema}</p>
+              <p class="csd-session-meta">${docente}</p>
+            </div>
+          </div>
+          ${badgeHtml}
+        </div>
       `;
     }).join('');
 
-    container.innerHTML = `
-      <table class="curso-sesiones-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Jornada</th>
-            <th>Docente</th>
-            <th>Estado</th>
-            <th>Asistencia</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
+    container.innerHTML = items;
+  }
+
+  async function cargarDetalleCurso(idCurso) {
+    // Reset title & status badge
+    const titleEl2 = document.getElementById('curso-sesiones-title');
+    if (titleEl2) titleEl2.textContent = 'Cargando...';
+    const badgeId2 = document.getElementById('csd-badge-id');
+    if (badgeId2) badgeId2.textContent = '…';
+    const badgeStatus2 = document.getElementById('csd-badge-status');
+    if (badgeStatus2) { badgeStatus2.textContent = 'EN CURSO'; badgeStatus2.className = 'csd-badge csd-badge--status'; }
+
+    // Reset bento cells
+    ['csd-info-modalidad','csd-info-periodo','csd-info-inicio','csd-info-jornada'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '…';
+    });
+
+    if (futurasEl) futurasEl.innerHTML = '<p class="curso-sesiones-empty" style="font-size:.8rem;color:#747780;padding:.5rem 0;">Cargando...</p>';
+    if (pasadasEl) pasadasEl.innerHTML = '<p class="curso-sesiones-empty" style="font-size:.8rem;color:#747780;padding:.5rem 0;">Cargando...</p>';
+    if (qrCardEl) qrCardEl.style.display = 'none';
+
+    abrirModalSesiones();
+
+    try {
+      const response = await fetch(`/api/curso_detalle/${encodeURIComponent(idCurso)}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || `Error HTTP ${response.status}`);
+      }
+
+      const curso = payload.curso || {};
+      if (titleEl2) titleEl2.textContent = curso.nombre || 'Detalle del curso';
+
+      renderInfoCurso(curso);
+      renderCertificado(curso);
+
+      const sesionesFuturas = payload.sesiones_futuras || [];
+      const sesionesPasadas = payload.sesiones_pasadas || [];
+
+      // Show/hide section wrappers
+      const secFuturas = document.getElementById('csd-section-futuras');
+      const secPasadas = document.getElementById('csd-section-pasadas');
+      if (secFuturas) secFuturas.style.display = sesionesFuturas.length ? '' : 'none';
+      if (secPasadas) secPasadas.style.display = sesionesPasadas.length ? '' : 'none';
+
+      renderTablaSesiones(futurasEl, sesionesFuturas);
+      renderTablaSesiones(pasadasEl, sesionesPasadas);
+      renderQrSesionAbierta([...sesionesFuturas, ...sesionesPasadas], curso);
+    } catch (error) {
+      const msg = (error && error.message) || 'No se pudo cargar el detalle.';
+      if (futurasEl) futurasEl.innerHTML = `<p style="font-size:.82rem;color:#dc2626;padding:.4rem 0;">${msg}</p>`;
+      if (pasadasEl) pasadasEl.innerHTML = '';
+      if (qrCardEl) qrCardEl.style.display = 'none';
+    }
   }
 
   function renderQrSesionAbierta(sesionesDisponibles, curso) {
@@ -374,53 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       marcarBtn.disabled = false;
       marcarBtn.textContent = 'Marcar Asistencia';
-    }
-  }
-
-  async function cargarDetalleCurso(idCurso) {
-    titleEl.textContent = 'Detalle del curso';
-    metaEl.textContent = 'Cargando informacion...';
-    if (infoEl) {
-      infoEl.innerHTML = '<p class="curso-sesiones-empty">Cargando informacion del curso...</p>';
-    }
-    futurasEl.innerHTML = '<p class="curso-sesiones-empty">Cargando...</p>';
-    pasadasEl.innerHTML = '<p class="curso-sesiones-empty">Cargando...</p>';
-    if (qrCardEl) qrCardEl.style.display = 'none';
-    abrirModalSesiones();
-
-    try {
-      const response = await fetch(`/api/curso_detalle/${encodeURIComponent(idCurso)}`, {
-        method: 'GET',
-        credentials: 'same-origin',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        const error = payload.error || `Error HTTP ${response.status}`;
-        throw new Error(error);
-      }
-
-      const curso = payload.curso || {};
-      titleEl.textContent = curso.nombre || 'Detalle del curso';
-      metaEl.textContent = `${curso.id || ''} · ${curso.modalidad || 'Modalidad no definida'} · ${curso.mes || ''} ${curso.anio || ''}`.trim();
-
-      renderInfoCurso(curso);
-      const sesionesFuturas = payload.sesiones_futuras || [];
-      const sesionesPasadas = payload.sesiones_pasadas || [];
-      renderTablaSesiones(futurasEl, sesionesFuturas);
-      renderTablaSesiones(pasadasEl, sesionesPasadas);
-      renderQrSesionAbierta([...sesionesFuturas, ...sesionesPasadas], curso);
-    } catch (error) {
-      const mensaje = (error && error.message) || 'No se pudo cargar el detalle del curso.';
-      if (infoEl) {
-        infoEl.innerHTML = `<p class="curso-sesiones-empty" style="color:#dc2626;">${mensaje}</p>`;
-      }
-      futurasEl.innerHTML = `<p class="curso-sesiones-empty" style="color:#dc2626;">${mensaje}</p>`;
-      pasadasEl.innerHTML = '<p class="curso-sesiones-empty">Sin datos.</p>';
-      if (qrCardEl) qrCardEl.style.display = 'none';
     }
   }
 

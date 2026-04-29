@@ -4019,3 +4019,92 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Abril 27, 2026  
 **Versión actual**: 1.10.0 (Asistente Virtual Integrado - Gemini IA)  
 **Estado**: Development - Soporte interactivo inteligente habilitado para todos los usuarios
+
+---
+
+# 📜 Versión 1.11.0 - Sistema de Certificación Digital y Rediseño de Detalle de Curso
+
+**Fecha**: Abril 29, 2026  
+**Cambios**: Introducción de un sistema automatizado para la generación de diplomas y constancias, junto con una renovación total de la interfaz de detalle de curso en el portal docente.
+
+## Cambio 32.1: Sistema de Certificación Digital (DIPLOMAS y CONSTANCIAS)
+**Fecha**: Abril 29, 2026  
+**Archivos afectados**: `services/certificate_service.py`, `routes/certificados.py`, `scripts/migrate_certs.py`, `templates/certificados/`
+
+**QUÉ**:
+- Implementación de un motor de generación de PDF basado en **pdfkit (wkhtmltopdf)**.
+- Creación de un sistema de plantillas dinámicas:
+  - Soporte para **DIPLOMAS** (Orientación horizontal) y **CONSTANCIAS** (Orientación vertical).
+  - Gestión centralizada de fondos de imagen, firmantes y cargos por dirección.
+- Asociación flexible de plantillas a capacitaciones específicas.
+- Endpoint de descarga segura para docentes con validación de aprobación del curso.
+
+**POR QUÉ**:
+- Digitalizar la entrega de reconocimientos, reduciendo costos operativos y tiempos de espera.
+- Asegurar la autenticidad y uniformidad de los documentos emitidos por el IPSD.
+
+**PARA QUÉ**:
+- Permitir que los docentes descarguen sus certificados de forma inmediata al aprobar un curso.
+- Facilitar a los administradores la gestión de múltiples formatos de certificación sin intervención técnica.
+
+---
+
+## Cambio 32.2: Rediseño Premium del Modal "Detalle de Curso"
+**Fecha**: Abril 29, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `static/main.js`
+
+**QUÉ**:
+- Sustitución del modal informativo básico por una interfaz **Bento-style** moderna.
+- Nuevas secciones visuales:
+  - **Bento Info Grid**: Resumen rápido de modalidad, periodo, duración y jornada.
+  - **Bloque de Asistencia**: Integración del marcado QR directamente en el panel de detalle.
+  - **Bloque de Certificado**: Indicador de estado del diploma (Bloqueado/Disponible para descarga).
+  - **Timeline de Sesiones**: Lista optimizada de sesiones pasadas y futuras con indicadores de asistencia.
+- Migración masiva de iconografía a **Material Symbols (Outlined)** para un look más limpio y profesional.
+
+**POR QUÉ**:
+- El modal anterior era puramente informativo y se sentía desconectado del flujo de asistencia.
+- Mejorar la experiencia del docente al centralizar toda la actividad de un curso en una sola vista coherente.
+
+**PARA QUÉ**:
+- Incrementar la transparencia del proceso de formación (asistencias marcadas vs faltantes).
+- Proporcionar una navegación más intuitiva y visualmente gratificante.
+
+---
+
+## Cambio 32.3: Gestión Administrativa de Plantillas
+**Fecha**: Abril 29, 2026  
+**Archivos afectados**: `templates/admin.html`, `routes/admin.py`, `services/admin_service.py`
+
+**QUÉ**:
+- Nueva pestaña de gestión en el Panel Admin: **"Certificados"**.
+- CRUD completo de plantillas de certificados:
+  - Carga de imágenes de fondo (fondos institucionales).
+  - Configuración de firmantes dinámicos.
+  - Vista previa de datos asociados.
+- Actualización del formulario de creación/edición de cursos para permitir la vinculación de plantillas.
+
+**POR QUÉ**:
+- Dar autonomía a los administradores de cada dirección para personalizar sus propios certificados.
+- Centralizar la lógica de negocio de certificación en la interfaz administrativa.
+
+**PARA QUÉ**:
+- Agilizar la puesta en marcha de nuevos ciclos de capacitación con certificaciones listas.
+
+---
+
+## Resumen de Cambios v1.11.0
+
+| Aspecto | Cambio |
+|--------|--------|
+| Nueva Función | Generación automatizada de Certificados y Diplomas en PDF |
+| UI/UX Docente | Rediseño Bento-style del Detalle de Curso y nuevas micro-interacciones |
+| UI/UX Admin | Panel de gestión de plantillas de certificados y firmantes |
+| Tecnología | Integración de `pdfkit` y `wkhtmltopdf` para procesamiento de documentos |
+| Identidad | Estandarización visual con Material Symbols y estética Glassmorphism avanzada |
+
+---
+
+**Última actualización**: Abril 29, 2026  
+**Versión actual**: 1.11.0 (Sistema de Certificación Digital y Rediseño de Detalle de Curso)  
+**Estado**: Development - Sistema de diplomas activo y UI de curso modernizada

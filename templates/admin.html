@@ -643,20 +643,23 @@
 
     <nav class="sidebar-nav">
       <a href="/admin?view=dashboard" class="sidebar-link" data-view="dashboard">
-        <span class="link-icon">📊</span> Dashboard
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span></span> Dashboard
       </a>
       <a href="/admin?view=cursos" class="sidebar-link" data-view="cursos">
-        <span class="link-icon">📚</span> Gestión de Cursos
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">library_books</span></span> Gestión de Cursos
       </a>
       <a href="/admin?view=calendario" class="sidebar-link" data-view="calendario">
-        <span class="link-icon">🗓️</span> Calendario
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span></span> Calendario
       </a>
       <a href="/admin?view=matriculas" class="sidebar-link" data-view="matriculas">
-        <span class="link-icon">📋</span> Matrículas
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">list_alt</span></span> Matrículas
+      </a>
+      <a href="/admin?view=certificados" class="sidebar-link" data-view="certificados">
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span></span> Plantillas PDF
       </a>
       {% if es_superadmin %}
       <a href="/admin?view=usuarios" class="sidebar-link" data-view="usuarios">
-        <span class="link-icon">🛡️</span> Usuarios Admin
+        <span class="link-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">shield_person</span></span> Usuarios Admin
       </a>
       {% endif %}
     </nav>
@@ -676,9 +679,9 @@
       <div class="flex gap-2" style="align-items:center;">
         <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
            class="btn-success-ipsd" style="font-size:.85rem; padding:.5rem 1rem;">
-          📥 Exportar CSV
+          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">download</span> Exportar CSV
         </a>
-        <button type="button" class="top-alert-btn" aria-label="Notificaciones" title="Notificaciones">🔔</button>
+        <button type="button" class="top-alert-btn" aria-label="Notificaciones" title="Notificaciones"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">notifications</span></button>
         <div class="top-user-menu" id="top-user-menu">
           <button type="button" class="top-user-chip top-user-menu-trigger" id="top-user-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="top-user-dropdown">
             <span class="top-user-avatar">{{ (admin_user or 'A')[:1] | upper }}</span>
@@ -686,13 +689,13 @@
               <p class="top-user-name">{{ admin_user }}</p>
               <p class="top-user-role">{{ 'Super Admin' if es_superadmin else ('Admin · ' ~ admin_direccion) }}</p>
             </div>
-            <span class="top-user-caret">▾</span>
+            <span class="top-user-caret"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">expand_more</span></span>
           </button>
           <div class="top-user-dropdown" id="top-user-dropdown">
             {% if curso_sesiones_id or curso_asistencias_id %}
-            <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}">📊 Ver asistencias</a>
+            <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Ver asistencias</a>
             {% endif %}
-            <a href="/logout_admin">🚪 Cerrar sesión</a>
+            <a href="/logout_admin"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">logout</span> Cerrar sesión</a>
           </div>
         </div>
       </div>
@@ -713,7 +716,7 @@
             {% set clase_alerta = 'warning' %}
           {% endif %}
           <div class="alert-ipsd {{ clase_alerta }}" style="margin:0;">
-            <span>{% if clase_alerta == 'danger' %}⛔{% elif clase_alerta == 'success' %}✅{% elif clase_alerta == 'warning' %}⚠️{% else %}ℹ️{% endif %}</span>
+            <span>{% if clase_alerta == 'danger' %}<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">block</span>{% elif clase_alerta == 'success' %}<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">check_circle</span>{% elif clase_alerta == 'warning' %}<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">warning</span>️{% else %}<span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">info</span>{% endif %}</span>
             <span>{{ mensaje }}</span>
           </div>
         {% endfor %}
@@ -726,21 +729,21 @@
       <section id="section-stats">
         <div class="grid-3 mb-4 animate-fade-up">
           <div class="stat-card">
-            <div class="stat-icon blue">📋</div>
+            <div class="stat-icon blue"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">list_alt</span></div>
             <div>
               <div class="stat-value" style="color:var(--primary);">{{ stats.total_matriculas }}</div>
               <div class="stat-label">Total Matrículas</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon purple">📚</div>
+            <div class="stat-icon purple"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">library_books</span></div>
             <div>
               <div class="stat-value" style="color:var(--secondary);">{{ stats.total_cursos }}</div>
               <div class="stat-label">Cursos Activos</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon green">👨‍🏫</div>
+            <div class="stat-icon green"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">school</span></div>
             <div>
               <div class="stat-value" style="color:var(--success);">{{ stats.total_profesores }}</div>
               <div class="stat-label">Profesores Inscritos</div>
@@ -752,7 +755,7 @@
         <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}">
           <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
             <div>
-              <span style="font-weight:700; font-size:.95rem;">🗓️ Gestión de Calendario</span>
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span> Gestión de Calendario</span>
               <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
                 Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
               </div>
@@ -862,7 +865,7 @@
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
                           <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia">🔓</button>
+                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock_open</span></button>
                         </form>
                         {% endif %}
 
@@ -893,7 +896,7 @@
                           data-hora-inicio="{{ sesion['hora_inicio'] }}"
                           data-hora-fin="{{ sesion['hora_fin'] }}"
                           data-estado="{{ sesion['estado'] }}">
-                          ✏️
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                         </button>
 
                         <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
@@ -906,7 +909,7 @@
                             title="Eliminar sesión"
                             aria-label="Eliminar sesión"
                             onclick="return confirm('¿Eliminar esta sesión?');">
-                            🗑️
+                            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
                           </button>
                         </form>
                       </div>
@@ -932,7 +935,7 @@
       <div class="grid-2 mb-4 animate-fade-up-1">
         <div class="card-ipsd">
           <div class="card-header">
-            <span style="font-weight:700; font-size:.95rem;">📊 Matrículas por Curso</span>
+            <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Matrículas por Curso</span>
           </div>
           <div class="chart-container" style="height:260px;">
             <canvas id="chartCursos"></canvas>
@@ -940,7 +943,7 @@
         </div>
         <div class="card-ipsd">
           <div class="card-header">
-            <span style="font-weight:700; font-size:.95rem;">📅 Matrículas por Período</span>
+            <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">event</span> Matrículas por Período</span>
           </div>
           <div class="chart-container" style="height:260px;">
             <canvas id="chartMeses"></canvas>
@@ -956,7 +959,7 @@
           <!-- Formulario Crear Curso -->
           <div class="card-ipsd">
             <div class="card-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
-              <span style="font-weight:700; font-size:.95rem; color:var(--primary);">➕ Nueva Acción Formativa</span>
+              <span style="font-weight:700; font-size:.95rem; color:var(--primary);"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">add_circle</span> Nueva Acción Formativa</span>
             </div>
             <div class="card-body">
               <form action="/admin/crear_curso" method="POST">
@@ -993,7 +996,7 @@
                 </div>
 
                 <div class="alert-ipsd info" style="margin:.2rem 0 .9rem 0;">
-                  <span>ℹ️</span>
+                  <span><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">info</span></span>
                   <span>Días y horarios se gestionan después desde <strong>Gestión de Calendario</strong> del curso.</span>
                 </div>
 
@@ -1061,6 +1064,18 @@
                   </div>
                 </div>
 
+                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Plantilla de Certificado (Opcional)</label>
+                    <select class="form-select" name="id_plantilla_certificado">
+                      <option value="">-- Ninguna --</option>
+                      {% for p in plantillas %}
+                      <option value="{{ p.id }}">{{ p.nombre_plantilla }} ({{ p.direccion_codigo }} - {{ p.tipo_documento }})</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
                 <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
                   Crear Acción Formativa
                 </button>
@@ -1071,7 +1086,7 @@
           <!-- Lista de Cursos -->
           <div class="card-ipsd">
             <div class="card-header">
-              <span style="font-weight:700; font-size:.95rem;">📋Acciones Formativas Registradas</span>
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">list_alt</span>Acciones Formativas Registradas</span>
               <span class="badge-pill secondary text-xs">{{ cursos|length }}</span>
             </div>
             <div style="overflow-x:auto; max-height:490px; overflow-y:auto;">
@@ -1116,7 +1131,7 @@
                           title="Gestionar sesiones"
                           aria-label="Gestionar sesiones"
                           style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; text-decoration:none;">
-                          🗓️
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span>
                         </a>
                         <a
                           href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id']) }}"
@@ -1124,7 +1139,7 @@
                           title="Ver asistencias"
                           aria-label="Ver asistencias"
                           style="color:#065f46; border-color:#99f6e4; background:#ecfeff; text-decoration:none;">
-                          👥
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">group</span>
                         </a>
                         <button
                           type="button"
@@ -1142,8 +1157,9 @@
                           data-horas="{{ curso['horas_totales'] or 20 }}"
                           data-semanas="{{ curso['semanas_duracion'] or 1 }}"
                           data-enlace="{{ curso['enlace_virtual'] or '' }}"
-                          data-cupos="{{ curso['cupos_maximos'] }}">
-                          ✏️
+                          data-cupos="{{ curso['cupos_maximos'] }}"
+                          data-plantilla="{{ curso['id_plantilla_certificado'] or '' }}">
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                         </button>
                         <form action="/admin/eliminar_curso" method="POST" style="display:inline; margin:0;" id="del-curso-{{ loop.index }}">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -1156,7 +1172,7 @@
                             aria-label="Eliminar curso"
                             data-form-id="del-curso-{{ loop.index }}"
                             data-nombre="{{ curso['nombre'] }}">
-                            🗑️
+                            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
                           </button>
                         </form>
                       </div>
@@ -1184,7 +1200,7 @@
         <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario" data-curso-sesiones-id="{{ curso_sesiones_id }}" style="box-shadow:none; border-radius:0; border:none;">
           <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
             <div>
-              <span style="font-weight:700; font-size:.95rem;">🗓️ Gestión de Calendario</span>
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span> Gestión de Calendario</span>
               <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
                 Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
               </div>
@@ -1375,7 +1391,7 @@
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
                           <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia">🔓</button>
+                          <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia" aria-label="Habilitar asistencia"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock_open</span></button>
                         </form>
                         {% endif %}
 
@@ -1384,7 +1400,7 @@
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
                           <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                          <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Desactivar asistencia" aria-label="Desactivar asistencia">🔒</button>
+                          <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Desactivar asistencia" aria-label="Desactivar asistencia"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span></button>
                         </form>
                         {% endif %}
 
@@ -1418,7 +1434,7 @@
                           data-docente-sesion="{{ sesion['docente_sesion'] or '' }}"
                           data-edicion="{{ sesion['edicion'] or '' }}"
                           data-estado="{{ sesion['estado'] }}">
-                          ✏️
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                         </button>
 
                         <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
@@ -1431,7 +1447,7 @@
                             title="Eliminar sesión"
                             aria-label="Eliminar sesión"
                             onclick="return confirm('¿Eliminar esta sesión?');">
-                            🗑️
+                            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
                           </button>
                         </form>
                       </div>
@@ -1459,7 +1475,7 @@
         <div class="card-ipsd animate-fade-up-2">
           <div class="card-header calendar-board-header">
             <div class="calendar-board-title-wrap">
-              <span class="calendar-board-icon">🗓️</span>
+              <span class="calendar-board-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span></span>
               <div>
                 <div class="calendar-board-title">Calendario de Eventos</div>
                 <p class="calendar-board-subtitle" id="calendario-total-visible">{{ calendario_eventos|length }} evento(s) cargado(s)</p>
@@ -1470,8 +1486,8 @@
           <div class="card-body" style="padding:1.1rem 1.2rem;">
             <div class="calendar-toolbar">
               <div class="calendar-nav-group">
-                <button type="button" class="calendar-nav-btn" id="calendar-prev-month" aria-label="Mes anterior">‹</button>
-                <button type="button" class="calendar-nav-btn" id="calendar-next-month" aria-label="Mes siguiente">›</button>
+                <button type="button" class="calendar-nav-btn" id="calendar-prev-month" aria-label="Mes anterior"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">chevron_left</span></button>
+                <button type="button" class="calendar-nav-btn" id="calendar-next-month" aria-label="Mes siguiente"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">chevron_right</span></button>
                 <button type="button" class="calendar-today-btn" id="calendar-today-btn">Hoy</button>
               </div>
 
@@ -1517,7 +1533,7 @@
         <div class="grid-2 mb-4 animate-fade-up-3">
           <div class="card-ipsd">
             <div class="card-header" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);">
-              <span style="font-weight:700; font-size:.95rem; color:#3730a3;">🧑‍💼 Crear Administrador por Dirección</span>
+              <span style="font-weight:700; font-size:.95rem; color:#3730a3;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">admin_panel_settings</span> Crear Administrador por Dirección</span>
             </div>
             <div class="card-body">
               <form action="/admin/crear_admin" method="POST">
@@ -1552,7 +1568,7 @@
 
           <div class="card-ipsd">
             <div class="card-header">
-              <span style="font-weight:700; font-size:.95rem;">👥 Usuarios Administrativos</span>
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">group</span> Usuarios Administrativos</span>
               <span class="badge-pill secondary text-xs">{{ usuarios_admin|length }}</span>
             </div>
             <div style="overflow-x:auto; max-height:360px; overflow-y:auto;">
@@ -1587,7 +1603,7 @@
                           data-username="{{ u['username'] }}"
                           data-direccion="{{ u['direccion'] }}"
                           data-rol="{{ u['rol'] }}">
-                          ✏️
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                         </button>
                         <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');" style="margin:0;">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -1598,7 +1614,7 @@
                             class="btn-danger-ipsd btn-icon-action"
                             title="Eliminar usuario"
                             aria-label="Eliminar usuario">
-                            🗑️
+                            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
                           </button>
                         </form>
                       {% endif %}
@@ -1620,7 +1636,7 @@
         <div class="grid-2 mb-4 animate-fade-up-4">
           <div class="card-ipsd">
             <div class="card-header" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
-              <span style="font-weight:700; font-size:.95rem; color:#166534;">🏢 Crear Dirección</span>
+              <span style="font-weight:700; font-size:.95rem; color:#166534;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">business</span> Crear Dirección</span>
             </div>
             <div class="card-body">
               <form action="/admin/crear_direccion" method="POST">
@@ -1676,7 +1692,7 @@
                         aria-label="Editar dirección"
                         data-codigo="{{ d['codigo'] }}"
                         data-nombre="{{ d['nombre'] }}">
-                        ✏️
+                        <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                       </button>
                       <form action="/admin/eliminar_direccion" method="POST" style="margin:0;" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -1688,7 +1704,7 @@
                           aria-label="Eliminar dirección"
                           title="{% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}No se puede eliminar: tiene datos asociados{% else %}Eliminar dirección{% endif %}"
                           {% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}disabled{% endif %}>
-                          🗑️
+                          <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
                         </button>
                       </form>
                     </td>
@@ -1767,7 +1783,7 @@
         <div class="card-ipsd animate-fade-up-4">
           <div class="card-header">
             <div class="flex gap-2" style="align-items:center;">
-              <span style="font-weight:700; font-size:.95rem;">📋 Listado de Matrículas</span>
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">list_alt</span> Listado de Matrículas</span>
               <span class="badge-pill secondary text-xs">{{ registros|length }} registro(s)</span>
             </div>
             {% if registros and es_superadmin %}
@@ -1777,7 +1793,7 @@
               <input type="hidden" name="confirmacion" id="vaciar-confirmacion" value="">
               <button type="button" class="btn-danger-ipsd" style="font-size:.8rem; padding:.4rem .8rem;"
                 onclick="abrirModalVaciar()">
-                ⚠️ Vaciar Todo
+                <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">warning</span>️ Vaciar Todo
               </button>
             </form>
             {% endif %}
@@ -1857,6 +1873,93 @@
         </div>
       </section>
 
+      <section id="section-certificados" class="admin-screen" data-screen="certificados">
+        <div class="flex-between mb-4">
+          <div>
+            <h2 style="font-weight:700; font-size:1.4rem; color:#0f172a; margin-bottom:.25rem; display:flex; align-items:center; gap:.5rem;">
+              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span> Plantillas de Certificados
+            </h2>
+            <p style="color:var(--text-muted); font-size:.9rem; margin:0;">
+              Sube imágenes de fondo para Diplomas y Constancias y configúralos.
+            </p>
+          </div>
+          <button type="button" class="btn-primary-ipsd" onclick="document.getElementById('modal-plantilla').classList.add('active'); document.getElementById('modal-plantilla').setAttribute('aria-hidden', 'false'); document.body.style.overflow='hidden';">
+            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">add_photo_alternate</span> Nueva Plantilla
+          </button>
+        </div>
+
+        <div class="card-ipsd">
+          <div class="card-body p-0">
+            <table class="table-ipsd">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Dirección</th>
+                  <th>Nombre Plantilla</th>
+                  <th>Tipo</th>
+                  <th>Fondo URL</th>
+                  <th>Firmante</th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in plantillas %}
+                <tr>
+                  <td>{{ p.id }}</td>
+                  <td><span class="badge-pill secondary text-xs">{{ p.direccion_codigo }}</span></td>
+                  <td><strong>{{ p.nombre_plantilla }}</strong></td>
+                  <td>
+                    {% if p.tipo_documento == 'DIPLOMA' %}
+                    <span class="badge-pill success text-xs">Diploma</span>
+                    {% else %}
+                    <span class="badge-pill info text-xs">Constancia</span>
+                    {% endif %}
+                  </td>
+                  <td><a href="{{ p.ruta_fondo_img }}" target="_blank" style="font-size: .8rem;">Ver Imagen</a></td>
+                  <td style="font-size:.85rem; color:var(--text-muted);">
+                    {{ p.firmante_nombre }}<br>
+                    <small>{{ p.firmante_cargo }}</small>
+                  </td>
+                  <td style="text-align:right;">
+                    <button type="button" class="btn-ghost btn-icon-action"
+                      data-id="{{ p.id }}"
+                      data-direccion="{{ p.direccion_codigo }}"
+                      data-nombre="{{ p.nombre_plantilla }}"
+                      data-tipo="{{ p.tipo_documento }}"
+                      data-firmante="{{ p.firmante_nombre }}"
+                      data-cargo="{{ p.firmante_cargo }}"
+                      onclick="abrirModalEditarPlantilla({
+                        id: this.dataset.id,
+                        direccion_codigo: this.dataset.direccion,
+                        nombre_plantilla: this.dataset.nombre,
+                        tipo_documento: this.dataset.tipo,
+                        firmante_nombre: this.dataset.firmante,
+                        firmante_cargo: this.dataset.cargo
+                      })"
+                      title="Editar" style="color:#1d4ed8;">
+                      <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
+                    </button>
+                    <form action="/admin/certificados/plantilla/eliminar/{{ p.id }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn-ghost btn-icon-action" title="Eliminar" style="color:#b91c1c;">
+                        <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="6" style="text-align:center; color:var(--text-muted); padding:3rem;">
+                    No hay plantillas registradas.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       {% if curso_asistencias_id and curso_asistencia_reporte and curso_asistencia_reporte['ok'] %}
       {% set curso_reporte = curso_asistencia_reporte['curso'] %}
       <div class="modal-overlay active" id="modal-asistencia-curso" aria-hidden="false" data-close-url="{{ url_for('admin') }}?view=cursos">
@@ -1864,7 +1967,7 @@
           <div class="card-ipsd animate-fade-up-3" style="box-shadow:none; border-radius:0; border:none;">
             <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
               <div>
-                <span style="font-weight:700; font-size:.95rem;">📊 Asistencias por Acción Formativa</span>
+                <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Asistencias por Acción Formativa</span>
                 <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
                   Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
                 </div>
@@ -2034,7 +2137,7 @@
 <!-- Modal eliminar curso -->
 <div class="modal-overlay" id="modal-curso">
   <div class="modal-box">
-    <div class="modal-icon">🗑️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">delete</span></div>
     <div class="modal-title">¿Eliminar curso?</div>
     <div class="modal-desc" id="modal-curso-desc"></div>
     <div class="modal-actions">
@@ -2047,7 +2150,7 @@
 <!-- Modal eliminar matrícula -->
 <div class="modal-overlay" id="modal-matricula">
   <div class="modal-box">
-    <div class="modal-icon">⚠️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">warning</span>️</div>
     <div class="modal-title">¿Eliminar matrícula?</div>
     <div class="modal-desc" id="modal-matricula-desc"></div>
     <div class="modal-actions">
@@ -2074,7 +2177,7 @@
 <!-- Modal editar dirección -->
 <div class="modal-overlay" id="modal-editar-direccion">
   <div class="modal-box" style="max-width:500px;">
-    <div class="modal-icon">✏️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span></div>
     <div class="modal-title">Editar Dirección</div>
     <form action="/admin/actualizar_direccion" method="POST" style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -2102,7 +2205,7 @@
 <!-- Modal editar usuario admin -->
 <div class="modal-overlay" id="modal-editar-usuario">
   <div class="modal-box" style="max-width:540px;">
-    <div class="modal-icon">🛡️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">shield_person</span></div>
     <div class="modal-title">Editar Usuario Admin</div>
     <form action="/admin/actualizar_admin" method="POST" style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -2144,7 +2247,7 @@
 <!-- Modal editar curso -->
 <div class="modal-overlay" id="modal-editar-curso">
   <div class="modal-box" style="max-width:560px;">
-    <div class="modal-icon">✏️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span></div>
     <div class="modal-title">Editar Curso</div>
     <form action="/admin/actualizar_curso" method="POST" style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -2217,6 +2320,16 @@
         >
       </div>
 
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Plantilla de Certificado (Opcional)</label>
+        <select class="form-select" name="id_plantilla_certificado" id="edit-curso-plantilla">
+          <option value="">-- Ninguna --</option>
+          {% for p in plantillas %}
+          <option value="{{ p.id }}">{{ p.nombre_plantilla }} ({{ p.direccion_codigo }} - {{ p.tipo_documento }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
       <div class="modal-actions">
         <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-curso')">Cancelar</button>
         <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
@@ -2228,7 +2341,7 @@
 <!-- Modal editar sesión -->
 <div class="modal-overlay" id="modal-editar-sesion">
   <div class="modal-box" style="max-width:520px;">
-    <div class="modal-icon">🗓️</div>
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">calendar_month</span></div>
     <div class="modal-title">Editar Sesión</div>
     <form action="/admin/sesion/editar" method="POST" style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -2304,6 +2417,120 @@
     </div>
   </div>
 </div>
+<!-- Modal nueva plantilla de certificados -->
+<div class="modal-overlay" id="modal-plantilla">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span></div>
+    <div class="modal-title">Nueva Plantilla de Certificado</div>
+    <form action="/admin/certificados/plantilla" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      {% if es_superadmin %}
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Dirección Asignada</label>
+        <select class="form-select" name="direccion_codigo" required>
+          {% for d in direcciones %}
+          <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Nombre de la Plantilla</label>
+        <input type="text" class="form-input" name="nombre_plantilla" maxlength="150" required placeholder="Ej. Diploma 2024">
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
+          <select class="form-select" name="tipo_documento" required>
+            <option value="DIPLOMA">Diploma</option>
+            <option value="CONSTANCIA">Constancia</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Imagen de Fondo (PNG/JPG)</label>
+          <input type="file" class="form-input" name="fondo_img" accept=".png,.jpg,.jpeg" required style="padding:.4rem;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Nombre del Firmante</label>
+          <input type="text" class="form-input" name="firmante_nombre" maxlength="100" required placeholder="Dr. Juan Pérez">
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Cargo del Firmante</label>
+          <input type="text" class="form-input" name="firmante_cargo" maxlength="100" required placeholder="Director General">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-plantilla')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Plantilla</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar plantilla de certificados -->
+<div class="modal-overlay" id="modal-editar-plantilla">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span></div>
+    <div class="modal-title">Editar Plantilla de Certificado</div>
+    <form id="form-editar-plantilla" action="" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      {% if es_superadmin %}
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Dirección Asignada</label>
+        <select class="form-select" name="direccion_codigo" id="edit-plantilla-direccion" required>
+          {% for d in direcciones %}
+          <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Nombre de la Plantilla</label>
+        <input type="text" class="form-input" name="nombre_plantilla" id="edit-plantilla-nombre" maxlength="150" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
+          <select class="form-select" name="tipo_documento" id="edit-plantilla-tipo" required>
+            <option value="DIPLOMA">Diploma</option>
+            <option value="CONSTANCIA">Constancia</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Imagen de Fondo (Opcional)</label>
+          <input type="file" class="form-input" name="fondo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
+          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar el fondo actual.</small>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Nombre del Firmante</label>
+          <input type="text" class="form-input" name="firmante_nombre" id="edit-plantilla-firmante-nombre" maxlength="100" required>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Cargo del Firmante</label>
+          <input type="text" class="form-input" name="firmante_cargo" id="edit-plantilla-firmante-cargo" maxlength="100" required>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-plantilla')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -2315,7 +2542,7 @@ let qrSesionAdminNombreArchivo = 'qr-asistencia.png';
 const adminLayout = document.querySelector('.admin-layout');
 const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
 const vistaInicialServidor = adminLayout?.dataset.vistaInicial || 'dashboard';
-const vistasPermitidas = ['dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios'];
+const vistasPermitidas = ['dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios', 'certificados'];
 
 function normalizarVista(view) {
   let vistaFinal = vistasPermitidas.includes(view) ? view : 'dashboard';
@@ -2412,6 +2639,23 @@ function abrirModalEditarUsuario(username, direccion, rol) {
   abrirModal('modal-editar-usuario');
 }
 
+function abrirModalEditarPlantilla(data) {
+  const form = document.getElementById('form-editar-plantilla');
+  if (form) {
+    form.action = '/admin/certificados/plantilla/editar/' + data.id;
+  }
+  
+  if (document.getElementById('edit-plantilla-direccion')) {
+    document.getElementById('edit-plantilla-direccion').value = data.direccion_codigo || '';
+  }
+  document.getElementById('edit-plantilla-nombre').value = data.nombre_plantilla || '';
+  document.getElementById('edit-plantilla-tipo').value = data.tipo_documento || 'DIPLOMA';
+  document.getElementById('edit-plantilla-firmante-nombre').value = data.firmante_nombre || '';
+  document.getElementById('edit-plantilla-firmante-cargo').value = data.firmante_cargo || '';
+  
+  abrirModal('modal-editar-plantilla');
+}
+
 function numeroMesDesdeNombre(nombreMes) {
   const meses = {
     'Enero': '01',
@@ -2459,6 +2703,7 @@ function abrirModalEditarCurso(data) {
   document.getElementById('edit-curso-semanas').value = data.semanas || '1';
   document.getElementById('edit-curso-cupos').value = data.cupos || '0';
   document.getElementById('edit-curso-enlace').value = data.enlace || '';
+  document.getElementById('edit-curso-plantilla').value = data.plantilla || '';
 
   actualizarEstadoEnlaceVirtualEdicion();
   abrirModal('modal-editar-curso');
@@ -2797,7 +3042,8 @@ document.addEventListener('DOMContentLoaded', function() {
         horas: this.dataset.horas,
         semanas: this.dataset.semanas,
         enlace: this.dataset.enlace,
-        cupos: this.dataset.cupos
+        cupos: this.dataset.cupos,
+        plantilla: this.dataset.plantilla
       });
     });
   });

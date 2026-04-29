@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 816px; /* Aprox 8.5 in at 96 dpi */
+            height: 1056px; /* Aprox 11 in at 96 dpi */
+            background-image: url('file:///{{ ruta_fondo_absoluta }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        
+        /* Ajustar estos top/left en base al diseño real del fondo de constancia */
+        .nombre-docente {
+            position: absolute;
+            top: 450px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+
+        .texto-certifica {
+            position: absolute;
+            top: 520px;
+            left: 100px;
+            width: 616px;
+            text-align: justify;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .fecha-emision {
+            position: absolute;
+            top: 680px;
+            right: 100px;
+            font-size: 16px;
+        }
+
+        .firmante-nombre {
+            position: absolute;
+            bottom: 180px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .firmante-cargo {
+            position: absolute;
+            bottom: 150px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="nombre-docente">{{ nombre_docente }}</div>
+    
+    <div class="texto-certifica">
+        Por haber participado en la Acción Formativa en modalidad <strong>{{ modalidad }}</strong> denominada 
+        <strong>"{{ curso_nombre }}"</strong> con una duración de <strong>{{ horas_totales }} horas</strong>.
+    </div>
+
+    <div class="fecha-emision">
+        Emitido el: {{ dia }} de {{ mes }} de {{ anio }}
+    </div>
+
+    <div class="firmante-nombre">{{ firmante_nombre }}</div>
+    <div class="firmante-cargo">{{ firmante_cargo }}</div>
+</body>
+</html>

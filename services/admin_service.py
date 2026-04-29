@@ -610,6 +610,7 @@ def create_curso_records(
     direccion_curso,
     fechas_objetivo,
     franjas_horarias,
+    id_plantilla_certificado=None,
 ):
     try:
         conn = get_db_connection()
@@ -642,8 +643,8 @@ def create_curso_records(
                 '''
                 INSERT INTO capacitaciones
                 (id, nombre, anio, trimestre, mes, dia, modalidad, cupos_maximos, enlace_virtual, duracion_tipo,
-                 tipo_accion, horas_totales, semanas_duracion)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 tipo_accion, horas_totales, semanas_duracion, id_plantilla_certificado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     id_curso,
@@ -659,6 +660,7 @@ def create_curso_records(
                     tipo_accion_norm,
                     horas_totales_norm,
                     semanas_duracion_norm,
+                    id_plantilla_certificado,
                 ),
             )
             for franja in franjas_norm:
@@ -690,6 +692,7 @@ def update_curso_record(
     cupos_maximos,
     enlace_virtual,
     dia_semana,
+    id_plantilla_certificado=None,
 ):
     try:
         conn = get_db_connection()
@@ -716,7 +719,8 @@ def update_curso_record(
             '''
             UPDATE capacitaciones
             SET nombre = ?, anio = ?, trimestre = ?, mes = ?, dia = ?, modalidad = ?, duracion_tipo = ?,
-                tipo_accion = ?, horas_totales = ?, semanas_duracion = ?, cupos_maximos = ?, enlace_virtual = ?
+                tipo_accion = ?, horas_totales = ?, semanas_duracion = ?, cupos_maximos = ?, enlace_virtual = ?,
+                id_plantilla_certificado = ?
             WHERE id = ?
             ''',
             (
@@ -732,6 +736,7 @@ def update_curso_record(
                 semanas_duracion_norm,
                 cupos_maximos,
                 enlace_virtual,
+                id_plantilla_certificado,
                 id_curso,
             ),
         )
