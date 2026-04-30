@@ -1880,7 +1880,7 @@
               <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span> Plantillas de Certificados
             </h2>
             <p style="color:var(--text-muted); font-size:.9rem; margin:0;">
-              Sube imágenes de fondo para Diplomas y Constancias y configúralos.
+              Configura la firma (PNG) y el texto dinámico del certificado.
             </p>
           </div>
           <button type="button" class="btn-primary-ipsd" onclick="document.getElementById('modal-plantilla').classList.add('active'); document.getElementById('modal-plantilla').setAttribute('aria-hidden', 'false'); document.body.style.overflow='hidden';">
@@ -1897,7 +1897,7 @@
                   <th>Dirección</th>
                   <th>Nombre Plantilla</th>
                   <th>Tipo</th>
-                  <th>Fondo URL</th>
+                  <th>Firma</th>
                   <th>Firmante</th>
                   <th style="text-align:right;">Acciones</th>
                 </tr>
@@ -1915,12 +1915,21 @@
                     <span class="badge-pill info text-xs">Constancia</span>
                     {% endif %}
                   </td>
-                  <td><a href="{{ p.ruta_fondo_img }}" target="_blank" style="font-size: .8rem;">Ver Imagen</a></td>
+                  <td>
+                    {% if p.ruta_firma_img %}
+                    <a href="{{ p.ruta_firma_img }}" target="_blank" style="font-size: .8rem;">Ver Firma</a>
+                    {% else %}
+                    <span style="font-size:.8rem; color:var(--text-muted);">—</span>
+                    {% endif %}
+                  </td>
                   <td style="font-size:.85rem; color:var(--text-muted);">
                     {{ p.firmante_nombre }}<br>
                     <small>{{ p.firmante_cargo }}</small>
                   </td>
                   <td style="text-align:right;">
+                    <a href="/admin/certificados/plantilla/preview/{{ p.id }}" target="_blank" class="btn-ghost btn-icon-action" title="Vista previa" style="color:#0f766e;">
+                      <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">visibility</span>
+                    </a>
                     <button type="button" class="btn-ghost btn-icon-action"
                       data-id="{{ p.id }}"
                       data-direccion="{{ p.direccion_codigo }}"
@@ -1928,13 +1937,15 @@
                       data-tipo="{{ p.tipo_documento }}"
                       data-firmante="{{ p.firmante_nombre }}"
                       data-cargo="{{ p.firmante_cargo }}"
+                      data-texto="{{ (p.texto_certificado or '')|e }}"
                       onclick="abrirModalEditarPlantilla({
                         id: this.dataset.id,
                         direccion_codigo: this.dataset.direccion,
                         nombre_plantilla: this.dataset.nombre,
                         tipo_documento: this.dataset.tipo,
                         firmante_nombre: this.dataset.firmante,
-                        firmante_cargo: this.dataset.cargo
+                        firmante_cargo: this.dataset.cargo,
+                        texto_certificado: this.dataset.texto
                       })"
                       title="Editar" style="color:#1d4ed8;">
                       <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
@@ -1949,7 +1960,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="6" style="text-align:center; color:var(--text-muted); padding:3rem;">
+                  <td colspan="7" style="text-align:center; color:var(--text-muted); padding:3rem;">
                     No hay plantillas registradas.
                   </td>
                 </tr>
@@ -2450,8 +2461,28 @@
           </select>
         </div>
         <div>
-          <label class="form-label" style="font-size:.8rem;">Imagen de Fondo (PNG/JPG)</label>
-          <input type="file" class="form-input" name="fondo_img" accept=".png,.jpg,.jpeg" required style="padding:.4rem;">
+          <label class="form-label" style="font-size:.8rem;">Firma (PNG transparente)</label>
+          <input type="file" class="form-input" name="firma_img" accept=".png" required style="padding:.4rem;">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Texto del Certificado</label>
+        <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-crear">
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[CURSO]')">[CURSO]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORAS]')">[HORAS]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
+          <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA]')">[FECHA]</button>
+          <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
+          <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
+        </div>
+        <textarea class="form-input" name="texto_certificado" id="crear-plantilla-texto" rows="4" required placeholder="Ej. Por haber participado y aprobado el curso [CURSO]..." oninput="actualizarPreview(this.value, 'crear-preview')"></textarea>
+        
+        <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 0.25rem;">Vista Previa (Texto)</div>
+            <div id="crear-preview" style="font-size: 0.9rem; line-height: 1.5; color: #334155; font-family: Georgia, serif;">Escribe el texto arriba para ver la vista previa...</div>
         </div>
       </div>
 
@@ -2507,9 +2538,29 @@
           </select>
         </div>
         <div>
-          <label class="form-label" style="font-size:.8rem;">Imagen de Fondo (Opcional)</label>
-          <input type="file" class="form-input" name="fondo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
-          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar el fondo actual.</small>
+          <label class="form-label" style="font-size:.8rem;">Firma (Opcional)</label>
+          <input type="file" class="form-input" name="firma_img" accept=".png" style="padding:.4rem;">
+          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar la firma actual.</small>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Texto del Certificado</label>
+        <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-editar">
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[CURSO]')">[CURSO]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORAS]')">[HORAS]</button>
+          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
+          <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA]')">[FECHA]</button>
+          <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
+          <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
+        </div>
+        <textarea class="form-input" name="texto_certificado" id="edit-plantilla-texto" rows="4" required oninput="actualizarPreview(this.value, 'edit-preview')"></textarea>
+        
+        <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 0.25rem;">Vista Previa (Texto)</div>
+            <div id="edit-preview" style="font-size: 0.9rem; line-height: 1.5; color: #334155; font-family: Georgia, serif;"></div>
         </div>
       </div>
 
@@ -2652,6 +2703,14 @@ function abrirModalEditarPlantilla(data) {
   document.getElementById('edit-plantilla-tipo').value = data.tipo_documento || 'DIPLOMA';
   document.getElementById('edit-plantilla-firmante-nombre').value = data.firmante_nombre || '';
   document.getElementById('edit-plantilla-firmante-cargo').value = data.firmante_cargo || '';
+  const texto = document.getElementById('edit-plantilla-texto');
+  if (texto) {
+    texto.value = data.texto_certificado || '';
+    // Forzar actualización del preview al abrir
+    if (typeof actualizarPreview === 'function') {
+        actualizarPreview(texto.value, 'edit-preview');
+    }
+  }
   
   abrirModal('modal-editar-plantilla');
 }
@@ -3705,4 +3764,84 @@ async function initCharts() {
   }
 }
 </script>
+<script>
+  // Script para Live Preview y Píldoras de Certificados
+  function insertarEtiqueta(textareaId, etiqueta) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    // Reemplaza o inserta
+    textarea.value = text.substring(0, start) + etiqueta + text.substring(end);
+    
+    // Mueve el cursor y dispara el preview
+    textarea.selectionStart = textarea.selectionEnd = start + etiqueta.length;
+    textarea.focus();
+    
+    // Disparar input event para que el preview se actualice
+    const event = new Event('input', { bubbles: true });
+    textarea.dispatchEvent(event);
+  }
+
+  function actualizarPreview(texto, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+
+    if (!texto.trim()) {
+        preview.innerHTML = "Escribe el texto arriba para ver la vista previa...";
+        preview.style.color = "#94a3b8";
+        return;
+    }
+
+    preview.style.color = "#334155";
+    
+    let html = texto
+        .replace(/\[NOMBRE\]/g, '<strong>CARLOS DANIEL INTERIANO IRÍAS</strong>')
+        .replace(/\[CURSO\]/g, '<strong>La Evolución de la Docencia Universitaria</strong>')
+        .replace(/\[MODALIDAD\]/g, '<strong>Presencial</strong>')
+        .replace(/\[HORAS\]/g, '<strong>40</strong>')
+        .replace(/\[FECHA_RANGO\]/g, '<strong>del 27 al 27 de Abril de 2026</strong>')
+        .replace(/\[FECHA\]/g, '<strong>27 de Abril de 2026</strong>')
+      .replace(/\[FECHA_APROBACION\]/g, '<strong>27 de Abril de 2026</strong>')
+      .replace(/\[FECHA_EMISION\]/g, '<strong>27 de Abril de 2026</strong>')
+        .replace(/\[HORARIO\]/g, '<strong>Nocturna 18:00-20:00</strong>')
+        .replace(/\n/g, '<br>');
+        
+    preview.innerHTML = html;
+  }
+  
+  // Agregar listener cuando se abre el modal de editar para forzar el preview inicial
+  document.addEventListener('DOMContentLoaded', () => {
+      const editTextArea = document.getElementById('edit-plantilla-texto');
+      if (editTextArea) {
+          // Lo disparamos manualmente si tiene contenido inicial
+          setTimeout(() => {
+              if (editTextArea.value) {
+                  actualizarPreview(editTextArea.value, 'edit-preview');
+              }
+          }, 500);
+      }
+  });
+</script>
+<style>
+  .btn-pildora {
+    background: #e2e8f0;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-pildora:hover {
+    background: #0b2e6d;
+    color: white;
+    border-color: #0b2e6d;
+  }
+</style>
 {% endblock %}

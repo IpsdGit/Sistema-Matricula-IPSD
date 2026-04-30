@@ -268,6 +268,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         query_cursos = '''
                  SELECT c.id, c.nombre, c.anio, c.trimestre, c.mes, c.dia, c.modalidad, c.cupos_maximos, c.enlace_virtual,
                                      c.duracion_tipo, c.tipo_accion, c.horas_totales, c.semanas_duracion,
+                                     c.id_plantilla_certificado,
                    GROUP_CONCAT(h.horario, '<br>') as horarios_html,
                    COUNT(DISTINCT m.numero_empleado) as total_inscritos
             FROM capacitaciones c
@@ -571,10 +572,18 @@ def update_matricula_resultado(numero_empleado, id_capacitacion, matricula_id, a
             conn.close()
             return {'ok': False, 'error': 'Matrícula no encontrada', 'status_code': 404}
 
-        cursor = conn.execute(
-            'UPDATE matriculas SET aprobado = ? WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
-            (aprobado, matricula_id, numero_empleado, id_capacitacion),
-        )
+        # Actualizar aprobación y fecha de aprobación si corresponde
+        if aprobado == 1:
+            fecha_aprobacion = datetime.now().strftime('%Y-%m-%d')
+            cursor = conn.execute(
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ? WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
+                (aprobado, fecha_aprobacion, matricula_id, numero_empleado, id_capacitacion),
+            )
+        else:
+            cursor = conn.execute(
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
+                (aprobado, matricula_id, numero_empleado, id_capacitacion),
+            )
 
         registrar_evento_matricula(
             conn,
@@ -642,15 +651,19 @@ def create_curso_records(
             conn.execute(
                 '''
                 INSERT INTO capacitaciones
-                (id, nombre, anio, trimestre, mes, dia, modalidad, cupos_maximos, enlace_virtual, duracion_tipo,
+                (id, nombre, anio, trimestre, mes, dia, anio_fin, mes_fin, dia_fin,
+                 modalidad, cupos_maximos, enlace_virtual, duracion_tipo,
                  tipo_accion, horas_totales, semanas_duracion, id_plantilla_certificado)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     id_curso,
                     nombre_curso,
                     anio_actual,
                     trimestre,
+                    mes_actual,
+                    dia_actual,
+                    anio_actual,
                     mes_actual,
                     dia_actual,
                     modalidad,
@@ -720,7 +733,10 @@ def update_curso_record(
             UPDATE capacitaciones
             SET nombre = ?, anio = ?, trimestre = ?, mes = ?, dia = ?, modalidad = ?, duracion_tipo = ?,
                 tipo_accion = ?, horas_totales = ?, semanas_duracion = ?, cupos_maximos = ?, enlace_virtual = ?,
-                id_plantilla_certificado = ?
+                id_plantilla_certificado = ?,
+                anio_fin = COALESCE(NULLIF(anio_fin, ''), ?),
+                mes_fin = COALESCE(NULLIF(mes_fin, ''), ?),
+                dia_fin = COALESCE(NULLIF(dia_fin, ''), ?)
             WHERE id = ?
             ''',
             (
@@ -737,6 +753,9 @@ def update_curso_record(
                 cupos_maximos,
                 enlace_virtual,
                 id_plantilla_certificado,
+                anio,
+                mes,
+                dia,
                 id_curso,
             ),
         )

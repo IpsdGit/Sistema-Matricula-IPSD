@@ -3,3 +3,4 @@ Werkzeug==2.3.7
 google-genai==1.12.1
 python-dotenv==1.0.1
 openpyxl==3.1.5
+pdfkit==1.0.0

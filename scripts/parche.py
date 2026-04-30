@@ -38,6 +38,25 @@ def aplicar_parche():
     except Exception:
         print("- La columna 'aprobado' ya estaba lista.")
 
+    try:
+        cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_aprobacion TEXT')
+        # Backfill
+        cursor.execute('''
+            UPDATE matriculas 
+            SET fecha_aprobacion = (
+                SELECT SUBSTR(fecha_evento, 1, 10)
+                FROM matricula_historial 
+                WHERE matricula_id = matriculas.numero_empleado || '_' || matriculas.id_capacitacion
+                AND estado_codigo = 'APROBADO'
+                ORDER BY fecha_evento DESC 
+                LIMIT 1
+            )
+            WHERE aprobado = 1 AND fecha_aprobacion IS NULL
+        ''')
+        print("✓ Columna 'fecha_aprobacion' agregada y backfill completado.")
+    except Exception:
+        print("- La columna 'fecha_aprobacion' ya estaba lista.")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS estado_matricula_catalogo (
             codigo TEXT PRIMARY KEY,

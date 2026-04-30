@@ -98,6 +98,57 @@ def register_admin_routes(app):
         except Exception:
             return None
 
+    def _sincronizar_fechas_capacitacion_desde_sesiones(id_curso, fecha_inicio_fallback='', fecha_fin_fallback=''):
+        """Mantiene (anio/mes/dia) y (anio_fin/mes_fin/dia_fin) en capacitaciones según MIN/MAX(fecha) de sesiones_curso."""
+        id_curso = (id_curso or '').strip().upper()
+        if not id_curso:
+            return
+
+        def _parse_iso(iso_str):
+            iso_str = (iso_str or '').strip()
+            if not iso_str:
+                return None
+            try:
+                return datetime.strptime(iso_str, '%Y-%m-%d').date()
+            except ValueError:
+                return None
+
+        try:
+            conn = get_db_connection()
+            fila = conn.execute(
+                'SELECT MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin FROM sesiones_curso WHERE id_curso = ?',
+                (id_curso,),
+            ).fetchone()
+
+            fecha_inicio_iso = (fila['fecha_inicio'] or '').strip() if fila else ''
+            fecha_fin_iso = (fila['fecha_fin'] or '').strip() if fila else ''
+            inicio_dt = _parse_iso(fecha_inicio_iso) or _parse_iso(fecha_inicio_fallback)
+            fin_dt = _parse_iso(fecha_fin_iso) or _parse_iso(fecha_fin_fallback) or inicio_dt
+
+            if not inicio_dt or not fin_dt:
+                conn.close()
+                return
+
+            anio_ini = str(inicio_dt.year)
+            mes_ini = MESES_ES[inicio_dt.month - 1]
+            dia_ini = str(inicio_dt.day)
+            anio_fin = str(fin_dt.year)
+            mes_fin = MESES_ES[fin_dt.month - 1]
+            dia_fin = str(fin_dt.day)
+
+            conn.execute(
+                '''
+                UPDATE capacitaciones
+                SET anio = ?, mes = ?, dia = ?, anio_fin = ?, mes_fin = ?, dia_fin = ?
+                WHERE id = ?
+                ''',
+                (anio_ini, mes_ini, dia_ini, anio_fin, mes_fin, dia_fin, id_curso),
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            return
+
     def _construir_configuracion_sesiones(sesiones_curso, fecha_default):
         fecha_fallback = (fecha_default or datetime.now().strftime('%Y-%m-%d')).strip()
         configuracion = {
@@ -439,6 +490,8 @@ def register_admin_routes(app):
                 return redirect(url_for('admin_gestion_sesiones', id_curso=id_curso))
             sesiones_creadas_total += int(result.get('sesiones_creadas', 0) or 0)
 
+        _sincronizar_fechas_capacitacion_desde_sesiones(id_curso, fecha_inicio, fecha_fin)
+
         result = {
             'ok': True,
             'sesiones_creadas': sesiones_creadas_total,
@@ -544,6 +597,8 @@ def register_admin_routes(app):
             docente_sesion=docente_sesion,
             edicion=edicion,
         )
+        if result.get('ok'):
+            _sincronizar_fechas_capacitacion_desde_sesiones(id_curso, fecha, fecha)
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -589,6 +644,8 @@ def register_admin_routes(app):
             docente_sesion=docente_sesion,
             edicion=edicion,
         )
+        if result.get('ok'):
+            _sincronizar_fechas_capacitacion_desde_sesiones(id_curso)
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -620,6 +677,8 @@ def register_admin_routes(app):
             abort(403)
 
         result = eliminar_sesion(id_sesion)
+        if result.get('ok'):
+            _sincronizar_fechas_capacitacion_desde_sesiones(id_curso)
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status

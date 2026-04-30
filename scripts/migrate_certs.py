@@ -8,17 +8,18 @@ conexion = sqlite3.connect(db_path)
 cursor = conexion.cursor()
 
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS plantillas_certificados (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        direccion_codigo TEXT NOT NULL,
-        nombre_plantilla TEXT NOT NULL, 
-        tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
-        ruta_fondo_img TEXT NOT NULL, 
-        firmante_nombre TEXT NOT NULL, 
-        firmante_cargo TEXT NOT NULL, 
-        activo INTEGER DEFAULT 1,
-        FOREIGN KEY(direccion_codigo) REFERENCES direcciones(codigo)
-    )
+        CREATE TABLE IF NOT EXISTS plantillas_certificados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            direccion_codigo TEXT NOT NULL,
+            nombre_plantilla TEXT NOT NULL,
+            tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
+            ruta_firma_img TEXT NOT NULL,
+            texto_certificado TEXT NOT NULL,
+            firmante_nombre TEXT NOT NULL,
+            firmante_cargo TEXT NOT NULL,
+            activo INTEGER DEFAULT 1,
+            FOREIGN KEY(direccion_codigo) REFERENCES direcciones(codigo)
+        )
 ''')
 
 try:

@@ -4105,6 +4105,189 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Abril 29, 2026  
-**Versión actual**: 1.11.0 (Sistema de Certificación Digital y Rediseño de Detalle de Curso)  
-**Estado**: Development - Sistema de diplomas activo y UI de curso modernizada
+---
+
+# 🎓 Versión 1.12.0 - Plantillas Dinámicas y Editor Visual de Certificados
+
+**Fecha**: Abril 30, 2026  
+**Cambios**: Refactorización integral del sistema de certificados (1063 insertiones, 197 eliminaciones en 13 archivos)
+
+## Cambio 33.1: Migración de esquema de datos → Firma + Texto Dinámico
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `database.py`, `scripts/setup_bd.py`, `scripts/migrate_certs.py`
+
+**QUÉ**:
+- Cambio de modelo de datos en tabla `plantillas_certificados`:
+  - ❌ Antes: `ruta_fondo_img` (una imagen de fondo estática por plantilla)
+  - ✅ Ahora: `ruta_firma_img` (imagen PNG transparente de firma) + `texto_certificado` (contenido editable con etiquetas dinámicas)
+- Nuevas etiquetas soportadas en texto:
+  - `[NOMBRE]` - Nombre completo del docente
+  - `[CURSO]` - Nombre del curso
+  - `[MODALIDAD]` - Virtual/Presencial
+  - `[HORAS]` - Horas totales
+  - `[HORARIO]` - Horario elegido
+  - `[FECHA]` - Fecha actual
+  - `[FECHA_RANGO]` - Rango de fecha inicio-fin del curso
+  - `[FECHA_APROBACION]` - Fecha de aprobación real
+- Script `migrate_certs.py` realiza migración automática de datos antiguos al nuevo esquema.
+
+**POR QUÉ**:
+- Modelo anterior requería una imagen de fondo diferente por cada plantilla → difícil de mantener y escalar.
+- El nuevo modelo permite: una imagen de fondo única + firmas personalizables + texto reutilizable y parametrizado.
+- Reduce duplicación de activos y facilita cambios futuros sin tocar la BD.
+
+**PARA QUÉ**:
+- Una plantilla sirve para N docentes automáticamente.
+- Texto y datos se populan sin hardcoding.
+- Mayor flexibilidad para personalización institucional.
+
+---
+
+## Cambio 33.2: Sistema de reemplazo de etiquetas dinámicas
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `services/certificate_service.py` (+393 líneas), `services/portal_service.py` (+34 líneas)
+
+**QUÉ**:
+- Nueva función `_reemplazar_etiquetas()`:
+  - Mapea etiquetas como `[NOMBRE]` → valores reales de BD (nombre completo, curso, etc.)
+  - Soporta formateo de fechas (DD/Mes/Año)
+  - Manejo de valores vacíos con defaults
+  
+- Nueva función `generar_html_preview_plantilla()`:
+  - Genera preview visual del certificado con datos ficticios para demostración en admin
+  - Usa datos simulados (ej. "Carlos Daniel Interiano Irias", "Curso de Capacitación")
+  - Renderiza en tiempo real lo que vería el usuario final
+
+- Validación mejorada en `portal_service.py`:
+  - Chequea que `plantilla_disponible = ID ≠ null AND activa = 1 AND firma_presente AND texto_presente`
+  - No genera PDFs inválidos
+
+**POR QUÉ**:
+- Las etiquetas permiten reutilizar una plantilla sin modificar código.
+- El preview ayuda a admins a verificar plantillas antes de usarlas en producción.
+
+**PARA QUÉ**:
+- Automatización completa de certificados personalizados.
+- Reducción de errores manuales.
+
+---
+
+## Cambio 33.3: Editor Visual de Plantillas en Admin
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `templates/admin.html` (+159 líneas), `routes/admin.py` (+59 líneas), `services/admin_service.py` (+33 líneas)
+
+**QUÉ**:
+- Nueva sección en panel Admin: **"Gestión de Plantillas de Certificados"**
+  
+**Interfaz mejorada**:
+- Pildoras/botones de etiquetas: `[NOMBRE]` `[CURSO]` `[FECHA_RANGO]` etc.
+  - Al hacer clic, insertan la etiqueta en el textarea
+- **Textarea expandible** para editar texto del certificado
+- **Vista Previa en Vivo** (live preview):
+  - Muestra cómo se vería el certificado con datos ficticios
+  - Se actualiza mientras el admin escribe
+- Tabla mejorada de plantillas:
+  - Columna "Firma" (reemplaza "Fondo")
+  - Botón "Vista Previa" para ver completo
+  - Carga de archivo: solo acepta PNG
+- CRUD completo: crear, editar, eliminar plantillas
+
+**POR QUÉ**:
+- Antes los admins tenían que editar HTML/CSS directamente.
+- Ahora pueden editar visualmente sin conocimiento técnico.
+
+**PARA QUÉ**:
+- Autonomía: cada dirección crea sus propias plantillas.
+- Agilidad: cambios sin tickets al departamento técnico.
+
+---
+
+## Cambio 33.4: Rediseño Premium de Templates HTML de Certificados
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `templates/certificados/base_constancia.html` (+124 líneas), `templates/certificados/base_diploma.html` (+225 líneas)
+
+**QUÉ**:
+- **Constancia** (mejoras visuales):
+  - Marco azul institucional (#0b2e6d) con borde dorado
+  - Layout flex (antes: posicionamiento absoluto)
+  - Firma PNG superpuesta (antes: posición fija hardcoded)
+  - Texto dinámico renderizado (antes: hardcoded)
+  - Legibilidad mejorada con espaciado profesional
+
+- **Diploma** (redesign completo):
+  - Esquinas decorativas triangulares (antes: rectangular simple)
+  - Header: "UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS"
+  - Zona de contenido con tipografía Georgia (serif) para elegancia
+  - Footer flexible con datos variables (antes: fijo)
+  - Firma superpuesta con línea de firma
+
+- **Tipografía**:
+  - Arial genérico → Georgia (títulos) + Segoe UI (body)
+  - Tamaños escalonados para jerarquía clara
+
+**POR QUÉ**:
+- Certificados anteriores se veían básicos y poco institucionales.
+- Necesidad de elevar la percepción de valor de los diplomas.
+
+**PARA QUÉ**:
+- Profesionalismo: documentos dignos de enmarcar.
+- Reconocimiento institucional: branding UNAH visible.
+
+---
+
+## Cambio 33.5: Validación Robusta y Manejo de Errores
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `scripts/parche.py`, `services/portal_service.py`, `database.py`
+
+**QUÉ**:
+- **Validación triple** en `portal_service.py`:
+  - ✅ Plantilla existe (ID ≠ null)
+  - ✅ Plantilla activa (activa = 1)
+  - ✅ Firma presente (ruta_firma_img ≠ empty)
+  - ✅ Texto presente (texto_certificado ≠ empty)
+  
+- Script `parche.py` (+19 líneas):
+  - Correcciones puntuales durante transición de esquema
+  - Cleanup de datos legacy
+  - Validación post-migración
+
+**POR QUÉ**:
+- Antes: chequeo simple por ID podía generar PDFs inválidos.
+- Ahora: garantía de integridad antes de generar.
+
+**PARA QUÉ**:
+- Cero PDFs rotos o incompletos.
+- Mejor experiencia del usuario final.
+
+---
+
+## Cambio 33.6: Dependencias Actualizadas
+**Fecha**: Abril 30, 2026  
+**Archivos afectados**: `requirements.txt`
+
+**QUÉ**:
+- Nueva dependencia o versión en `requirements.txt`
+- Posible actualización de `pdfkit` o librería relacionada para soporte mejorado
+
+**PARA QUÉ**:
+- Compatibilidad con wkhtmltopdf.
+- Soporte de features nuevas o fixes críticos.
+
+---
+
+## Resumen de Cambios v1.12.0
+
+| Aspecto | Cambio |
+|--------|--------|
+| **Modelo de datos** | Fondo estático → Firma + Texto Dinámico (etiquetas parametrizadas) |
+| **Reutilización** | Una plantilla = Un docente → Una plantilla = Muchos docentes |
+| **Admin UX** | Visualización → Editor Visual con Preview en Vivo |
+| **Templates** | Básicos → Premium (marcos, tipografía profesional, firma integrada) |
+| **Validación** | Chequeo simple → Triple validación (existencia, activo, integridad) |
+| **Líneas código** | +1063 insertiones, -197 eliminaciones en 13 archivos |
+
+---
+
+**Última actualización**: Abril 30, 2026  
+**Versión actual**: 1.12.0 (Plantillas Dinámicas y Editor Visual de Certificados)  
+**Estado**: Development - Sistema de plantillas parametrizadas activo; certificados completamente personalizables por admin

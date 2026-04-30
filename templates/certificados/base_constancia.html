@@ -10,80 +10,100 @@
         body {
             margin: 0;
             padding: 0;
-            width: 816px; /* Aprox 8.5 in at 96 dpi */
-            height: 1056px; /* Aprox 11 in at 96 dpi */
-            background-image: url('file:///{{ ruta_fondo_absoluta }}');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
             position: relative;
             font-family: Arial, sans-serif;
-            color: #333;
+            color: #0f172a;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
-        
-        /* Ajustar estos top/left en base al diseño real del fondo de constancia */
-        .nombre-docente {
-            position: absolute;
-            top: 450px;
-            left: 0;
+
+        .sheet {
             width: 100%;
-            text-align: center;
-            font-size: 28px;
-            font-weight: bold;
-            color: #1e3a8a;
+            height: 100%;
+            padding: 48px;
+            box-sizing: border-box;
+            background: #ffffff;
         }
 
-        .texto-certifica {
-            position: absolute;
-            top: 520px;
-            left: 100px;
-            width: 616px;
-            text-align: justify;
-            font-size: 18px;
-            line-height: 1.6;
-        }
-
-        .fecha-emision {
-            position: absolute;
-            top: 680px;
-            right: 100px;
-            font-size: 16px;
-        }
-
-        .firmante-nombre {
-            position: absolute;
-            bottom: 180px;
-            left: 0;
+        .frame {
+            position: relative;
             width: 100%;
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
+            height: 100%;
+            box-sizing: border-box;
+            border: 5px solid #0b2e6d;
+            outline: 2px solid #f2b705;
+            outline-offset: -14px;
+            padding: 44px 52px;
         }
 
-        .firmante-cargo {
-            position: absolute;
-            bottom: 150px;
-            left: 0;
-            width: 100%;
+        .titulo {
             text-align: center;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 40px;
+            letter-spacing: 0.22em;
+            color: #0b2e6d;
+            margin-top: 8px;
+        }
+
+        .subtitulo {
+            text-align: center;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            color: #334155;
+            margin-top: 8px;
+        }
+
+        .texto {
+            margin-top: 34px;
             font-size: 14px;
-            color: #555;
+            line-height: 1.7;
+            text-align: justify;
+        }
+
+        .firma {
+            position: absolute;
+            left: 52px;
+            right: 52px;
+            bottom: 42px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            justify-items: center;
+        }
+
+        .firma img {
+            max-width: 260px;
+            max-height: 90px;
+        }
+
+        .firma .nombre {
+            font-weight: 700;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .firma .cargo {
+            font-size: 12px;
+            color: #475569;
+            text-align: center;
+            margin-top: -2px;
         }
     </style>
 </head>
 <body>
-    <div class="nombre-docente">{{ nombre_docente }}</div>
-    
-    <div class="texto-certifica">
-        Por haber participado en la Acción Formativa en modalidad <strong>{{ modalidad }}</strong> denominada 
-        <strong>"{{ curso_nombre }}"</strong> con una duración de <strong>{{ horas_totales }} horas</strong>.
-    </div>
+    <div class="sheet">
+        <div class="frame">
+            <div class="titulo">CONSTANCIA</div>
+            <div class="subtitulo">DE PARTICIPACIÓN</div>
 
-    <div class="fecha-emision">
-        Emitido el: {{ dia }} de {{ mes }} de {{ anio }}
-    </div>
+            <div class="texto">{{ texto_certificado_renderizado|safe }}</div>
 
-    <div class="firmante-nombre">{{ firmante_nombre }}</div>
-    <div class="firmante-cargo">{{ firmante_cargo }}</div>
+            <div class="firma">
+                <img src="file:///{{ ruta_firma_absoluta }}" alt="Firma">
+                <div class="nombre">{{ firmante_nombre }}</div>
+                <div class="cargo">{{ firmante_cargo }}</div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -10,81 +10,202 @@
         body {
             margin: 0;
             padding: 0;
-            width: 1056px; /* Aprox 11 in at 96 dpi */
-            height: 816px; /* Aprox 8.5 in at 96 dpi */
-            background-image: url('file:///{{ ruta_fondo_absoluta }}');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            position: relative;
             font-family: Arial, sans-serif;
-            color: #333;
-        }
-        
-        .nombre-docente {
-            position: absolute;
-            top: 360px;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            font-size: 32px;
-            font-weight: bold;
-            color: #1e3a8a;
+            color: #0f172a;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .texto-certifica {
-            position: absolute;
-            top: 440px;
-            left: 150px;
-            width: 756px;
-            text-align: center;
-            font-size: 20px;
-            line-height: 1.6;
+        .sheet {
+            width: 100%;
+            height: 100%;
+            padding: 36px;
+            box-sizing: border-box;
+            background: #ffffff;
         }
 
-        .fecha-emision {
-            position: absolute;
-            top: 550px;
-            left: 0;
+        .frame {
+            position: relative;
             width: 100%;
-            text-align: center;
-            font-size: 16px;
+            height: 100%;
+            box-sizing: border-box;
+            border: 6px solid #0b2e6d;
+            outline: 2px solid #f2b705;
+            outline-offset: -16px;
+            padding: 42px 54px;
+            display: flex;
+            flex-direction: column;
         }
 
-        .firmante-nombre {
+        .corner {
             position: absolute;
-            bottom: 120px;
-            left: 0;
-            width: 100%;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #0b2e6d 0%, #0b2e6d 55%, #f2b705 55%, #f2b705 100%);
+            opacity: 0.95;
+        }
+        .corner.tl { top: 0; left: 0; }
+        .corner.tr { top: 0; right: 0; transform: scaleX(-1); }
+        .corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
+        .corner.br { bottom: 0; right: 0; transform: scale(-1, -1); }
+
+        .header {
             text-align: center;
-            font-size: 18px;
-            font-weight: bold;
+            margin-top: 10px;
         }
 
-        .firmante-cargo {
-            position: absolute;
-            bottom: 90px;
-            left: 0;
-            width: 100%;
-            text-align: center;
+        .header .uni {
+            font-weight: 700;
+            letter-spacing: 0.14em;
             font-size: 14px;
-            color: #555;
+            color: #0b2e6d;
+        }
+
+        .header .titulo {
+            margin: 16px 0 0;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 64px;
+            letter-spacing: 0.06em;
+            color: #0b2e6d;
+        }
+
+        .header .subtitulo {
+            margin-top: 2px;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 18px;
+            letter-spacing: 0.28em;
+            color: #0b2e6d;
+        }
+
+        .contenido {
+            margin-top: 34px;
+            text-align: center;
+            flex-grow: 1; /* Permite empujar la firma hacia abajo */
+        }
+
+        .contenido .intro {
+            font-size: 14px;
+            letter-spacing: 0.08em;
+            color: #334155;
+        }
+
+        .contenido .nombre {
+            margin-top: 18px;
+            font-size: 30px;
+            font-weight: 700;
+            color: #0b2e6d;
+        }
+
+        .contenido .linea {
+            margin: 14px auto 0;
+            width: 72%;
+            height: 2px;
+            background: #0b2e6d;
+        }
+
+        .contenido .texto {
+            margin: 26px auto 0;
+            width: 86%;
+            font-size: 18px;
+            line-height: 1.7;
+            color: #0f172a;
+        }
+
+        .firma {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .firma .contenedor-firma {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .firma .img {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            margin-bottom: -22px; /* Superponer el sello/firma con la línea de forma natural */
+            z-index: 10;
+        }
+
+        .firma .img img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .firma .meta {
+            text-align: center;
+            width: 100%;
+            min-width: 320px;
+            position: relative;
+        }
+
+        .firma .meta .linea-firma {
+            width: 100%;
+            height: 1px;
+            background: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .firma .meta .nombre-firmante {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .firma .meta .cargo-firmante {
+            font-size: 12px;
+            color: #475569;
+            margin-top: 2px;
         }
     </style>
 </head>
 <body>
-    <div class="nombre-docente">{{ nombre_docente }}</div>
-    
-    <div class="texto-certifica">
-        Por haber completado con éxito el diplomado/curso <strong>"{{ curso_nombre }}"</strong><br>
-        en modalidad <strong>{{ modalidad }}</strong> con una duración de <strong>{{ horas_totales }} horas</strong>.
-    </div>
+    <div class="sheet">
+        <div class="frame">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
 
-    <div class="fecha-emision">
-        Dado el {{ dia }} de {{ mes }} de {{ anio }}
-    </div>
+            <div class="header">
+                <div class="uni">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</div>
+                <div class="titulo">DIPLOMA</div>
+                <div class="subtitulo">DE PARTICIPACIÓN</div>
+            </div>
 
-    <div class="firmante-nombre">{{ firmante_nombre }}</div>
-    <div class="firmante-cargo">{{ firmante_cargo }}</div>
+            <div class="contenido">
+                <div class="intro">SE OTORGA EL PRESENTE A</div>
+                <div class="nombre">{{ nombre_docente }}</div>
+                <div class="linea"></div>
+
+                <div class="texto">{{ texto_certificado_renderizado|safe }}</div>
+            </div>
+
+            <div class="firma">
+                <div class="contenedor-firma">
+                    <div class="img">
+                        <img src="file:///{{ ruta_firma_absoluta }}" alt="Firma y Sello">
+                    </div>
+                    <div class="meta">
+                        <div class="linea-firma"></div>
+                        <div class="nombre-firmante">{{ firmante_nombre }}</div>
+                        <div class="cargo-firmante">{{ firmante_cargo }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

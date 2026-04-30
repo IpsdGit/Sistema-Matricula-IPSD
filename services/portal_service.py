@@ -291,10 +291,27 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
 
         curso = conn.execute(
             '''
-            SELECT id, nombre, anio, trimestre, mes, dia, modalidad, enlace_virtual, duracion_tipo,
-                   tipo_accion, horas_totales, semanas_duracion, id_plantilla_certificado
-            FROM capacitaciones
-            WHERE id = ?
+            SELECT
+                c.id,
+                c.nombre,
+                c.anio,
+                c.trimestre,
+                c.mes,
+                c.dia,
+                c.modalidad,
+                c.enlace_virtual,
+                c.duracion_tipo,
+                c.tipo_accion,
+                c.horas_totales,
+                c.semanas_duracion,
+                c.id_plantilla_certificado,
+                p.activo AS plantilla_activa,
+                p.ruta_firma_img,
+                p.texto_certificado
+            FROM capacitaciones c
+            LEFT JOIN plantillas_certificados p
+                ON p.id = c.id_plantilla_certificado
+            WHERE c.id = ?
             LIMIT 1
             ''',
             (id_curso,),
@@ -430,6 +447,13 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             else:
                 sesiones_futuras.append(registro)
 
+        plantilla_disponible = bool(
+            curso['id_plantilla_certificado']
+            and int(curso['plantilla_activa'] or 0) == 1
+            and (curso['ruta_firma_img'] or '').strip()
+            and (curso['texto_certificado'] or '').strip()
+        )
+
         return {
             'ok': True,
             'curso': {
@@ -453,7 +477,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
                     else (historial_ultimo['horario_elegido'] if historial_ultimo else None)
                 ),
                 'matricula_id': matricula_activa['id'] if matricula_activa else None,
-                'plantilla_disponible': bool(curso['id_plantilla_certificado']),
+                'plantilla_disponible': plantilla_disponible,
                 'estado_matricula': historial_ultimo['estado_codigo'] if historial_ultimo else None,
                 'estado_matricula_nombre': historial_ultimo['estado_nombre'] if historial_ultimo else None,
                 'fecha_ultimo_estado': historial_ultimo['fecha_evento'] if historial_ultimo else None,

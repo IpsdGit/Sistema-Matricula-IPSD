@@ -1,10 +1,11 @@
 import os
 import re
 import sqlite3
+from datetime import datetime
 
 from werkzeug.security import generate_password_hash
 
-from config import DB_PATH
+from config import DB_PATH, MESES_ES
 
 
 def get_db_connection():
@@ -35,6 +36,35 @@ def asegurar_migraciones_minimas():
                 nombre TEXT NOT NULL
             )
         ''')
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS plantillas_certificados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                direccion_codigo TEXT NOT NULL,
+                nombre_plantilla TEXT NOT NULL,
+                tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
+                ruta_firma_img TEXT NOT NULL,
+                texto_certificado TEXT NOT NULL,
+                firmante_nombre TEXT NOT NULL,
+                firmante_cargo TEXT NOT NULL,
+                activo INTEGER DEFAULT 1,
+                FOREIGN KEY(direccion_codigo) REFERENCES direcciones(codigo)
+            )
+            '''
+        )
+
+        columnas_plantillas = {
+            row[1] for row in cursor.execute('PRAGMA table_info(plantillas_certificados)').fetchall()
+        }
+        if 'ruta_firma_img' not in columnas_plantillas:
+            cursor.execute(
+                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
+            )
+        if 'texto_certificado' not in columnas_plantillas:
+            cursor.execute(
+                "ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''"
+            )
 
         cursor.execute(
             '''
@@ -96,6 +126,10 @@ def asegurar_migraciones_minimas():
         columnas_capacitaciones = {
             row[1] for row in cursor.execute('PRAGMA table_info(capacitaciones)').fetchall()
         }
+        if 'id_plantilla_certificado' not in columnas_capacitaciones:
+            cursor.execute(
+                'ALTER TABLE capacitaciones ADD COLUMN id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)'
+            )
         if 'enlace_virtual' not in columnas_capacitaciones:
             cursor.execute('ALTER TABLE capacitaciones ADD COLUMN enlace_virtual TEXT')
         if 'duracion_tipo' not in columnas_capacitaciones:
@@ -106,6 +140,66 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE capacitaciones ADD COLUMN horas_totales INTEGER NOT NULL DEFAULT 20')
         if 'semanas_duracion' not in columnas_capacitaciones:
             cursor.execute('ALTER TABLE capacitaciones ADD COLUMN semanas_duracion INTEGER NOT NULL DEFAULT 1')
+
+        columnas_capacitaciones = {
+            row[1] for row in cursor.execute('PRAGMA table_info(capacitaciones)').fetchall()
+        }
+        if 'anio_fin' not in columnas_capacitaciones:
+            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN anio_fin TEXT NOT NULL DEFAULT ''")
+        if 'mes_fin' not in columnas_capacitaciones:
+            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN mes_fin TEXT NOT NULL DEFAULT ''")
+        if 'dia_fin' not in columnas_capacitaciones:
+            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN dia_fin TEXT NOT NULL DEFAULT ''")
+
+        cursor.execute(
+            '''
+            UPDATE capacitaciones
+            SET
+                anio_fin = CASE WHEN TRIM(COALESCE(anio_fin, '')) = '' THEN COALESCE(anio, '') ELSE anio_fin END,
+                mes_fin = CASE WHEN TRIM(COALESCE(mes_fin, '')) = '' THEN COALESCE(mes, '') ELSE mes_fin END,
+                dia_fin = CASE WHEN TRIM(COALESCE(dia_fin, '')) = '' THEN COALESCE(dia, '') ELSE dia_fin END
+            '''
+        )
+
+        # Backfill de fechas desde sesiones_curso cuando existan calendarios configurados.
+        try:
+            filas_fechas = cursor.execute(
+                '''
+                SELECT id_curso, MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin
+                FROM sesiones_curso
+                GROUP BY id_curso
+                '''
+            ).fetchall()
+        except sqlite3.Error:
+            filas_fechas = []
+
+        for fila in filas_fechas:
+            id_curso = (fila[0] or '').strip().upper()
+            fecha_inicio_iso = (fila[1] or '').strip()
+            fecha_fin_iso = (fila[2] or '').strip()
+            if not id_curso or not fecha_inicio_iso or not fecha_fin_iso:
+                continue
+            try:
+                inicio_dt = datetime.strptime(fecha_inicio_iso, '%Y-%m-%d').date()
+                fin_dt = datetime.strptime(fecha_fin_iso, '%Y-%m-%d').date()
+            except ValueError:
+                continue
+
+            anio_inicio = str(inicio_dt.year)
+            mes_inicio = MESES_ES[inicio_dt.month - 1]
+            dia_inicio = str(inicio_dt.day)
+            anio_fin = str(fin_dt.year)
+            mes_fin = MESES_ES[fin_dt.month - 1]
+            dia_fin = str(fin_dt.day)
+
+            cursor.execute(
+                '''
+                UPDATE capacitaciones
+                SET anio = ?, mes = ?, dia = ?, anio_fin = ?, mes_fin = ?, dia_fin = ?
+                WHERE id = ?
+                ''',
+                (anio_inicio, mes_inicio, dia_inicio, anio_fin, mes_fin, dia_fin, id_curso)
+            )
 
         cursor.execute(
             '''
@@ -182,6 +276,21 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP')
         if 'aprobado' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN aprobado INTEGER')
+        if 'fecha_aprobacion' not in columnas_matriculas:
+            cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_aprobacion TEXT')
+            # Intentar backfill desde el historial si existe algún registro de 'APROBADO'
+            cursor.execute('''
+                UPDATE matriculas 
+                SET fecha_aprobacion = (
+                    SELECT SUBSTR(fecha_evento, 1, 10)
+                    FROM matricula_historial 
+                    WHERE matricula_id = matriculas.numero_empleado || '_' || matriculas.id_capacitacion
+                    AND estado_codigo = 'APROBADO'
+                    ORDER BY fecha_evento DESC 
+                    LIMIT 1
+                )
+                WHERE aprobado = 1 AND fecha_aprobacion IS NULL
+            ''')
 
         cursor.execute(
             '''
