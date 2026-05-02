@@ -3365,6 +3365,258 @@ Cambios en panel de generación de calendarios:
 **Fecha**: Abril 21, 2026  
 **Archivos afectados**: `services/portal_service.py` (-2 líneas)
 
+---
+
+# 🎖️ Versión 1.13 - Mejoras a Sistema de Certificados y Sincronización de Docentes (PENDIENTE DE COMMIT)
+
+## Cambio 27.9: Soporte para logos en plantillas de certificados
+**Fecha**: 29 de Abril - 2 de Mayo 2026  
+**Archivos afectados**: `database.py`, `routes/certificados.py`, `services/certificate_service.py`
+
+**QUÉ**:
+- Nueva columna `ruta_logo_img` en tabla `plantillas_certificados` para almacenar la ruta de logos
+- Funciones `registrar_plantilla()` y `actualizar_plantilla()` ahora aceptan parámetro `file_logo`
+- Los logos se guardan en `/static/certificados/logos/` con formato: `{DIRECCION}_logo_{TIMESTAMP}_{filename}`
+- Refactorización de lógica de INSERT/UPDATE para soportar columnnas opcionales de forma dinámica
+- Nueva función helper `_ruta_absoluta_a_file_url()` para convertir rutas absolutas a file:// URLs
+
+**POR QUÉ**:
+- Cada dirección de IPSD necesita incluir su logo institucional en los certificados
+- Sistema anterior solo permitía firmas, no logos
+- Refactorización permite agregar más campos sin duplicar código de INSERT/UPDATE
+- wkhtmltopdf requiere URLs file:// para imágenes locales
+
+**PARA QUÉ**:
+- Personalizar certificados con branding de cada dirección
+- Mejorar presentación visual de diplomas y constancias
+- Sentar base para agregar fondos/backgrounds de certificados en el futuro
+- Hacer el código más mantenible y escalable
+
+---
+
+## Cambio 27.10: Sincronización de Centro Universitario Regional desde Excel
+**Fecha**: 29 de Abril - 2 de Mayo 2026  
+**Archivos afectados**: `database.py`, `scripts/sync_docentes_excel.py`
+
+**QUÉ**:
+- Nueva columna `centro_universitario_regional` en tabla `docentes`
+- Script `sync_docentes_excel.py` actualizado para leer esta columna desde el Excel
+- Mapeo flexible de nombres de columnas: soporta 'centro universitario regional', 'centro universitario', 'centro regional', 'cur'
+- Ruta del Excel personalizada para cada usuario: `C:\Users\{USERNAME}\Desktop\Base de Prueba.xlsx`
+- Cambio de ruta de `ipsd4` a `Carlo` en la máquina de desarrollo
+- Validación mejorada: `centro_universitario_regional` es opcional, pero otros campos siguen siendo obligatorios
+
+**POR QUÉ**:
+- IPSD tiene múltiples sedes/centros universitarios regionales
+- Los profesores deben estar asociados a su centro para:
+  - Generación de reportes por sede
+  - Validaciones de conflictos de horarios por ubicación
+  - Filtros de disponibilidad de cursos presenciales
+- Cada usuario debe apuntar a su propia ruta de Excel
+- Nombres de columnas en Excel pueden variar entre instituciones
+
+**PARA QUÉ**:
+- Capturar información de ubicación de profesores desde la nómina
+- Preparar base para reportes y estadísticas por centro regional
+- Facilitar sincronización automática desde múltiples fuentes (diferentes usuarios)
+- Mejorar robustez del script frente a variaciones en nombres de columnas
+
+---
+
+## Cambio 27.11: Mejoras en generación de PDF de certificados
+**Fecha**: 29 de Abril - 2 de Mayo 2026  
+**Archivos afectados**: `services/certificate_service.py`, `routes/certificados.py`, `templates/certificados/base_diploma.html`, `templates/certificados/base_constancia.html`
+
+**QUÉ**:
+
+**Parte A: Generación de PDF mejorada**:
+- Nueva función `obtener_datos_empleado(matricula_id)` que retorna nombre completo y número de empleado
+- Nombres de archivos PDF ahora incluyen: `Certificado_{numero_empleado}_{nombre_docente}.pdf` en lugar de solo `certificado_{matricula_id}.pdf`
+- Soporte para rutas absolutas a file:// en wkhtmltopdf mediante `_ruta_absoluta_a_file_url()`
+- Nueva query SQL que obtiene `centro_universitario_regional` desde tabla docentes
+- Sustitución de placeholder `[CENTRO_UNIVERSITARIO_REGIONAL]` en plantillas
+
+**Parte B: Fondos/Backgrounds de certificados**:
+- Sistema de inyección automática de fondos (backgrounds) según tipo de documento:
+  - Diplomas: `/static/certificados/backgrounds/diploma_background.png`
+  - Constancias: `/static/certificados/backgrounds/constancia_background.png`
+- Soporte en función `generar_html_preview_plantilla()` y `generar_binario_pdf()`
+- Verificación de existencia de archivo antes de inyectar (fallback si no existe)
+- Variable de contexto `ruta_fondo_src` inyectada en templates
+
+**Parte C: Optimización de wkhtmltopdf**:
+- Nuevas opciones añadidas:
+  - `'print-media-type': None`: Usar estilos de print media
+  - `'disable-smart-shrinking': None`: Desactivar ajuste automático de escala
+  - `'zoom': '1.0'`: Fuerza zoom 1:1 (sin escalado automático)
+- Objetivo: Asegurar que los PDFs se generen a escala exacta de los templates
+
+**Parte D: Cambios en templates**:
+- Los templates ahora esperan variables adicionales de contexto:
+  - `ruta_logo_src`: Ruta file:// del logo (puede estar vacío)
+  - `ruta_fondo_src`: Ruta file:// del fondo
+  - `centro_universitario_regional`: Nombre del centro del docente
+
+**POR QUÉ**:
+- Certificados deben ser únicos e identificables por número de empleado
+- Cada dirección necesita branding visual consistente (logos y fondos)
+- El `centro_universitario_regional` es información importante en algunos certificados
+- wkhtmltopdf necesita configuración especial para no alterar escalas
+- Previsualizaciones deben verse igual que PDFs finales
+
+**PARA QUÉ**:
+- Facilitar identificación y archivo de certificados descargados
+- Mejorar presentación profesional de diplomas y constancias
+- Incluir contexto completo del docente (sede/centro)
+- Asegurar fidelidad de diseño entre preview y PDF final
+- Preparar base para branding completo por dirección
+
+---
+
+## Cambio 27.12: Eliminación de script de parche obsoleto
+**Fecha**: 1 de Mayo 2026  
+**Archivos afectados**: `scripts/parche.py` (eliminado, 213 líneas)
+
+**QUÉ**:
+- Script `parche.py` ha sido completamente eliminado del repositorio
+- Su funcionalidad ha sido integrada directamente en `database.py` en la función `asegurar_migraciones_minimas()`
+- Las migraciones ahora ocurren automáticamente en cada inicio de la aplicación
+
+**POR QUÉ**:
+- `parche.py` era un mecanismo de migración manual (ejecutar por separado)
+- Con `asegurar_migraciones_minimas()` centralizado en `database.py`, ya no es necesario
+- Mejor UX: No hay que acordarse de ejecutar parches manualmente
+- Reduce complejidad: Una sola forma de hacer migraciones
+
+**PARA QUÉ**:
+- Simplificar el workflow de deployment
+- Evitar errores por olvidar ejecutar parches
+- Consolidar toda la lógica de migraciones en un único punto
+
+---
+
+## Cambio 27.13: Refactorización de interfaz de edición de plantillas
+**Fecha**: 29 de Abril - 2 de Mayo 2026  
+**Archivos afectados**: `templates/admin.html`, `static/style.css`, `templates/certificados/base_diploma.html`, `templates/certificados/base_constancia.html`
+
+**QUÉ**:
+
+**Parte A: Panel de admin.html**:
+- Reorganización de formularios de edición de plantillas con mejor estructura visual
+- Ahora incluye campo de carga para logo de certificado
+- Validaciones mejoradas en formularios (required attributes)
+- Mejor agrupación de campos relacionados
+
+**Parte B: Estilos mejorados**:
+- Nuevos estilos CSS para campos de entrada de logos
+- Mejora en responsividad de formularios
+- Mejor contraste y legibilidad en inputs de archivo
+
+**Parte C: Templates de certificados**:
+- Refactorización de `base_diploma.html` y `base_constancia.html`
+- Soporte para inyección de variables adicionales (centro, logo, fondo)
+- Mejor estructura de DIVs para posicionamiento de elementos
+- Preparación para futuros estilos de diseño
+
+**POR QUÉ**:
+- UI anterior no tenía lugar para cargar logos
+- Necesidad de mejor organización visual del formulario admin
+- Plantillas necesitaban refactorización para soportar nuevos elementos visuales
+
+**PARA QUÉ**:
+- Mejorar UX de administradores al crear/editar plantillas
+- Hacer templates más mantenibles y escalables
+- Preparar base para futuros cambios de diseño de certificados
+
+---
+
+## Cambio 27.14: Adición de logo nuevo en sistema
+**Fecha**: 1 de Mayo 2026  
+**Archivos afectados**: `/static/certificados/logos/IPSD_logo_20260501154442_LOGOS-UNAH-DC_.png` (nuevo)
+
+**QUÉ**:
+- Nuevo logo PNG agregado al directorio de logos con formato timestamped
+- Nombre: `IPSD_logo_20260501154442_LOGOS-UNAH-DC_.png`
+- Tamaño: ~154KB
+- Resolución: Optimizada para impresión en certificados
+
+**POR QUÉ**:
+- Sistema ahora soporta cargar logos, pero faltaba logo de ejemplo
+- Se necesita logo IPSD como base para todas las plantillas de certificados
+
+**PARA QUÉ**:
+- Tener logo base para todas las plantillas
+- Proporcionar ejemplo funcional de cómo se ven logos en certificados
+- Facilitar testing visual del sistema de plantillas
+
+---
+
+## Cambio 27.15: Eliminación de firmas obsoletas
+**Fecha**: 29 de Abril - 2 de Mayo 2026  
+**Archivos afectados**: `/static/certificados/firmas/IPSD_firma_20260430*` (3 archivos eliminados)
+
+**QUÉ**:
+- Se eliminaron 3 archivos de firma PNG antiguas:
+  - `IPSD_firma_20260430141008_Firma_y_sello.png`
+  - `IPSD_firma_20260430142526_Firma_y_sello.png`
+  - `IPSD_firma_20260430152450_Firma_y_sello.png`
+
+**POR QUÉ**:
+- Estos eran versiones de prueba/iteraciones del mismo archivo
+- Ocupaban espacio sin aporte funcional (duplicados)
+- Limpieza de archivos innecesarios
+
+**PARA QUÉ**:
+- Reducir tamaño del repositorio
+- Mantener carpeta de firmas limpia (solo firmas actuales)
+- Facilitar búsqueda de archivos relevantes
+
+---
+
+## Cambio 27.16: Importación de os en app.py
+**Fecha**: 1 de Mayo 2026  
+**Archivos afectados**: `app.py` (+1 línea)
+
+**QUÉ**:
+- Se agregó `import os` al inicio de `app.py`
+- Necesario para futuras operaciones que requieran acceso al sistema de archivos
+
+**POR QUÉ**:
+- Código fue refactorizado para usar más funcionalidades del módulo `os`
+- Import faltaba pero era necesario
+
+**PARA QUÉ**:
+- Permitir operaciones de archivos en la aplicación principal
+
+---
+
+## RESUMEN DE CAMBIOS SIN SUBIR (29 Apr - 2 May 2026)
+
+| Categoría | Cambios | Estado |
+|-----------|---------|--------|
+| **Base de Datos** | 2 nuevas columnas (ruta_logo_img, centro_universitario_regional) | ✅ |
+| **Backend** | 5 funciones nuevas/mejoradas en certificate_service | ✅ |
+| **Backend** | 1 script eliminado (parche.py) | ✅ |
+| **Frontend** | 2 templates refactorizados, 1 CSS mejorado | ✅ |
+| **Assets** | 1 logo agregado, 3 firmas eliminadas | ✅ |
+| **Rutas** | 3 cambios en routes/certificados.py para soportar logos | ✅ |
+| **Scripts** | sync_docentes_excel.py mejorado para nuevo campo | ✅ |
+| **Líneas Totales** | ~552 insertadas, ~443 eliminadas (neto: ~109 líneas) | ✅ |
+
+---
+
+**Nota**: Estos cambios están listos para ser commitados. Se recomienda hacer commit con el mensaje:
+```
+feat: Sistema de logos en certificados y sincronización de centros regionales (v1.13)
+
+- Soporte para cargar logos en plantillas de certificados
+- Sincronización de centro_universitario_regional desde Excel
+- Mejoras en generación de PDF con fondos y nombres descriptivos
+- Refactorización de validación de columnas Excel
+- Eliminación de script parche.py obsoleto
+- Mejoras en UX de admin para edición de plantillas
+```
+
 **QUÉ**:
 Cambio en función `process_matricula()` - manejo de error "Fecha máxima de matrícula pasada":
 - Antes: Retorna error sin contexto

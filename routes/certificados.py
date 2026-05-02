@@ -7,6 +7,7 @@ from services.certificate_service import (
     eliminar_plantilla,
     obtener_plantilla_por_id,
     generar_html_preview_plantilla,
+    obtener_datos_empleado,
 )
 
 certificados_bp = Blueprint('certificados', __name__)
@@ -33,6 +34,7 @@ def crear_plantilla():
     firmante_cargo = request.form.get('firmante_cargo')
     texto_certificado = request.form.get('texto_certificado', '')
     file_firma = request.files.get('firma_img')
+    file_logo = request.files.get('logo_img')
     
     if not file_firma or file_firma.filename == '':
         flash('Debes seleccionar una firma PNG.', 'danger')
@@ -52,6 +54,7 @@ def crear_plantilla():
             nombre_plantilla=nombre_plantilla,
             tipo_documento=tipo_documento,
             file_firma=file_firma,
+            file_logo=file_logo,
             texto_certificado=texto_certificado,
             firmante_nombre=firmante_nombre,
             firmante_cargo=firmante_cargo
@@ -78,6 +81,7 @@ def editar_plantilla_route(id_plantilla):
     firmante_cargo = request.form.get('firmante_cargo')
     texto_certificado = request.form.get('texto_certificado', '')
     file_firma = request.files.get('firma_img')
+    file_logo = request.files.get('logo_img')
     
     try:
         actualizar_plantilla(
@@ -86,6 +90,7 @@ def editar_plantilla_route(id_plantilla):
             nombre_plantilla=nombre_plantilla,
             tipo_documento=tipo_documento,
             file_firma=file_firma,
+            file_logo=file_logo,
             texto_certificado=texto_certificado,
             firmante_nombre=firmante_nombre,
             firmante_cargo=firmante_cargo
@@ -153,9 +158,18 @@ def descargar_certificado(matricula_id):
             409,
             {'Content-Type': 'text/html; charset=utf-8'},
         )
+    
+    # Obtener nombre y número de empleado para el nombre del archivo
+    nombre_empleado, numero_empleado = obtener_datos_empleado(matricula_id)
+    
+    # Construir nombre del archivo
+    if nombre_empleado and numero_empleado:
+        nombre_archivo = f'Certificado_{numero_empleado}_{nombre_empleado.replace(" ", "_")}.pdf'
+    else:
+        nombre_archivo = f'Certificado_{matricula_id}.pdf'
         
     response = make_response(pdf_binario)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=certificado_{matricula_id}.pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={nombre_archivo}'
     response.headers['Content-Length'] = str(len(pdf_binario))
     return response

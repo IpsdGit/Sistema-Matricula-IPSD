@@ -14,8 +14,8 @@ if PROJECT_ROOT not in sys.path:
 
 from config import DB_PATH
 
-DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
-
+DEFAULT_EXCEL_PATH = r"C:\Users\Carlo\Desktop\Base de Prueba.xlsx"
+# DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
 
 def normalizar_texto(valor):
     return str(valor or '').strip()
@@ -49,6 +49,7 @@ def asegurar_tabla_docentes(conn):
             numero_empleado TEXT UNIQUE NOT NULL,
             nombre_completo TEXT NOT NULL,
             correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+            centro_universitario_regional TEXT NOT NULL DEFAULT '',
             activo INTEGER NOT NULL DEFAULT 1,
             fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -81,6 +82,12 @@ def resolver_columnas(headers):
             'correo electronico',
             'correo electronico institucional',
         },
+        'centro_universitario_regional': {
+            'centro universitario regional',
+            'centro universitario',
+            'centro regional',
+            'cur',
+        },
     }
 
     indices = {}
@@ -90,7 +97,8 @@ def resolver_columnas(headers):
                 indices[campo] = idx
                 break
 
-    faltantes = [k for k in alias_map if k not in indices]
+    obligatorias = {'numero_empleado', 'nombre_completo', 'correo_institucional'}
+    faltantes = [k for k in obligatorias if k not in indices]
     if faltantes:
         raise ValueError(
             'No se encontraron columnas obligatorias en el Excel: ' + ', '.join(faltantes)
@@ -134,6 +142,11 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
         correo_institucional = normalizar_correo(
             row[indices['correo_institucional']] if indices['correo_institucional'] < len(row) else ''
         )
+        centro_universitario_regional = ''
+        if 'centro_universitario_regional' in indices:
+            centro_universitario_regional = normalizar_texto(
+                row[indices['centro_universitario_regional']] if indices['centro_universitario_regional'] < len(row) else ''
+            )
 
         if not numero_empleado or not nombre_completo or not correo_institucional:
             errores_validacion += 1
@@ -143,7 +156,9 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             errores_validacion += 1
             continue
 
-        registros_validos.append((numero_empleado, nombre_completo, correo_institucional))
+        registros_validos.append(
+            (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional)
+        )
 
     wb.close()
 
@@ -158,21 +173,22 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
         upserts_ok = 0
         conflictos = 0
 
-        for numero_empleado, nombre_completo, correo_institucional in registros_validos:
+        for numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional in registros_validos:
             try:
                 cursor.execute(
                     '''
                     INSERT INTO docentes (
-                        numero_empleado, nombre_completo, correo_institucional, activo, fecha_sincronizacion
+                        numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, activo, fecha_sincronizacion
                     )
-                    VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+                    VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
                     ON CONFLICT(numero_empleado) DO UPDATE SET
                         nombre_completo = excluded.nombre_completo,
                         correo_institucional = excluded.correo_institucional,
+                        centro_universitario_regional = excluded.centro_universitario_regional,
                         activo = 1,
                         fecha_sincronizacion = CURRENT_TIMESTAMP
                     ''',
-                    (numero_empleado, nombre_completo, correo_institucional),
+                    (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional),
                 )
                 upserts_ok += 1
             except sqlite3.IntegrityError:

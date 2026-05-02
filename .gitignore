@@ -1,5 +1,6 @@
 # Base de Datos
 *.db
+*.db.bak
 matricula.db
 maestro.db
 

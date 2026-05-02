@@ -71,20 +71,28 @@
 
   --transition:     all .25s cubic-bezier(.4,0,.2,1);
   --transition-fast: all .15s ease;
+  
+  /* Escala global para responsividad */
+  --scale: 0.80;
 }
 
 /* ─── Reset y base ─── */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { 
+  scroll-behavior: smooth; 
+  zoom: var(--scale);
+}
 
 body {
   font-family: 'Manrope', sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
+  min-width: calc(100vw / var(--scale));
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ─── TIPOGRAFÍA ─── */
@@ -415,7 +423,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 
 /* ─── HERO (index.html) ─── */
 .hero {
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
   display: flex;
   align-items: center;
   background: var(--bg-dark);
@@ -523,7 +531,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 /* ─── PANEL ADMIN (sidebar layout) ─── */
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
 }
 .admin-sidebar {
   width: 260px;
@@ -581,7 +589,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 /* ─── PORTAL DOCENTE (sidebar + topbar) ─── */
 .portal-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
   padding: 20px;
   gap: 18px;
   position: relative;
@@ -2222,6 +2230,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
   box-shadow: var(--shadow-xl);
   transform: scale(.95) translateY(10px);
   transition: transform .25s cubic-bezier(.4,0,.2,1);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 .modal-overlay.active .modal-box { transform: scale(1) translateY(0); }
 .modal-icon { font-size: 2.5rem; text-align: center; margin-bottom: 1rem; }
@@ -3455,7 +3465,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 
 /* ─── LOGIN ADMIN ─── */
 .admin-login-bg {
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
   background: var(--bg-dark);
   display: flex;
   align-items: center;
@@ -3506,7 +3516,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 
 /* ─── PÁGINA DE ÉXITO/CANCELACIÓN ─── */
 .result-page {
-  min-height: 100vh;
+  min-height: calc(100vh / var(--scale));
   display: flex;
   flex-direction: column;
   align-items: center;

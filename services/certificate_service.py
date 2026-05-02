@@ -21,6 +21,12 @@ def _ruta_web_a_ruta_absoluta(ruta_web: str) -> str:
     ruta_relativa = ruta_web.lstrip('/')
     return os.path.join(current_app.root_path, ruta_relativa).replace('\\', '/')
 
+def _ruta_absoluta_a_file_url(ruta_absoluta: str) -> str:
+    if not ruta_absoluta:
+        return ''
+    ruta = ruta_absoluta.replace('\\', '/')
+    return f'file:///{ruta}'
+
 
 def _resolver_wkhtmltopdf_path() -> str:
     env_path = (os.environ.get('WKHTMLTOPDF_PATH') or '').strip()
@@ -82,6 +88,7 @@ def registrar_plantilla(
     nombre_plantilla,
     tipo_documento,
     file_firma,
+    file_logo,
     texto_certificado,
     firmante_nombre,
     firmante_cargo,
@@ -95,6 +102,12 @@ def registrar_plantilla(
 
     upload_folder = os.path.join(current_app.root_path, 'static', 'certificados', 'firmas')
     os.makedirs(upload_folder, exist_ok=True)
+    
+    upload_folder_logos = os.path.join(current_app.root_path, 'static', 'certificados', 'logos')
+    os.makedirs(upload_folder_logos, exist_ok=True)
+    
+    upload_folder_backgrounds = os.path.join(current_app.root_path, 'static', 'certificados', 'backgrounds')
+    os.makedirs(upload_folder_backgrounds, exist_ok=True)
 
     from datetime import datetime
 
@@ -103,7 +116,15 @@ def registrar_plantilla(
     ruta_guardado = os.path.join(upload_folder, filename)
     file_firma.save(ruta_guardado)
 
-    ruta_db = f'/static/certificados/firmas/{filename}'
+    ruta_db_firma = f'/static/certificados/firmas/{filename}'
+    
+    ruta_db_logo = ''
+    if file_logo and file_logo.filename:
+        filename_logo = secure_filename(file_logo.filename)
+        filename_logo = f"{(direccion_codigo or 'IPSD').strip().upper()}_logo_{timestamp}_{filename_logo}"
+        ruta_guardado_logo = os.path.join(upload_folder_logos, filename_logo)
+        file_logo.save(ruta_guardado_logo)
+        ruta_db_logo = f'/static/certificados/logos/{filename_logo}'
 
     texto_certificado = (texto_certificado or '').strip()
     if not texto_certificado:
@@ -111,41 +132,30 @@ def registrar_plantilla(
 
     conn = get_db_connection()
     try:
-        if _tabla_tiene_columna(conn, 'plantillas_certificados', 'ruta_fondo_img'):
-            conn.execute(
-                '''
-                INSERT INTO plantillas_certificados
-                (direccion_codigo, nombre_plantilla, tipo_documento, ruta_fondo_img, ruta_firma_img, texto_certificado, firmante_nombre, firmante_cargo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (
-                    direccion_codigo,
-                    nombre_plantilla,
-                    tipo_documento,
-                    '',
-                    ruta_db,
-                    texto_certificado,
-                    firmante_nombre,
-                    firmante_cargo,
-                ),
-            )
-        else:
-            conn.execute(
-                '''
-                INSERT INTO plantillas_certificados
-                (direccion_codigo, nombre_plantilla, tipo_documento, ruta_firma_img, texto_certificado, firmante_nombre, firmante_cargo)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (
-                    direccion_codigo,
-                    nombre_plantilla,
-                    tipo_documento,
-                    ruta_db,
-                    texto_certificado,
-                    firmante_nombre,
-                    firmante_cargo,
-                ),
-            )
+        columnas_plantillas = {row['name'] for row in conn.execute('PRAGMA table_info(plantillas_certificados)').fetchall()}
+        
+        campos = ['direccion_codigo', 'nombre_plantilla', 'tipo_documento', 'ruta_firma_img', 'texto_certificado', 'firmante_nombre', 'firmante_cargo']
+        valores = [direccion_codigo, nombre_plantilla, tipo_documento, ruta_db_firma, texto_certificado, firmante_nombre, firmante_cargo]
+        
+        if 'ruta_fondo_img' in columnas_plantillas:
+            campos.append('ruta_fondo_img')
+            valores.append('')
+            
+        if 'ruta_logo_img' in columnas_plantillas:
+            campos.append('ruta_logo_img')
+            valores.append(ruta_db_logo)
+
+        placeholders = ', '.join(['?'] * len(valores))
+        campos_str = ', '.join(campos)
+
+        conn.execute(
+            f'''
+            INSERT INTO plantillas_certificados
+            ({campos_str})
+            VALUES ({placeholders})
+            ''',
+            tuple(valores)
+        )
         conn.commit()
     finally:
         conn.close()
@@ -156,6 +166,7 @@ def actualizar_plantilla(
     nombre_plantilla,
     tipo_documento,
     file_firma,
+    file_logo,
     texto_certificado,
     firmante_nombre,
     firmante_cargo,
@@ -166,6 +177,14 @@ def actualizar_plantilla(
         if not texto_certificado:
             raise ValueError('Debes ingresar el texto del certificado.')
 
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        columnas_plantillas = {row['name'] for row in conn.execute('PRAGMA table_info(plantillas_certificados)').fetchall()}
+        
+        campos_set = ['direccion_codigo = ?', 'nombre_plantilla = ?', 'tipo_documento = ?', 'texto_certificado = ?', 'firmante_nombre = ?', 'firmante_cargo = ?']
+        valores = [direccion_codigo, nombre_plantilla, tipo_documento, texto_certificado, firmante_nombre, firmante_cargo]
+
         if file_firma and file_firma.filename:
             filename = secure_filename(file_firma.filename)
             if not filename.lower().endswith('.png'):
@@ -173,50 +192,42 @@ def actualizar_plantilla(
 
             upload_folder = os.path.join(current_app.root_path, 'static', 'certificados', 'firmas')
             os.makedirs(upload_folder, exist_ok=True)
-            from datetime import datetime
 
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             filename = f"{(direccion_codigo or 'IPSD').strip().upper()}_firma_{timestamp}_{filename}"
             ruta_guardado = os.path.join(upload_folder, filename)
             file_firma.save(ruta_guardado)
-            ruta_db = f'/static/certificados/firmas/{filename}'
+            ruta_db_firma = f'/static/certificados/firmas/{filename}'
+            
+            campos_set.append('ruta_firma_img = ?')
+            valores.append(ruta_db_firma)
 
-            conn.execute(
-                '''
-                UPDATE plantillas_certificados
-                SET direccion_codigo = ?, nombre_plantilla = ?, tipo_documento = ?,
-                    ruta_firma_img = ?, texto_certificado = ?, firmante_nombre = ?, firmante_cargo = ?
-                WHERE id = ?
-                ''',
-                (
-                    direccion_codigo,
-                    nombre_plantilla,
-                    tipo_documento,
-                    ruta_db,
-                    texto_certificado,
-                    firmante_nombre,
-                    firmante_cargo,
-                    id_plantilla,
-                ),
-            )
-        else:
-            conn.execute(
-                '''
-                UPDATE plantillas_certificados
-                SET direccion_codigo = ?, nombre_plantilla = ?, tipo_documento = ?,
-                    texto_certificado = ?, firmante_nombre = ?, firmante_cargo = ?
-                WHERE id = ?
-                ''',
-                (
-                    direccion_codigo,
-                    nombre_plantilla,
-                    tipo_documento,
-                    texto_certificado,
-                    firmante_nombre,
-                    firmante_cargo,
-                    id_plantilla,
-                ),
-            )
+        if file_logo and file_logo.filename:
+            filename_logo = secure_filename(file_logo.filename)
+            upload_folder_logos = os.path.join(current_app.root_path, 'static', 'certificados', 'logos')
+            upload_folder_backgrounds = os.path.join(current_app.root_path, 'static', 'certificados', 'backgrounds')
+            os.makedirs(upload_folder_logos, exist_ok=True)
+            os.makedirs(upload_folder_backgrounds, exist_ok=True)
+            
+            filename_logo = f"{(direccion_codigo or 'IPSD').strip().upper()}_logo_{timestamp}_{filename_logo}"
+            ruta_guardado_logo = os.path.join(upload_folder_logos, filename_logo)
+            file_logo.save(ruta_guardado_logo)
+            ruta_db_logo = f'/static/certificados/logos/{filename_logo}'
+            
+            if 'ruta_logo_img' in columnas_plantillas:
+                campos_set.append('ruta_logo_img = ?')
+                valores.append(ruta_db_logo)
+
+        valores.append(id_plantilla)
+        campos_str = ', '.join(campos_set)
+
+        conn.execute(
+            f'''
+            UPDATE plantillas_certificados
+            SET {campos_str}
+            WHERE id = ?
+            ''',
+            tuple(valores)
+        )
             
         conn.commit()
     finally:
@@ -276,7 +287,19 @@ def generar_html_preview_plantilla(plantilla):
     if not ruta_firma_web:
         return None
 
-    contexto['ruta_firma_absoluta'] = _ruta_web_a_ruta_absoluta(ruta_firma_web)
+    contexto['ruta_firma_src'] = ruta_firma_web
+    
+    ruta_logo_web = (contexto.get('ruta_logo_img') or '').strip()
+    contexto['ruta_logo_src'] = ruta_logo_web or ''
+    
+    # Inyectar el fondo del diploma
+    ruta_fondo_web = '/static/certificados/backgrounds/diploma_background.png'
+    ruta_fondo = _ruta_web_a_ruta_absoluta(ruta_fondo_web)
+    if os.path.exists(ruta_fondo):
+        contexto['ruta_fondo_src'] = ruta_fondo_web
+    else:
+        contexto['ruta_fondo_src'] = ''
+
     contexto.update(
         {
             'nombre_docente': 'Carlos Daniel Interiano Irias',
@@ -287,6 +310,7 @@ def generar_html_preview_plantilla(plantilla):
             'horas_totales': '20',
             'semanas_duracion': '4',
             'tipo_accion': 'CURSO',
+            'centro_universitario_regional': 'Ciudad Universitaria',
             'anio': '2026',
             'mes': 'Abril',
             'dia': '27',
@@ -332,6 +356,7 @@ def generar_html_preview_plantilla(plantilla):
         '[FECHA]': fecha_exacta,
         '[FECHA_RANGO]': fecha_rango,
         '[FECHA_APROBACION]': fecha_emision_str,
+        '[CENTRO_UNIVERSITARIO_REGIONAL]': contexto.get('centro_universitario_regional', ''),
         '[FECHA_EMISION]': fecha_emision_str,
     }
 
@@ -348,11 +373,11 @@ def generar_binario_pdf(matricula_id):
         # Obtener datos de la matrícula, docente, curso y plantilla
         query = '''
             SELECT 
-                d.nombre_completo as nombre_docente, d.numero_empleado,
+                d.nombre_completo as nombre_docente, d.numero_empleado, d.centro_universitario_regional,
                 m.horario_elegido, m.fecha_aprobacion,
                 c.nombre as curso_nombre, c.modalidad, c.horas_totales, c.semanas_duracion, c.tipo_accion,
                 c.anio, c.mes, c.dia, c.anio_fin, c.mes_fin, c.dia_fin,
-                p.tipo_documento, p.ruta_firma_img, p.texto_certificado, p.firmante_nombre, p.firmante_cargo
+                p.tipo_documento, p.ruta_firma_img, p.ruta_logo_img, p.texto_certificado, p.firmante_nombre, p.firmante_cargo
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
             JOIN capacitaciones c ON m.id_capacitacion = c.id
@@ -388,7 +413,27 @@ def generar_binario_pdf(matricula_id):
         if not ruta_firma_web:
             return None
 
-        contexto['ruta_firma_absoluta'] = _ruta_web_a_ruta_absoluta(ruta_firma_web)
+        ruta_firma_absoluta = _ruta_web_a_ruta_absoluta(ruta_firma_web)
+        contexto['ruta_firma_src'] = _ruta_absoluta_a_file_url(ruta_firma_absoluta)
+        
+        ruta_logo_web = (contexto.get('ruta_logo_img') or '').strip()
+        if ruta_logo_web:
+            ruta_logo_absoluta = _ruta_web_a_ruta_absoluta(ruta_logo_web)
+            contexto['ruta_logo_src'] = _ruta_absoluta_a_file_url(ruta_logo_absoluta)
+        else:
+            contexto['ruta_logo_src'] = ''
+        
+        # Inyectar el fondo según tipo de documento
+        if contexto['tipo_documento'] == 'DIPLOMA':
+            ruta_fondo_web = '/static/certificados/backgrounds/diploma_background.png'
+        else:
+            ruta_fondo_web = '/static/certificados/backgrounds/constancia_background.png'
+        
+        ruta_fondo = _ruta_web_a_ruta_absoluta(ruta_fondo_web)
+        if os.path.exists(ruta_fondo):
+            contexto['ruta_fondo_src'] = _ruta_absoluta_a_file_url(ruta_fondo)
+        else:
+            contexto['ruta_fondo_src'] = ''
 
         fecha_rango = _formatear_rango_diploma(
             contexto.get('dia'),
@@ -410,6 +455,7 @@ def generar_binario_pdf(matricula_id):
             '[FECHA]': fecha_exacta,
             '[FECHA_RANGO]': fecha_rango,
             '[FECHA_APROBACION]': fecha_emision_str,
+            '[CENTRO_UNIVERSITARIO_REGIONAL]': contexto.get('centro_universitario_regional', ''),
             '[FECHA_EMISION]': fecha_emision_str,
         }
 
@@ -425,7 +471,10 @@ def generar_binario_pdf(matricula_id):
             'margin-left': '0',
             'encoding': "UTF-8",
             'enable-local-file-access': None,
-            'no-outline': None
+            'print-media-type': None,
+            'no-outline': None,
+            'disable-smart-shrinking': None, 
+            'zoom': '1.0' # <--- Asegura la escala 1:1
         }
         
         if contexto['tipo_documento'] == 'DIPLOMA':
@@ -449,5 +498,27 @@ def generar_binario_pdf(matricula_id):
         except Exception:
             print(f"Error generando PDF: {e}")
         return None
+    finally:
+        conn.close()
+
+
+def obtener_datos_empleado(matricula_id):
+    """Obtiene el nombre y número de empleado para una matrícula."""
+    conn = get_db_connection()
+    try:
+        query = '''
+            SELECT d.nombre_completo, d.numero_empleado
+            FROM matriculas m
+            JOIN docentes d ON m.numero_empleado = d.numero_empleado
+            WHERE m.id = ? AND m.aprobado = 1
+        '''
+        datos = conn.execute(query, (matricula_id,)).fetchone()
+        
+        if not datos:
+            return None, None
+        
+        return dict(datos)['nombre_completo'], dict(datos)['numero_empleado']
+    except Exception:
+        return None, None
     finally:
         conn.close()

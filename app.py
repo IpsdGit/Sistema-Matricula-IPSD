@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+import os
 
 from config import configure_app
 from database import asegurar_migraciones_minimas
@@ -12,6 +13,7 @@ app = Flask(__name__)
 configure_app(app)
 
 asegurar_migraciones_minimas()
+
 app.jinja_env.globals['csrf_token'] = generar_csrf_token
 
 

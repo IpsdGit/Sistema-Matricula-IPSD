@@ -7,6 +7,10 @@
             size: letter landscape;
             margin: 0;
         }
+        html, body {
+            width: 11in;
+            height: 8.5in;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -17,11 +21,16 @@
         }
 
         .sheet {
-            width: 100%;
-            height: 100%;
-            padding: 36px;
+            position: relative;
+            width: 11in;
+            height: 8.5in;
+            padding: 0;
             box-sizing: border-box;
-            background: #ffffff;
+            background-color: transparent;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
         }
 
         .frame {
@@ -29,40 +38,32 @@
             width: 100%;
             height: 100%;
             box-sizing: border-box;
-            border: 6px solid #0b2e6d;
-            outline: 2px solid #f2b705;
-            outline-offset: -16px;
-            padding: 42px 54px;
+            padding: 40px 58px;
             display: flex;
             flex-direction: column;
+            z-index: 2;
         }
-
-        .corner {
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #0b2e6d 0%, #0b2e6d 55%, #f2b705 55%, #f2b705 100%);
-            opacity: 0.95;
-        }
-        .corner.tl { top: 0; left: 0; }
-        .corner.tr { top: 0; right: 0; transform: scaleX(-1); }
-        .corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
-        .corner.br { bottom: 0; right: 0; transform: scale(-1, -1); }
 
         .header {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
-        .header .uni {
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            font-size: 14px;
-            color: #0b2e6d;
+        .logo-superior {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .logo-superior img {
+            max-height: 85px;
+            max-width: 400px;
+            object-fit: contain;
         }
 
         .header .titulo {
-            margin: 16px 0 0;
+            margin: 18px 0 0;
             font-family: Georgia, 'Times New Roman', Times, serif;
             font-size: 64px;
             letter-spacing: 0.06em;
@@ -78,7 +79,7 @@
         }
 
         .contenido {
-            margin-top: 34px;
+            margin-top: 24px;
             text-align: center;
             flex-grow: 1; /* Permite empujar la firma hacia abajo */
         }
@@ -104,7 +105,7 @@
         }
 
         .contenido .texto {
-            margin: 26px auto 0;
+            margin: 22px auto 0;
             width: 86%;
             font-size: 18px;
             line-height: 1.7;
@@ -133,7 +134,7 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            margin-bottom: -22px; /* Superponer el sello/firma con la línea de forma natural */
+            margin-bottom: -22px; 
             z-index: 10;
         }
 
@@ -153,10 +154,10 @@
         }
 
         .firma .meta .linea-firma {
-            width: 100%;
-            height: 1px;
+            width: 280px;
+            height: 2px;
             background: #1f2937;
-            margin-bottom: 8px;
+            margin: 0 auto 8px auto;
         }
 
         .firma .meta .nombre-firmante {
@@ -172,15 +173,15 @@
     </style>
 </head>
 <body>
-    <div class="sheet">
-        <div class="frame">
-            <div class="corner tl"></div>
-            <div class="corner tr"></div>
-            <div class="corner bl"></div>
-            <div class="corner br"></div>
+    <div class="sheet" style="background-image: url('{{ ruta_fondo_src }}');">
 
+        <div class="frame">
             <div class="header">
-                <div class="uni">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</div>
+                {% if ruta_logo_src %}
+                <div class="logo-superior">
+                    <img src="{{ ruta_logo_src }}" alt="Logo Superior">
+                </div>
+                {% endif %}
                 <div class="titulo">DIPLOMA</div>
                 <div class="subtitulo">DE PARTICIPACIÓN</div>
             </div>
@@ -196,7 +197,7 @@
             <div class="firma">
                 <div class="contenedor-firma">
                     <div class="img">
-                        <img src="file:///{{ ruta_firma_absoluta }}" alt="Firma y Sello">
+                        <img src="{{ ruta_firma_src }}" alt="Firma y Sello">
                     </div>
                     <div class="meta">
                         <div class="linea-firma"></div>

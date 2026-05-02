@@ -336,6 +336,55 @@
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
   }
 
+  .plantilla-modal {
+    max-width: 880px;
+    width: min(880px, 96vw);
+    max-height: 90vh;
+    overflow: auto;
+  }
+
+  .plantilla-texto-grid {
+    display: grid;
+    gap: .75rem;
+  }
+
+  .plantilla-preview {
+    padding: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  .file-input-hidden {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .file-change-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .35rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .file-current-name {
+    display: block;
+    margin-top: .35rem;
+    font-size: .75rem;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+
   .calendar-grid-shell.view-week .calendar-month-grid {
     grid-template-columns: repeat(7, minmax(0, 1fr));
     grid-auto-rows: 192px;
@@ -505,6 +554,13 @@
     padding: .46rem .56rem;
     border-color: #cfdaea;
     gap: .26rem;
+  }
+
+  @media (min-width: 900px) {
+    .plantilla-texto-grid {
+      grid-template-columns: 1.1fr .9fr;
+      align-items: start;
+    }
   }
 
   .calendar-event-item:hover {
@@ -1917,9 +1973,10 @@
                   </td>
                   <td>
                     {% if p.ruta_firma_img %}
-                    <a href="{{ p.ruta_firma_img }}" target="_blank" style="font-size: .8rem;">Ver Firma</a>
-                    {% else %}
-                    <span style="font-size:.8rem; color:var(--text-muted);">—</span>
+                    <a href="{{ p.ruta_firma_img }}" target="_blank" style="font-size: .8rem; display:block;">Ver Firma</a>
+                    {% endif %}
+                    {% if p.ruta_logo_img %}
+                    <a href="{{ p.ruta_logo_img }}" target="_blank" style="font-size: .8rem; display:block; margin-top:4px;">Ver Logo</a>
                     {% endif %}
                   </td>
                   <td style="font-size:.85rem; color:var(--text-muted);">
@@ -1932,21 +1989,15 @@
                     </a>
                     <button type="button" class="btn-ghost btn-icon-action"
                       data-id="{{ p.id }}"
-                      data-direccion="{{ p.direccion_codigo }}"
-                      data-nombre="{{ p.nombre_plantilla }}"
-                      data-tipo="{{ p.tipo_documento }}"
-                      data-firmante="{{ p.firmante_nombre }}"
-                      data-cargo="{{ p.firmante_cargo }}"
+                      data-direccion="{{ (p.direccion_codigo or '')|e }}"
+                      data-nombre="{{ (p.nombre_plantilla or '')|e }}"
+                      data-tipo="{{ (p.tipo_documento or '')|e }}"
+                      data-firmante="{{ (p.firmante_nombre or '')|e }}"
+                      data-cargo="{{ (p.firmante_cargo or '')|e }}"
                       data-texto="{{ (p.texto_certificado or '')|e }}"
-                      onclick="abrirModalEditarPlantilla({
-                        id: this.dataset.id,
-                        direccion_codigo: this.dataset.direccion,
-                        nombre_plantilla: this.dataset.nombre,
-                        tipo_documento: this.dataset.tipo,
-                        firmante_nombre: this.dataset.firmante,
-                        firmante_cargo: this.dataset.cargo,
-                        texto_certificado: this.dataset.texto
-                      })"
+                      data-firma="{{ (p.ruta_firma_img or '')|e }}"
+                      data-logo="{{ (p.ruta_logo_img or '')|e }}"
+                      onclick="abrirModalEditarPlantilla(this)"
                       title="Editar" style="color:#1d4ed8;">
                       <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span>
                     </button>
@@ -2430,7 +2481,7 @@
 </div>
 <!-- Modal nueva plantilla de certificados -->
 <div class="modal-overlay" id="modal-plantilla">
-  <div class="modal-box" style="max-width:540px;">
+  <div class="modal-box plantilla-modal">
     <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span></div>
     <div class="modal-title">Nueva Plantilla de Certificado</div>
     <form action="/admin/certificados/plantilla" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
@@ -2452,37 +2503,46 @@
         <input type="text" class="form-input" name="nombre_plantilla" maxlength="150" required placeholder="Ej. Diploma 2024">
       </div>
 
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
+        <select class="form-select" name="tipo_documento" required>
+          <option value="DIPLOMA">Diploma</option>
+          <option value="CONSTANCIA">Constancia</option>
+        </select>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-        <div>
-          <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
-          <select class="form-select" name="tipo_documento" required>
-            <option value="DIPLOMA">Diploma</option>
-            <option value="CONSTANCIA">Constancia</option>
-          </select>
-        </div>
         <div>
           <label class="form-label" style="font-size:.8rem;">Firma (PNG transparente)</label>
           <input type="file" class="form-input" name="firma_img" accept=".png" required style="padding:.4rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size:.8rem;">Logo Superior (Opcional)</label>
+          <input type="file" class="form-input" name="logo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
         </div>
       </div>
 
       <div>
         <label class="form-label" style="font-size:.8rem;">Texto del Certificado</label>
-        <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-crear">
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[CURSO]')">[CURSO]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORAS]')">[HORAS]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
-          <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA]')">[FECHA]</button>
-          <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
-          <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
-        </div>
-        <textarea class="form-input" name="texto_certificado" id="crear-plantilla-texto" rows="4" required placeholder="Ej. Por haber participado y aprobado el curso [CURSO]..." oninput="actualizarPreview(this.value, 'crear-preview')"></textarea>
-        
-        <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <div class="plantilla-texto-grid">
+          <div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-crear">
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[CURSO]')">[CURSO]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORAS]')">[HORAS]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[CENTRO_UNIVERSITARIO_REGIONAL]')">[CENTRO_UNIVERSITARIO_REGIONAL]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
+              <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA]')">[FECHA]</button>
+              <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('crear-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
+              <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('crear-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
+            </div>
+            <textarea class="form-input" name="texto_certificado" id="crear-plantilla-texto" rows="7" required placeholder="Ej. Por haber participado y aprobado el curso [CURSO]..." oninput="actualizarPreview(this.value, 'crear-preview')" style="min-height:160px; resize:vertical;"></textarea>
+          </div>
+          <div class="plantilla-preview">
             <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 0.25rem;">Vista Previa (Texto)</div>
             <div id="crear-preview" style="font-size: 0.9rem; line-height: 1.5; color: #334155; font-family: Georgia, serif;">Escribe el texto arriba para ver la vista previa...</div>
+          </div>
         </div>
       </div>
 
@@ -2507,7 +2567,7 @@
 
 <!-- Modal editar plantilla de certificados -->
 <div class="modal-overlay" id="modal-editar-plantilla">
-  <div class="modal-box" style="max-width:540px;">
+  <div class="modal-box plantilla-modal">
     <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span></div>
     <div class="modal-title">Editar Plantilla de Certificado</div>
     <form id="form-editar-plantilla" action="" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
@@ -2529,38 +2589,52 @@
         <input type="text" class="form-input" name="nombre_plantilla" id="edit-plantilla-nombre" maxlength="150" required>
       </div>
 
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
+        <select class="form-select" name="tipo_documento" id="edit-plantilla-tipo" required>
+          <option value="DIPLOMA">Diploma</option>
+          <option value="CONSTANCIA">Constancia</option>
+        </select>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-        <div>
-          <label class="form-label" style="font-size:.8rem;">Tipo de Documento</label>
-          <select class="form-select" name="tipo_documento" id="edit-plantilla-tipo" required>
-            <option value="DIPLOMA">Diploma</option>
-            <option value="CONSTANCIA">Constancia</option>
-          </select>
-        </div>
-        <div>
+        <div style="position:relative;">
           <label class="form-label" style="font-size:.8rem;">Firma (Opcional)</label>
-          <input type="file" class="form-input" name="firma_img" accept=".png" style="padding:.4rem;">
-          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar la firma actual.</small>
+          <input type="file" class="file-input-hidden" id="edit-plantilla-firma-input" name="firma_img" accept=".png" onchange="actualizarNombreArchivo(this, 'edit-plantilla-firma-archivo')">
+          <label class="file-change-btn" for="edit-plantilla-firma-input">Cambiar firma</label>
+          <span id="edit-plantilla-firma-archivo" class="file-current-name"></span>
+          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar la firma.</small>
+        </div>
+        <div style="position:relative;">
+          <label class="form-label" style="font-size:.8rem;">Logo (Opcional)</label>
+          <input type="file" class="file-input-hidden" id="edit-plantilla-logo-input" name="logo_img" accept=".png,.jpg,.jpeg" onchange="actualizarNombreArchivo(this, 'edit-plantilla-logo-archivo')">
+          <label class="file-change-btn" for="edit-plantilla-logo-input">Cambiar logo</label>
+          <span id="edit-plantilla-logo-archivo" class="file-current-name"></span>
+          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar el logo.</small>
         </div>
       </div>
 
       <div>
         <label class="form-label" style="font-size:.8rem;">Texto del Certificado</label>
-        <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-editar">
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[CURSO]')">[CURSO]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORAS]')">[HORAS]</button>
-          <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
-          <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA]')">[FECHA]</button>
-          <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
-          <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
-        </div>
-        <textarea class="form-input" name="texto_certificado" id="edit-plantilla-texto" rows="4" required oninput="actualizarPreview(this.value, 'edit-preview')"></textarea>
-        
-        <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <div class="plantilla-texto-grid">
+          <div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.25rem; margin-bottom:0.5rem; margin-top:-0.1rem;" id="plantilla-pildoras-editar">
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[CURSO]')">[CURSO]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORAS]')">[HORAS]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[CENTRO_UNIVERSITARIO_REGIONAL]')">[CENTRO_UNIVERSITARIO_REGIONAL]</button>
+              <button type="button" class="btn-pildora" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
+              <button type="button" class="btn-pildora" title="Para un solo día exacto" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA]')">[FECHA]</button>
+              <button type="button" class="btn-pildora" title="Fecha de aprobacion" onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
+              <button type="button" class="btn-pildora" title="Ej: Nocturna 18:00-20:00" onclick="insertarEtiqueta('edit-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
+            </div>
+            <textarea class="form-input" name="texto_certificado" id="edit-plantilla-texto" rows="7" required oninput="actualizarPreview(this.value, 'edit-preview')" style="min-height:160px; resize:vertical;"></textarea>
+          </div>
+          <div class="plantilla-preview">
             <div style="font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 0.25rem;">Vista Previa (Texto)</div>
             <div id="edit-preview" style="font-size: 0.9rem; line-height: 1.5; color: #334155; font-family: Georgia, serif;"></div>
+          </div>
         </div>
       </div>
 
@@ -2690,22 +2764,67 @@ function abrirModalEditarUsuario(username, direccion, rol) {
   abrirModal('modal-editar-usuario');
 }
 
-function abrirModalEditarPlantilla(data) {
+function abrirModalEditarPlantilla(btn) {
   const form = document.getElementById('form-editar-plantilla');
   if (form) {
-    form.action = '/admin/certificados/plantilla/editar/' + data.id;
+    form.action = '/admin/certificados/plantilla/editar/' + btn.dataset.id;
   }
   
   if (document.getElementById('edit-plantilla-direccion')) {
-    document.getElementById('edit-plantilla-direccion').value = data.direccion_codigo || '';
+    document.getElementById('edit-plantilla-direccion').value = btn.dataset.direccion || '';
   }
-  document.getElementById('edit-plantilla-nombre').value = data.nombre_plantilla || '';
-  document.getElementById('edit-plantilla-tipo').value = data.tipo_documento || 'DIPLOMA';
-  document.getElementById('edit-plantilla-firmante-nombre').value = data.firmante_nombre || '';
-  document.getElementById('edit-plantilla-firmante-cargo').value = data.firmante_cargo || '';
+  document.getElementById('edit-plantilla-nombre').value = btn.dataset.nombre || '';
+  document.getElementById('edit-plantilla-tipo').value = btn.dataset.tipo || 'DIPLOMA';
+  document.getElementById('edit-plantilla-firmante-nombre').value = btn.dataset.firmante || '';
+  document.getElementById('edit-plantilla-firmante-cargo').value = btn.dataset.cargo || '';
+  
+  // Limpiar los campos de archivo para evitar que se re-envíen accidentalmente
+  const firmaInput = document.querySelector('#form-editar-plantilla input[name="firma_img"]');
+  if (firmaInput) {
+    firmaInput.value = '';
+  }
+  const logoInput = document.querySelector('#form-editar-plantilla input[name="logo_img"]');
+  if (logoInput) {
+    logoInput.value = '';
+  }
+
+  const firmaNombre = document.getElementById('edit-plantilla-firma-archivo');
+  if (firmaNombre) {
+    firmaNombre.textContent = obtenerNombreArchivo(btn.dataset.firma) || 'Sin firma cargada';
+  }
+
+  const logoNombre = document.getElementById('edit-plantilla-logo-archivo');
+  if (logoNombre) {
+    logoNombre.textContent = obtenerNombreArchivo(btn.dataset.logo) || 'Sin logo cargado';
+  }
+
+  const firmaActual = document.getElementById('edit-plantilla-firma-actual');
+  const firmaLink = document.getElementById('edit-plantilla-firma-link');
+  if (firmaActual && firmaLink) {
+    if (btn.dataset.firma) {
+      firmaLink.href = btn.dataset.firma;
+      firmaActual.style.display = 'block';
+    } else {
+      firmaLink.href = '#';
+      firmaActual.style.display = 'none';
+    }
+  }
+
+  const logoActual = document.getElementById('edit-plantilla-logo-actual');
+  const logoLink = document.getElementById('edit-plantilla-logo-link');
+  if (logoActual && logoLink) {
+    if (btn.dataset.logo) {
+      logoLink.href = btn.dataset.logo;
+      logoActual.style.display = 'block';
+    } else {
+      logoLink.href = '#';
+      logoActual.style.display = 'none';
+    }
+  }
+  
   const texto = document.getElementById('edit-plantilla-texto');
   if (texto) {
-    texto.value = data.texto_certificado || '';
+    texto.value = btn.dataset.texto || '';
     // Forzar actualización del preview al abrir
     if (typeof actualizarPreview === 'function') {
         actualizarPreview(texto.value, 'edit-preview');
@@ -2713,6 +2832,19 @@ function abrirModalEditarPlantilla(data) {
   }
   
   abrirModal('modal-editar-plantilla');
+}
+
+function obtenerNombreArchivo(ruta) {
+  if (!ruta) return '';
+  const partes = ruta.split('/');
+  return partes[partes.length - 1] || '';
+}
+
+function actualizarNombreArchivo(input, destinoId) {
+  const destino = document.getElementById(destinoId);
+  if (!destino) return;
+  const archivo = input?.files?.[0];
+  destino.textContent = archivo ? archivo.name : destino.textContent;
 }
 
 function numeroMesDesdeNombre(nombreMes) {

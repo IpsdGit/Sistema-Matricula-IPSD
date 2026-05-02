@@ -65,6 +65,10 @@ def asegurar_migraciones_minimas():
             cursor.execute(
                 "ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''"
             )
+        if 'ruta_logo_img' not in columnas_plantillas:
+            cursor.execute(
+                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_logo_img TEXT NOT NULL DEFAULT ''"
+            )
 
         cursor.execute(
             '''
@@ -73,6 +77,7 @@ def asegurar_migraciones_minimas():
                 numero_empleado TEXT UNIQUE NOT NULL,
                 nombre_completo TEXT NOT NULL,
                 correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                centro_universitario_regional TEXT NOT NULL DEFAULT '',
                 activo INTEGER NOT NULL DEFAULT 1,
                 fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -84,6 +89,14 @@ def asegurar_migraciones_minimas():
         cursor.execute(
             'CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)'
         )
+
+        columnas_docentes = {
+            row[1] for row in cursor.execute('PRAGMA table_info(docentes)').fetchall()
+        }
+        if 'centro_universitario_regional' not in columnas_docentes:
+            cursor.execute(
+                "ALTER TABLE docentes ADD COLUMN centro_universitario_regional TEXT NOT NULL DEFAULT ''"
+            )
 
         direcciones_admin = cursor.execute(
             '''
