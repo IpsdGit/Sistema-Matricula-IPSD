@@ -1728,6 +1728,7 @@
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Uso</th>
+                    <th>Firma / Logo</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -1739,6 +1740,18 @@
                     <td style="font-size:.75rem; color:var(--text-muted);">
                       Admins: {{ d['total_admins'] }}<br>
                       Cursos: {{ d['total_cursos'] }}
+                    </td>
+                    <td style="font-size:.78rem;">
+                      {% if d['ruta_firma_img'] %}
+                      <a href="{{ d['ruta_firma_img'] }}" target="_blank" style="color:#1d4ed8; font-weight:600; display:block; margin-bottom:4px;">Ver firma</a>
+                      {% else %}
+                      <span style="color:var(--text-muted); display:block; margin-bottom:4px;">Sin firma</span>
+                      {% endif %}
+                      {% if d['ruta_logo_img'] %}
+                      <a href="{{ d['ruta_logo_img'] }}" target="_blank" style="color:#1d4ed8; font-weight:600; display:block;">Ver logo</a>
+                      {% else %}
+                      <span style="color:var(--text-muted); display:block;">Sin logo</span>
+                      {% endif %}
                     </td>
                     <td style="display:flex; gap:.35rem; flex-wrap:wrap;">
                       <button
@@ -1936,12 +1949,17 @@
               <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">workspace_premium</span> Plantillas de Certificados
             </h2>
             <p style="color:var(--text-muted); font-size:.9rem; margin:0;">
-              Configura la firma (PNG) y el texto dinámico del certificado.
+              Configura el texto del certificado; la firma se gestiona por dirección.
             </p>
           </div>
-          <button type="button" class="btn-primary-ipsd" onclick="document.getElementById('modal-plantilla').classList.add('active'); document.getElementById('modal-plantilla').setAttribute('aria-hidden', 'false'); document.body.style.overflow='hidden';">
-            <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">add_photo_alternate</span> Nueva Plantilla
-          </button>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn-ghost" style="color:#0f172a; border-color:var(--border); border-radius:var(--radius);" onclick="abrirModal('modal-identidad-direccion')">
+              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">branding_watermark</span> Configurar Firma y Logo
+            </button>
+            <button type="button" class="btn-primary-ipsd" onclick="abrirModal('modal-plantilla')">
+              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">add_photo_alternate</span> Nueva Plantilla
+            </button>
+          </div>
         </div>
 
         <div class="card-ipsd">
@@ -1953,7 +1971,7 @@
                   <th>Dirección</th>
                   <th>Nombre Plantilla</th>
                   <th>Tipo</th>
-                  <th>Firma</th>
+                  <th>Firma Dirección</th>
                   <th>Firmante</th>
                   <th style="text-align:right;">Acciones</th>
                 </tr>
@@ -1973,7 +1991,7 @@
                   </td>
                   <td>
                     {% if p.ruta_firma_img %}
-                    <a href="{{ p.ruta_firma_img }}" target="_blank" style="font-size: .8rem; display:block;">Ver Firma</a>
+                    <a href="{{ p.ruta_firma_img }}" target="_blank" style="font-size: .8rem; display:block;">Ver Firma Dirección</a>
                     {% endif %}
                     {% if p.ruta_logo_img %}
                     <a href="{{ p.ruta_logo_img }}" target="_blank" style="font-size: .8rem; display:block; margin-top:4px;">Ver Logo</a>
@@ -1995,7 +2013,6 @@
                       data-firmante="{{ (p.firmante_nombre or '')|e }}"
                       data-cargo="{{ (p.firmante_cargo or '')|e }}"
                       data-texto="{{ (p.texto_certificado or '')|e }}"
-                      data-firma="{{ (p.ruta_firma_img or '')|e }}"
                       data-logo="{{ (p.ruta_logo_img or '')|e }}"
                       onclick="abrirModalEditarPlantilla(this)"
                       title="Editar" style="color:#1d4ed8;">
@@ -2241,7 +2258,7 @@
   <div class="modal-box" style="max-width:500px;">
     <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">edit</span></div>
     <div class="modal-title">Editar Dirección</div>
-    <form action="/admin/actualizar_direccion" method="POST" style="display:grid; gap:.75rem;">
+    <form action="/admin/actualizar_direccion" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="usuarios">
       <input type="hidden" name="codigo_actual" id="edit-codigo-actual">
@@ -2255,7 +2272,8 @@
         <label class="form-label" style="font-size:.8rem;">Nombre de la Dirección</label>
         <input type="text" class="form-input" id="edit-nombre-nuevo" name="nombre_nuevo" maxlength="80" required>
       </div>
-      
+
+
       <div class="modal-actions">
         <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-editar-direccion')">Cancelar</button>
         <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
@@ -2479,6 +2497,48 @@
     </div>
   </div>
 </div>
+<!-- Modal configurar identidad visual -->
+<div class="modal-overlay" id="modal-identidad-direccion">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-icon"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">branding_watermark</span></div>
+    <div class="modal-title">Configurar Identidad Visual (Firma y Logo)</div>
+    <form action="/admin/certificados/identidad" method="POST" enctype="multipart/form-data" style="display:grid; gap:.75rem;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Dirección</label>
+        {% if es_superadmin %}
+        <select class="form-select" name="direccion_codigo" required>
+          {% for d in direcciones %}
+          <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input type="text" class="form-input" value="{{ admin_direccion }}" readonly style="background:#f1f5f9; cursor:not-allowed;">
+        <input type="hidden" name="direccion_codigo" value="{{ admin_direccion }}">
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Firma (PNG)</label>
+        <input type="file" class="form-input" name="firma_img" accept=".png" style="padding:.4rem;">
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:.8rem;">Logo Superior (PNG/JPG)</label>
+        <input type="file" class="form-input" name="logo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
+      </div>
+      
+      <p style="color:var(--text-muted); font-size:.8rem; margin:0; line-height:1.4;">Estos archivos se aplicarán automáticamente a todas las plantillas de tu dirección.</p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);" onclick="cerrarModal('modal-identidad-direccion')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal nueva plantilla de certificados -->
 <div class="modal-overlay" id="modal-plantilla">
   <div class="modal-box plantilla-modal">
@@ -2509,17 +2569,6 @@
           <option value="DIPLOMA">Diploma</option>
           <option value="CONSTANCIA">Constancia</option>
         </select>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-        <div>
-          <label class="form-label" style="font-size:.8rem;">Firma (PNG transparente)</label>
-          <input type="file" class="form-input" name="firma_img" accept=".png" required style="padding:.4rem;">
-        </div>
-        <div>
-          <label class="form-label" style="font-size:.8rem;">Logo Superior (Opcional)</label>
-          <input type="file" class="form-input" name="logo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
-        </div>
       </div>
 
       <div>
@@ -2595,23 +2644,6 @@
           <option value="DIPLOMA">Diploma</option>
           <option value="CONSTANCIA">Constancia</option>
         </select>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-        <div style="position:relative;">
-          <label class="form-label" style="font-size:.8rem;">Firma (Opcional)</label>
-          <input type="file" class="file-input-hidden" id="edit-plantilla-firma-input" name="firma_img" accept=".png" onchange="actualizarNombreArchivo(this, 'edit-plantilla-firma-archivo')">
-          <label class="file-change-btn" for="edit-plantilla-firma-input">Cambiar firma</label>
-          <span id="edit-plantilla-firma-archivo" class="file-current-name"></span>
-          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar la firma.</small>
-        </div>
-        <div style="position:relative;">
-          <label class="form-label" style="font-size:.8rem;">Logo (Opcional)</label>
-          <input type="file" class="file-input-hidden" id="edit-plantilla-logo-input" name="logo_img" accept=".png,.jpg,.jpeg" onchange="actualizarNombreArchivo(this, 'edit-plantilla-logo-archivo')">
-          <label class="file-change-btn" for="edit-plantilla-logo-input">Cambiar logo</label>
-          <span id="edit-plantilla-logo-archivo" class="file-current-name"></span>
-          <small style="color:var(--text-muted);">Sube un archivo solo si deseas cambiar el logo.</small>
-        </div>
       </div>
 
       <div>
@@ -2777,50 +2809,6 @@ function abrirModalEditarPlantilla(btn) {
   document.getElementById('edit-plantilla-tipo').value = btn.dataset.tipo || 'DIPLOMA';
   document.getElementById('edit-plantilla-firmante-nombre').value = btn.dataset.firmante || '';
   document.getElementById('edit-plantilla-firmante-cargo').value = btn.dataset.cargo || '';
-  
-  // Limpiar los campos de archivo para evitar que se re-envíen accidentalmente
-  const firmaInput = document.querySelector('#form-editar-plantilla input[name="firma_img"]');
-  if (firmaInput) {
-    firmaInput.value = '';
-  }
-  const logoInput = document.querySelector('#form-editar-plantilla input[name="logo_img"]');
-  if (logoInput) {
-    logoInput.value = '';
-  }
-
-  const firmaNombre = document.getElementById('edit-plantilla-firma-archivo');
-  if (firmaNombre) {
-    firmaNombre.textContent = obtenerNombreArchivo(btn.dataset.firma) || 'Sin firma cargada';
-  }
-
-  const logoNombre = document.getElementById('edit-plantilla-logo-archivo');
-  if (logoNombre) {
-    logoNombre.textContent = obtenerNombreArchivo(btn.dataset.logo) || 'Sin logo cargado';
-  }
-
-  const firmaActual = document.getElementById('edit-plantilla-firma-actual');
-  const firmaLink = document.getElementById('edit-plantilla-firma-link');
-  if (firmaActual && firmaLink) {
-    if (btn.dataset.firma) {
-      firmaLink.href = btn.dataset.firma;
-      firmaActual.style.display = 'block';
-    } else {
-      firmaLink.href = '#';
-      firmaActual.style.display = 'none';
-    }
-  }
-
-  const logoActual = document.getElementById('edit-plantilla-logo-actual');
-  const logoLink = document.getElementById('edit-plantilla-logo-link');
-  if (logoActual && logoLink) {
-    if (btn.dataset.logo) {
-      logoLink.href = btn.dataset.logo;
-      logoActual.style.display = 'block';
-    } else {
-      logoLink.href = '#';
-      logoActual.style.display = 'none';
-    }
-  }
   
   const texto = document.getElementById('edit-plantilla-texto');
   if (texto) {

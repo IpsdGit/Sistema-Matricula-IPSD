@@ -306,11 +306,13 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
                 c.semanas_duracion,
                 c.id_plantilla_certificado,
                 p.activo AS plantilla_activa,
-                p.ruta_firma_img,
+                ddir.ruta_firma_img,
                 p.texto_certificado
             FROM capacitaciones c
             LEFT JOIN plantillas_certificados p
                 ON p.id = c.id_plantilla_certificado
+            LEFT JOIN direcciones ddir
+                ON ddir.codigo = p.direccion_codigo
             WHERE c.id = ?
             LIMIT 1
             ''',

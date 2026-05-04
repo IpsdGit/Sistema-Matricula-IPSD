@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 import os
 
 from config import configure_app
@@ -30,6 +30,12 @@ register_portal_routes(app)
 register_admin_routes(app)
 register_chat_routes(app)
 app.register_blueprint(certificados_bp)
+
+
+@app.route('/uploads/direcciones/<codigo_direccion>/<filename>')
+def uploaded_file(codigo_direccion, filename):
+    directorio = os.path.join(app.config['UPLOAD_FOLDER'], 'direcciones', codigo_direccion)
+    return send_from_directory(directorio, filename)
 
 
 @app.errorhandler(403)

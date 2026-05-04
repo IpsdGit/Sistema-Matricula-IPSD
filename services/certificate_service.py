@@ -87,44 +87,15 @@ def registrar_plantilla(
     direccion_codigo,
     nombre_plantilla,
     tipo_documento,
-    file_firma,
-    file_logo,
     texto_certificado,
     firmante_nombre,
     firmante_cargo,
 ):
-    if not file_firma or not file_firma.filename:
-        raise ValueError('Debes subir una firma en PNG.')
-
-    filename = secure_filename(file_firma.filename)
-    if not filename.lower().endswith('.png'):
-        raise ValueError('La firma debe ser un archivo PNG.')
-
-    upload_folder = os.path.join(current_app.root_path, 'static', 'certificados', 'firmas')
-    os.makedirs(upload_folder, exist_ok=True)
-    
-    upload_folder_logos = os.path.join(current_app.root_path, 'static', 'certificados', 'logos')
-    os.makedirs(upload_folder_logos, exist_ok=True)
-    
     upload_folder_backgrounds = os.path.join(current_app.root_path, 'static', 'certificados', 'backgrounds')
     os.makedirs(upload_folder_backgrounds, exist_ok=True)
 
     from datetime import datetime
-
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    filename = f"{(direccion_codigo or 'IPSD').strip().upper()}_firma_{timestamp}_{filename}"
-    ruta_guardado = os.path.join(upload_folder, filename)
-    file_firma.save(ruta_guardado)
-
-    ruta_db_firma = f'/static/certificados/firmas/{filename}'
-    
-    ruta_db_logo = ''
-    if file_logo and file_logo.filename:
-        filename_logo = secure_filename(file_logo.filename)
-        filename_logo = f"{(direccion_codigo or 'IPSD').strip().upper()}_logo_{timestamp}_{filename_logo}"
-        ruta_guardado_logo = os.path.join(upload_folder_logos, filename_logo)
-        file_logo.save(ruta_guardado_logo)
-        ruta_db_logo = f'/static/certificados/logos/{filename_logo}'
 
     texto_certificado = (texto_certificado or '').strip()
     if not texto_certificado:
@@ -134,16 +105,16 @@ def registrar_plantilla(
     try:
         columnas_plantillas = {row['name'] for row in conn.execute('PRAGMA table_info(plantillas_certificados)').fetchall()}
         
-        campos = ['direccion_codigo', 'nombre_plantilla', 'tipo_documento', 'ruta_firma_img', 'texto_certificado', 'firmante_nombre', 'firmante_cargo']
-        valores = [direccion_codigo, nombre_plantilla, tipo_documento, ruta_db_firma, texto_certificado, firmante_nombre, firmante_cargo]
+        campos = ['direccion_codigo', 'nombre_plantilla', 'tipo_documento', 'texto_certificado', 'firmante_nombre', 'firmante_cargo']
+        valores = [direccion_codigo, nombre_plantilla, tipo_documento, texto_certificado, firmante_nombre, firmante_cargo]
+
+        if 'ruta_firma_img' in columnas_plantillas:
+            campos.append('ruta_firma_img')
+            valores.append('')
         
         if 'ruta_fondo_img' in columnas_plantillas:
             campos.append('ruta_fondo_img')
             valores.append('')
-            
-        if 'ruta_logo_img' in columnas_plantillas:
-            campos.append('ruta_logo_img')
-            valores.append(ruta_db_logo)
 
         placeholders = ', '.join(['?'] * len(valores))
         campos_str = ', '.join(campos)
@@ -165,8 +136,6 @@ def actualizar_plantilla(
     direccion_codigo,
     nombre_plantilla,
     tipo_documento,
-    file_firma,
-    file_logo,
     texto_certificado,
     firmante_nombre,
     firmante_cargo,
@@ -184,38 +153,6 @@ def actualizar_plantilla(
         
         campos_set = ['direccion_codigo = ?', 'nombre_plantilla = ?', 'tipo_documento = ?', 'texto_certificado = ?', 'firmante_nombre = ?', 'firmante_cargo = ?']
         valores = [direccion_codigo, nombre_plantilla, tipo_documento, texto_certificado, firmante_nombre, firmante_cargo]
-
-        if file_firma and file_firma.filename:
-            filename = secure_filename(file_firma.filename)
-            if not filename.lower().endswith('.png'):
-                raise ValueError('La firma debe ser un archivo PNG.')
-
-            upload_folder = os.path.join(current_app.root_path, 'static', 'certificados', 'firmas')
-            os.makedirs(upload_folder, exist_ok=True)
-
-            filename = f"{(direccion_codigo or 'IPSD').strip().upper()}_firma_{timestamp}_{filename}"
-            ruta_guardado = os.path.join(upload_folder, filename)
-            file_firma.save(ruta_guardado)
-            ruta_db_firma = f'/static/certificados/firmas/{filename}'
-            
-            campos_set.append('ruta_firma_img = ?')
-            valores.append(ruta_db_firma)
-
-        if file_logo and file_logo.filename:
-            filename_logo = secure_filename(file_logo.filename)
-            upload_folder_logos = os.path.join(current_app.root_path, 'static', 'certificados', 'logos')
-            upload_folder_backgrounds = os.path.join(current_app.root_path, 'static', 'certificados', 'backgrounds')
-            os.makedirs(upload_folder_logos, exist_ok=True)
-            os.makedirs(upload_folder_backgrounds, exist_ok=True)
-            
-            filename_logo = f"{(direccion_codigo or 'IPSD').strip().upper()}_logo_{timestamp}_{filename_logo}"
-            ruta_guardado_logo = os.path.join(upload_folder_logos, filename_logo)
-            file_logo.save(ruta_guardado_logo)
-            ruta_db_logo = f'/static/certificados/logos/{filename_logo}'
-            
-            if 'ruta_logo_img' in columnas_plantillas:
-                campos_set.append('ruta_logo_img = ?')
-                valores.append(ruta_db_logo)
 
         valores.append(id_plantilla)
         campos_str = ', '.join(campos_set)
@@ -246,11 +183,26 @@ def eliminar_plantilla(id_plantilla):
 def obtener_plantillas_por_direccion(direccion_codigo):
     conn = get_db_connection()
     try:
-        plantillas = conn.execute('''
-            SELECT * FROM plantillas_certificados 
-            WHERE direccion_codigo = ? AND activo = 1
-            ORDER BY id DESC
-        ''', (direccion_codigo,)).fetchall()
+        plantillas = conn.execute(
+            '''
+            SELECT
+                p.id,
+                p.direccion_codigo,
+                p.nombre_plantilla,
+                p.tipo_documento,
+                p.texto_certificado,
+                p.firmante_nombre,
+                p.firmante_cargo,
+                p.activo,
+                p.ruta_logo_img,
+                d.ruta_firma_img
+            FROM plantillas_certificados p
+            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+            WHERE p.direccion_codigo = ? AND p.activo = 1
+            ORDER BY p.id DESC
+            ''',
+            (direccion_codigo,),
+        ).fetchall()
         return [dict(p) for p in plantillas]
     finally:
         conn.close()
@@ -258,11 +210,25 @@ def obtener_plantillas_por_direccion(direccion_codigo):
 def obtener_todas_las_plantillas():
     conn = get_db_connection()
     try:
-        plantillas = conn.execute('''
-            SELECT * FROM plantillas_certificados 
-            WHERE activo = 1
-            ORDER BY id DESC
-        ''').fetchall()
+        plantillas = conn.execute(
+            '''
+            SELECT
+                p.id,
+                p.direccion_codigo,
+                p.nombre_plantilla,
+                p.tipo_documento,
+                p.texto_certificado,
+                p.firmante_nombre,
+                p.firmante_cargo,
+                p.activo,
+                d.ruta_logo_img,
+                d.ruta_firma_img
+            FROM plantillas_certificados p
+            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+            WHERE p.activo = 1
+            ORDER BY p.id DESC
+            '''
+        ).fetchall()
         return [dict(p) for p in plantillas]
     finally:
         conn.close()
@@ -271,7 +237,22 @@ def obtener_plantilla_por_id(id_plantilla):
     conn = get_db_connection()
     try:
         plantilla = conn.execute(
-            'SELECT * FROM plantillas_certificados WHERE id = ? AND activo = 1',
+            '''
+            SELECT
+                p.id,
+                p.direccion_codigo,
+                p.nombre_plantilla,
+                p.tipo_documento,
+                p.texto_certificado,
+                p.firmante_nombre,
+                p.firmante_cargo,
+                p.activo,
+                d.ruta_logo_img,
+                d.ruta_firma_img
+            FROM plantillas_certificados p
+            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+            WHERE p.id = ? AND p.activo = 1
+            ''',
             (id_plantilla,),
         ).fetchone()
         return dict(plantilla) if plantilla else None
@@ -284,6 +265,19 @@ def generar_html_preview_plantilla(plantilla):
 
     contexto = dict(plantilla)
     ruta_firma_web = (contexto.get('ruta_firma_img') or '').strip()
+    if not ruta_firma_web and contexto.get('direccion_codigo'):
+        try:
+            conn = get_db_connection()
+            fila = conn.execute(
+                'SELECT ruta_firma_img, ruta_logo_img FROM direcciones WHERE codigo = ? LIMIT 1',
+                (contexto['direccion_codigo'],),
+            ).fetchone()
+            ruta_firma_web = (fila['ruta_firma_img'] or '').strip() if fila else ''
+            if fila and not contexto.get('ruta_logo_img'):
+                contexto['ruta_logo_img'] = (fila['ruta_logo_img'] or '').strip()
+        finally:
+            conn.close()
+        contexto['ruta_firma_img'] = ruta_firma_web
     if not ruta_firma_web:
         return None
 
@@ -377,11 +371,12 @@ def generar_binario_pdf(matricula_id):
                 m.horario_elegido, m.fecha_aprobacion,
                 c.nombre as curso_nombre, c.modalidad, c.horas_totales, c.semanas_duracion, c.tipo_accion,
                 c.anio, c.mes, c.dia, c.anio_fin, c.mes_fin, c.dia_fin,
-                p.tipo_documento, p.ruta_firma_img, p.ruta_logo_img, p.texto_certificado, p.firmante_nombre, p.firmante_cargo
+                p.tipo_documento, ddir.ruta_firma_img, ddir.ruta_logo_img, p.texto_certificado, p.firmante_nombre, p.firmante_cargo
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
             JOIN capacitaciones c ON m.id_capacitacion = c.id
             JOIN plantillas_certificados p ON c.id_plantilla_certificado = p.id
+            LEFT JOIN direcciones ddir ON p.direccion_codigo = ddir.codigo
             WHERE m.id = ? AND m.aprobado = 1
         '''
         datos = conn.execute(query, (matricula_id,)).fetchone()

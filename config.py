@@ -20,6 +20,7 @@ def resolve_db_path():
 
 
 DB_PATH = resolve_db_path()
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
 MESES_ES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -57,3 +58,5 @@ def configure_app(app):
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.jinja_env.auto_reload = True
     app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    os.makedirs(os.path.join(UPLOAD_FOLDER, 'direcciones'), exist_ok=True)

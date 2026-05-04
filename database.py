@@ -33,7 +33,9 @@ def asegurar_migraciones_minimas():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS direcciones (
                 codigo TEXT PRIMARY KEY,
-                nombre TEXT NOT NULL
+                nombre TEXT NOT NULL,
+                ruta_firma_img TEXT NOT NULL DEFAULT '',
+                ruta_logo_img TEXT NOT NULL DEFAULT ''
             )
         ''')
 
@@ -44,7 +46,6 @@ def asegurar_migraciones_minimas():
                 direccion_codigo TEXT NOT NULL,
                 nombre_plantilla TEXT NOT NULL,
                 tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
-                ruta_firma_img TEXT NOT NULL,
                 texto_certificado TEXT NOT NULL,
                 firmante_nombre TEXT NOT NULL,
                 firmante_cargo TEXT NOT NULL,
@@ -54,20 +55,24 @@ def asegurar_migraciones_minimas():
             '''
         )
 
+        columnas_direcciones = {
+            row[1] for row in cursor.execute('PRAGMA table_info(direcciones)').fetchall()
+        }
+        if 'ruta_firma_img' not in columnas_direcciones:
+            cursor.execute(
+                "ALTER TABLE direcciones ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
+            )
+        if 'ruta_logo_img' not in columnas_direcciones:
+            cursor.execute(
+                "ALTER TABLE direcciones ADD COLUMN ruta_logo_img TEXT NOT NULL DEFAULT ''"
+            )
+
         columnas_plantillas = {
             row[1] for row in cursor.execute('PRAGMA table_info(plantillas_certificados)').fetchall()
         }
-        if 'ruta_firma_img' not in columnas_plantillas:
-            cursor.execute(
-                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
-            )
         if 'texto_certificado' not in columnas_plantillas:
             cursor.execute(
                 "ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''"
-            )
-        if 'ruta_logo_img' not in columnas_plantillas:
-            cursor.execute(
-                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_logo_img TEXT NOT NULL DEFAULT ''"
             )
 
         cursor.execute(

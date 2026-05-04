@@ -401,7 +401,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
 
             direcciones_gestion = conn.execute(
                 '''
-                SELECT d.codigo, d.nombre,
+                SELECT d.codigo, d.nombre, d.ruta_firma_img,
                        (SELECT COUNT(*) FROM admin_users a WHERE a.direccion = d.codigo AND a.rol = 'admin') as total_admins,
                        (SELECT COUNT(*) FROM capacitaciones c WHERE c.id LIKE 'AF-' || d.codigo || '-%') as total_cursos
                 FROM direcciones d
@@ -867,7 +867,7 @@ def create_direccion_record(codigo, nombre):
         return {'ok': False}
 
 
-def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo):
+def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo, ruta_firma_img=None, ruta_logo_img=None):
     try:
         conn = get_db_connection()
 
@@ -926,11 +926,67 @@ def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo):
                 (nombre_nuevo, codigo_actual),
             )
 
+        if ruta_firma_img is not None:
+            codigo_destino = codigo_nuevo if codigo_actual != codigo_nuevo else codigo_actual
+            conn.execute(
+                'UPDATE direcciones SET ruta_firma_img = ? WHERE codigo = ?',
+                (ruta_firma_img, codigo_destino),
+            )
+
+        if ruta_logo_img is not None:
+            codigo_destino = codigo_nuevo if codigo_actual != codigo_nuevo else codigo_actual
+            conn.execute(
+                'UPDATE direcciones SET ruta_logo_img = ? WHERE codigo = ?',
+                (ruta_logo_img, codigo_destino),
+            )
+
         conn.commit()
         conn.close()
         return {'ok': True}
     except sqlite3.Error:
         return {'ok': False}
+
+
+def actualizar_identidad_direccion(direccion_codigo, file_firma, file_logo, upload_folder):
+    import os
+    from werkzeug.utils import secure_filename
+    
+    try:
+        conn = get_db_connection()
+        if not direccion_existe(conn, direccion_codigo):
+            conn.close()
+            return {'ok': False, 'error': 'Dirección no encontrada.'}
+            
+        dir_path = os.path.join(upload_folder, direccion_codigo)
+        os.makedirs(dir_path, exist_ok=True)
+        
+        if file_firma and file_firma.filename:
+            filename_firma = 'firma.png'
+            ruta_guardado_firma = os.path.join(dir_path, filename_firma)
+            file_firma.save(ruta_guardado_firma)
+            ruta_firma_web = f'/uploads/direcciones/{direccion_codigo}/{filename_firma}'
+            conn.execute(
+                'UPDATE direcciones SET ruta_firma_img = ? WHERE codigo = ?',
+                (ruta_firma_web, direccion_codigo),
+            )
+            
+        if file_logo and file_logo.filename:
+            filename_orig = secure_filename(file_logo.filename)
+            ext = os.path.splitext(filename_orig)[1].lower()
+            filename_logo = f'logo{ext}'
+            ruta_guardado_logo = os.path.join(dir_path, filename_logo)
+            file_logo.save(ruta_guardado_logo)
+            ruta_logo_web = f'/uploads/direcciones/{direccion_codigo}/{filename_logo}'
+            conn.execute(
+                'UPDATE direcciones SET ruta_logo_img = ? WHERE codigo = ?',
+                (ruta_logo_web, direccion_codigo),
+            )
+
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
 
 
 def delete_direccion_record(codigo):

@@ -1,5 +1,7 @@
-from flask import Blueprint, request, redirect, url_for, flash, session, make_response
-from utils import admin_requerido
+from flask import Blueprint, request, redirect, url_for, flash, session, make_response, current_app, abort
+from utils import admin_requerido, validar_csrf
+from services.admin_service import actualizar_identidad_direccion
+import os
 from services.certificate_service import (
     registrar_plantilla,
     generar_binario_pdf,
@@ -11,6 +13,37 @@ from services.certificate_service import (
 )
 
 certificados_bp = Blueprint('certificados', __name__)
+
+@certificados_bp.route('/admin/certificados/identidad', methods=['POST'])
+@admin_requerido
+def configurar_identidad():
+    if not validar_csrf(request.form.get('_csrf_token')):
+        abort(403)
+        
+    es_superadmin = session.get('admin_rol') == 'superadmin'
+    admin_direccion = session.get('admin_direccion')
+    
+    direccion_codigo = request.form.get('direccion_codigo')
+    if not es_superadmin:
+        direccion_codigo = admin_direccion
+        
+    if not direccion_codigo:
+        flash('Debes especificar una dirección válida.', 'danger')
+        return redirect(url_for('admin', view='certificados'))
+        
+    file_firma = request.files.get('firma_img')
+    file_logo = request.files.get('logo_img')
+    
+    upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'direcciones')
+    resultado = actualizar_identidad_direccion(direccion_codigo, file_firma, file_logo, upload_dir)
+    
+    if resultado.get('ok'):
+        flash('Identidad visual actualizada correctamente.', 'success')
+    else:
+        flash(f"Error al actualizar la identidad: {resultado.get('error', 'Desconocido')}", 'danger')
+        
+    return redirect(url_for('admin', view='certificados'))
+
 
 @certificados_bp.route('/admin/certificados/plantilla', methods=['POST'])
 @admin_requerido
@@ -33,12 +66,6 @@ def crear_plantilla():
     firmante_nombre = request.form.get('firmante_nombre')
     firmante_cargo = request.form.get('firmante_cargo')
     texto_certificado = request.form.get('texto_certificado', '')
-    file_firma = request.files.get('firma_img')
-    file_logo = request.files.get('logo_img')
-    
-    if not file_firma or file_firma.filename == '':
-        flash('Debes seleccionar una firma PNG.', 'danger')
-        return redirect(url_for('admin', view='certificados'))
 
     if not (texto_certificado or '').strip():
         flash('Debes ingresar el texto del certificado.', 'danger')
@@ -53,8 +80,6 @@ def crear_plantilla():
             direccion_codigo=direccion_codigo,
             nombre_plantilla=nombre_plantilla,
             tipo_documento=tipo_documento,
-            file_firma=file_firma,
-            file_logo=file_logo,
             texto_certificado=texto_certificado,
             firmante_nombre=firmante_nombre,
             firmante_cargo=firmante_cargo
@@ -80,8 +105,6 @@ def editar_plantilla_route(id_plantilla):
     firmante_nombre = request.form.get('firmante_nombre')
     firmante_cargo = request.form.get('firmante_cargo')
     texto_certificado = request.form.get('texto_certificado', '')
-    file_firma = request.files.get('firma_img')
-    file_logo = request.files.get('logo_img')
     
     try:
         actualizar_plantilla(
@@ -89,8 +112,6 @@ def editar_plantilla_route(id_plantilla):
             direccion_codigo=direccion_codigo,
             nombre_plantilla=nombre_plantilla,
             tipo_documento=tipo_documento,
-            file_firma=file_firma,
-            file_logo=file_logo,
             texto_certificado=texto_certificado,
             firmante_nombre=firmante_nombre,
             firmante_cargo=firmante_cargo
