@@ -1,10 +1,11 @@
 import os
 import shutil
 import pdfkit
-from flask import render_template, current_app
+from flask import render_template, current_app, url_for
 from werkzeug.utils import secure_filename
 from markupsafe import escape
 from database import get_db_connection
+from services import validacion_service
 
 
 def _tabla_tiene_columna(conn, tabla: str, columna: str) -> bool:
@@ -194,7 +195,7 @@ def obtener_plantillas_por_direccion(direccion_codigo):
                 p.firmante_nombre,
                 p.firmante_cargo,
                 p.activo,
-                p.ruta_logo_img,
+                d.ruta_logo_img,
                 d.ruta_firma_img
             FROM plantillas_certificados p
             LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
@@ -366,12 +367,15 @@ def generar_binario_pdf(matricula_id):
     try:
         # Obtener datos de la matrícula, docente, curso y plantilla
         query = '''
-            SELECT 
+            SELECT
+                m.id_capacitacion,
                 d.nombre_completo as nombre_docente, d.numero_empleado, d.centro_universitario_regional,
                 m.horario_elegido, m.fecha_aprobacion,
                 c.nombre as curso_nombre, c.modalidad, c.horas_totales, c.semanas_duracion, c.tipo_accion,
                 c.anio, c.mes, c.dia, c.anio_fin, c.mes_fin, c.dia_fin,
-                p.tipo_documento, ddir.ruta_firma_img, ddir.ruta_logo_img, p.texto_certificado, p.firmante_nombre, p.firmante_cargo
+                p.tipo_documento, p.direccion_codigo,
+                ddir.ruta_firma_img, ddir.ruta_logo_img,
+                p.texto_certificado, p.firmante_nombre, p.firmante_cargo
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
             JOIN capacitaciones c ON m.id_capacitacion = c.id
@@ -460,18 +464,52 @@ def generar_binario_pdf(matricula_id):
         # Opciones de pdfkit
         options = {
             'page-size': 'Letter',
-            'margin-top': '0',
-            'margin-right': '0',
-            'margin-bottom': '0',
-            'margin-left': '0',
+            'margin-top': '0mm',
+            'margin-right': '0mm',
+            'margin-bottom': '0mm',
+            'margin-left': '0mm',
             'encoding': "UTF-8",
-            'enable-local-file-access': None,
+            'enable-local-file-access': "",
             'print-media-type': None,
             'no-outline': None,
-            'disable-smart-shrinking': None, 
+            'disable-smart-shrinking': "",
             'zoom': '1.0' # <--- Asegura la escala 1:1
         }
         
+        # ── QR de validación ─────────────────────────────────────────────
+        token_cert = ''
+        qr_b64 = ''
+        try:
+            id_cap = contexto.get('id_capacitacion') or ''
+            cod_dir = contexto.get('direccion_codigo') or 'IPSD'
+            token_cert = validacion_service.registrar_o_obtener_certificado(
+                conn=conn,
+                matricula_id=int(matricula_id),
+                numero_empleado=contexto.get('numero_empleado', ''),
+                id_capacitacion=id_cap,
+                tipo_documento=contexto['tipo_documento'],
+                codigo_direccion=cod_dir,
+            )
+            # Construir la URL del validador
+            try:
+                url_validacion = url_for(
+                    'validacion_bp.validar_token',
+                    token=token_cert,
+                    _external=True,
+                )
+            except Exception:
+                url_validacion = f'http://localhost:5000/v/{token_cert}'
+
+            qr_b64 = validacion_service.generar_qr_base64(url_validacion)
+        except Exception as e:
+            try:
+                current_app.logger.warning(f'QR no generado: {e}')
+            except Exception:
+                pass
+
+        contexto['qr_base64'] = qr_b64
+        contexto['token_certificado'] = token_cert
+
         if contexto['tipo_documento'] == 'DIPLOMA':
             options['orientation'] = 'Landscape'
             html = render_template('certificados/base_diploma.html', **contexto)
@@ -498,22 +536,25 @@ def generar_binario_pdf(matricula_id):
 
 
 def obtener_datos_empleado(matricula_id):
-    """Obtiene el nombre y número de empleado para una matrícula."""
+    """Obtiene el nombre, número de empleado y tipo de documento para una matrícula."""
     conn = get_db_connection()
     try:
         query = '''
-            SELECT d.nombre_completo, d.numero_empleado
+            SELECT d.nombre_completo, d.numero_empleado, p.tipo_documento
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
+            JOIN capacitaciones c ON m.id_capacitacion = c.id
+            JOIN plantillas_certificados p ON c.id_plantilla_certificado = p.id
             WHERE m.id = ? AND m.aprobado = 1
         '''
         datos = conn.execute(query, (matricula_id,)).fetchone()
         
         if not datos:
-            return None, None
+            return None, None, None
         
-        return dict(datos)['nombre_completo'], dict(datos)['numero_empleado']
+        fila = dict(datos)
+        return fila.get('nombre_completo'), fila.get('numero_empleado'), fila.get('tipo_documento')
     except Exception:
-        return None, None
+        return None, None, None
     finally:
         conn.close()

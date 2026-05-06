@@ -142,6 +142,37 @@
             text-align: center;
             margin-top: -2px;
         }
+
+        /* QR de validación */
+        .validador-qr {
+            position: absolute;
+            bottom: 32px;
+            right: 55px;
+            text-align: center;
+            z-index: 20;
+        }
+
+        .validador-qr img {
+            width: 72px;
+            height: 72px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .validador-qr .qr-token {
+            font-size: 6.5px;
+            color: #64748b;
+            margin-top: 3px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: .03em;
+            word-break: break-all;
+            max-width: 72px;
+        }
+
+        .validador-qr .qr-label {
+            font-size: 6px;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
@@ -159,12 +190,26 @@
                 <div class="texto">{{ texto_certificado_renderizado|safe }}</div>
             </div>
 
-            <div class="firma">
-                <img src="{{ ruta_firma_src }}" alt="Firma">
-                <div class="linea-firma"></div>
-                <div class="nombre">{{ firmante_nombre }}</div>
-                <div class="cargo">{{ firmante_cargo }}</div>
-            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <tr>
+                    <td style="width: 25%; text-align: center; vertical-align: bottom; padding-left: 20px;">
+                        <div style="background-color: white; padding: 6px; border-radius: 6px; display: inline-block;">
+                            <img src="{{ qr_base64|safe }}" style="width: 75px; height: 75px; display: block; margin: 0 auto;" alt="QR">
+                            <div style="font-size: 9px; color: #0b2e6d; margin-top: 4px; font-weight: bold; font-family: Arial, sans-serif;">{{ token_certificado }}</div>
+                            <div style="font-size: 7px; color: #475569; font-family: Arial, sans-serif;">Escanee para validar</div>
+                        </div>
+                    </td>
+                    <td style="width: 50%; text-align: center; vertical-align: bottom;">
+                        <div class="firma" style="position: relative; bottom: auto; left: auto; width: auto; margin-top: 0;">
+                            <img src="{{ ruta_firma_src }}" alt="Firma">
+                            <div class="linea-firma"></div>
+                            <div class="nombre">{{ firmante_nombre }}</div>
+                            <div class="cargo">{{ firmante_cargo }}</div>
+                        </div>
+                    </td>
+                    <td style="width: 25%;"></td>
+                </tr>
+            </table>
         </div>
     </div>
 </body>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificador de Certificados – UNAH IPSD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #002b5c;
+      --gold:   #f6bf22;
+      --green:  #166534;
+      --green-bg: #dcfce7;
+      --red:    #991b1b;
+      --red-bg: #fee2e2;
+      --muted:  #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8eef8 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      color: #0f172a;
+    }
+
+    .validator-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,43,92,.10), 0 4px 16px rgba(0,0,0,.06);
+      width: 100%;
+      max-width: 560px;
+      overflow: hidden;
+    }
+
+    /* ── Header institucional ── */
+    .validator-header {
+      background: var(--blue);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .validator-header .shield {
+      width: 44px;
+      height: 44px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .validator-header-text h1 {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .validator-header-text p {
+      color: rgba(255,255,255,.65);
+      font-size: .78rem;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    /* ── Body ── */
+    .validator-body {
+      padding: 2rem;
+    }
+
+    /* ── Badge de estado ── */
+    .status-badge {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-badge.valid {
+      background: var(--green-bg);
+      border: 1.5px solid #bbf7d0;
+    }
+
+    .status-badge.invalid {
+      background: var(--red-bg);
+      border: 1.5px solid #fecaca;
+    }
+
+    .status-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: .1rem;
+    }
+
+    .status-text h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .status-badge.valid .status-text h2  { color: var(--green); }
+    .status-badge.invalid .status-text h2 { color: var(--red); }
+
+    .status-text p {
+      font-size: .85rem;
+      margin-top: .25rem;
+      color: var(--muted);
+    }
+
+    /* ── Detalle del certificado ── */
+    .cert-detail {
+      display: grid;
+      gap: .85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .cert-field {
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+    }
+
+    .cert-field label {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+    }
+
+    .cert-field span {
+      font-size: .92rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.25rem 0;
+    }
+
+    /* ── Token ── */
+    .token-display {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: .82rem;
+      color: var(--blue);
+      font-weight: 600;
+      word-break: break-all;
+      text-align: center;
+      letter-spacing: .04em;
+    }
+
+    .token-label {
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      text-align: center;
+      margin-bottom: .4rem;
+    }
+
+    /* ── Tipo badge ── */
+    .tipo-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: .3rem .85rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .tipo-pill.diploma    { background: rgba(212,227,255,.7); color: var(--blue); }
+    .tipo-pill.constancia { background: rgba(224,242,254,.9); color: #075985; }
+
+    /* ── Scan count ── */
+    .scan-count {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .scan-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+    }
+
+    /* ── Footer ── */
+    .validator-footer {
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+
+    .validator-footer p {
+      font-size: .72rem;
+      color: var(--muted);
+    }
+
+    .validator-footer strong {
+      color: var(--blue);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="validator-card">
+
+    <!-- Header -->
+    <div class="validator-header">
+      <div class="shield">🎓</div>
+      <div class="validator-header-text">
+        <h1>Verificador Oficial de Certificados</h1>
+        <p>Instituto de Profesionalización y Superación Docente · UNAH</p>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="validator-body">
+
+      {% if datos %}
+        <!-- Estado: Válido -->
+        <div class="status-badge valid">
+          <div class="status-icon">✅</div>
+          <div class="status-text">
+            <h2>Certificado Válido</h2>
+            <p>Este documento ha sido emitido oficialmente por el IPSD-UNAH y su autenticidad ha sido verificada.</p>
+          </div>
+        </div>
+
+        <div class="cert-detail">
+          <div class="cert-field">
+            <label>Tipo de Documento</label>
+            <span>
+              <span class="tipo-pill {{ 'diploma' if datos.tipo_documento == 'DIPLOMA' else 'constancia' }}">
+                {{ datos.tipo_documento }}
+              </span>
+            </span>
+          </div>
+
+          <div class="cert-field">
+            <label>Beneficiario</label>
+            <span>{{ datos.nombre_completo }}</span>
+          </div>
+
+          <div class="cert-field">
+            <label>Número de Empleado</label>
+            <span>{{ datos.numero_empleado }}</span>
+          </div>
+
+          <div class="cert-field">
+            <label>Capacitación Acreditada</label>
+            <span>{{ datos.nombre_curso }}</span>
+          </div>
+
+          <div class="cert-field">
+            <label>Modalidad</label>
+            <span>{{ datos.modalidad or '—' }}</span>
+          </div>
+
+          <div class="cert-field">
+            <label>Período</label>
+            <span>{{ datos.mes }} / {{ datos.anio }}</span>
+          </div>
+
+          <div class="cert-field">
+            <label>Fecha de Emisión</label>
+            <span>{{ datos.fecha_emision[:10] if datos.fecha_emision else '—' }}</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="scan-count">
+          <div class="scan-dot"></div>
+          Este QR ha sido escaneado <strong>&nbsp;{{ datos.veces_validado }}&nbsp;</strong> vez/veces.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="token-label">Token de Validación</div>
+        <div class="token-display">{{ datos.token_validacion }}</div>
+
+      {% else %}
+        <!-- Estado: Inválido -->
+        <div class="status-badge invalid">
+          <div class="status-icon">❌</div>
+          <div class="status-text">
+            <h2>Certificado No Encontrado o Revocado</h2>
+            <p>El código escaneado no corresponde a ningún certificado activo en nuestros registros. Si crees que es un error, contacta a la dirección emisora.</p>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="token-label">Token consultado</div>
+        <div class="token-display">{{ token }}</div>
+
+      {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="validator-footer">
+      <p>Verificado en <strong>sistema.ipsd.unah.edu.hn</strong></p>
+      <p>UNAH · IPSD © {{ 2026 }}</p>
+    </div>
+
+  </div>
+
+</body>
+</html>

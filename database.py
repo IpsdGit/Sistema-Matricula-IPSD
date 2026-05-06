@@ -547,6 +547,29 @@ def asegurar_migraciones_minimas():
                 (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
             )
 
+        # ── Tabla de certificados emitidos (sistema QR) ──────────────────────
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS certificados_emitidos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_validacion TEXT UNIQUE NOT NULL,
+                matricula_id INTEGER NOT NULL,
+                numero_empleado TEXT NOT NULL,
+                id_capacitacion TEXT NOT NULL,
+                fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
+                tipo_documento TEXT NOT NULL,
+                veces_validado INTEGER NOT NULL DEFAULT 0,
+                activo INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY(matricula_id) REFERENCES matriculas(id),
+                FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado),
+                FOREIGN KEY(id_capacitacion) REFERENCES capacitaciones(id)
+            )
+            '''
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)'
+        )
+
         conn.commit()
         conn.close()
     except sqlite3.Error:

@@ -4445,10 +4445,6 @@ Inicio: Lunes, 22 de Abril de 2026
 - CRUD completo: crear, editar, eliminar plantillas
 
 **POR QUÉ**:
-- Antes los admins tenían que editar HTML/CSS directamente.
-- Ahora pueden editar visualmente sin conocimiento técnico.
-
-**PARA QUÉ**:
 - Autonomía: cada dirección crea sus propias plantillas.
 - Agilidad: cambios sin tickets al departamento técnico.
 
@@ -4540,6 +4536,69 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Abril 30, 2026  
-**Versión actual**: 1.12.0 (Plantillas Dinámicas y Editor Visual de Certificados)  
-**Estado**: Development - Sistema de plantillas parametrizadas activo; certificados completamente personalizables por admin
+## 🛡️ Validación QR y Optimización UI/UX (v1.13.0)
+
+### Cambio 34.1: Implementación del Sistema de Validación por QR (PoC)
+**Fecha**: Mayo 4, 2026  
+**Archivos afectados**: `app.py`, `database.py`, `services/validacion_service.py` (nuevo), `routes/validacion.py` (nuevo), `templates/validador.html` (nuevo), `requirements.txt`
+
+**QUÉ**:
+- Creación de un subsistema de validación independiente:
+  - **Base de Datos**: Tabla `certificados_emitidos` para control de tokens y estadísticas de escaneo.
+  - **Servicio**: Generación de códigos QR en formato Base64 (Data URI) compatibles con `wkhtmltopdf`.
+  - **Rutas**: Blueprint `validacion_bp` con vista pública para que terceros verifiquen la autenticidad.
+- Inyección automática de QR y token único en el pie de página de Diplomas y Constancias.
+
+**POR QUÉ**:
+- Necesidad de prevenir la falsificación de certificados digitales.
+- Requerimiento institucional de proporcionar un mecanismo de verificación rápida para empleadores.
+
+**PARA QUÉ**:
+- Asegurar la integridad de los documentos emitidos por el IPSD.
+- Facilitar la validación mediante dispositivos móviles (celulares).
+
+---
+
+### Cambio 34.2: Modernización del Dashboard Docente
+**Fecha**: Mayo 5, 2026  
+**Archivos afectados**: `templates/dashboard.html`, `static/style.css`, `templates/base.html`
+
+**QUÉ**:
+- **Bento Grid**: Rediseño de la sección "Historial" con un layout moderno de rejilla.
+- **Sidebar de Actividades**: Migración de "Próximas Actividades" desde notificaciones a un panel lateral fijo en el dashboard.
+- **Modo Oscuro**: Implementación de soporte inicial para `data-theme="dark"` con persistencia en `localStorage`.
+- **KPIs**: Nueva tarjeta visual para conteo rápido de certificados obtenidos.
+
+**POR QUÉ**:
+- El dashboard anterior tenía demasiada carga visual en el centro.
+- La información de calendario era difícil de encontrar.
+
+**PARA QUÉ**:
+- Mejorar la experiencia de navegación del docente.
+- Dar una estética "premium" y moderna a la plataforma institucional.
+
+---
+
+### Cambio 34.3: Optimización de Archivos y Corrección de Colisiones
+**Fecha**: Mayo 5-6, 2026  
+**Archivos afectados**: `services/validacion_service.py`, `routes/certificados.py`, `services/certificate_service.py`
+
+**QUÉ**:
+- **Nomenclatura Dinámica**: Los PDFs descargados ahora tienen el formato `Tipo_Empleado_Nombre.pdf` en lugar de nombres genéricos.
+- **Fix de Colisión**: Corrección crítica en `registrar_o_obtener_certificado`. Ahora la búsqueda de tokens existentes usa una clave compuesta (`matricula_id` + `numero_empleado` + `id_capacitacion`) para evitar la reutilización errónea de tokens si se reinicia la base de datos de pruebas.
+- **Renderizado PDF**: Ajuste de `border=2` en el QR y uso del filtro `|safe` en Jinja2 para garantizar la visibilidad del código en entornos Linux y Windows.
+
+**POR QUÉ**:
+- Los nombres de archivo genéricos dificultaban la organización de los docentes.
+- Se detectó un bug donde un docente podía recibir el token de validación de otro si el ID de matrícula se reciclaba.
+
+**PARA QUÉ**:
+- Garantizar que cada QR apunte ÚNICAMENTE a los datos correctos.
+- Profesionalizar la entrega de archivos digitales.
+
+---
+
+**Última actualización**: Mayo 6, 2026  
+**Versión actual**: 1.13.0 (Validación QR y Dashboard Moderno)  
+**Estado**: Development - Sistema de validación funcional (PoC); UI optimizada para despliegue.
+

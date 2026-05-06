@@ -2,6 +2,12 @@ import argparse
 import os
 import shutil
 import sqlite3
+import sys
+
+# Asegurar que se puede importar config desde el directorio raíz
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from config import DB_PATH
 

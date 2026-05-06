@@ -60,6 +60,9 @@
       </div>
 
       <div class="portal-topbar-actions">
+        <button type="button" id="theme-toggle" class="portal-alert-btn" aria-label="Cambiar tema" title="Modo oscuro/claro">
+          <span class="material-symbols-outlined" id="theme-toggle-icon" style="vertical-align:middle;font-size:1rem;">dark_mode</span>
+        </button>
         <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas"
           class="portal-alert-btn {% if seccion_activa == 'notificaciones' %}active{% endif %}"
           aria-label="Notificaciones" title="Notificaciones">
@@ -140,20 +143,17 @@
           </div>
         </div>
 
-        <div class="notificaciones-layout">
+        <div class="notificaciones-layout wide">
           <div class="notificaciones-main">
             {% if notificaciones %}
             {% for item in notificaciones %}
             {% set nivel_class = 'success' if item['nivel'] == 'success' else ('warning' if item['nivel'] == 'warning'
             else 'info') %}
-            {% set categoria_label = 'Inscripción • Acción Formativa' if item['nivel'] == 'success' else ('Asistencia •
-            Recordatorio' if item['nivel'] == 'warning' else 'Oferta Académica • Nueva') %}
+            {% set categoria_label = 'Inscripción • Acción Formativa' if item['nivel'] == 'success' else ('Asistencia • Recordatorio' if item['nivel'] == 'warning' else 'Oferta Académica • Nueva') %}
             {% set leida_class = 'notificacion-card--leida' if item['leida'] else '' %}
-            {% set icon_class = 'ui-icon-success' if item['nivel'] == 'success' else ('ui-icon-warning' if item['nivel']
-            == 'warning' else 'ui-icon-info') %}
+            {% set icon_class = 'ui-icon-success' if item['nivel'] == 'success' else ('ui-icon-warning' if item['nivel'] == 'warning' else 'ui-icon-info') %}
 
-            <div
-              class="notificacion-card glass-surface study-card p-4 p-md-5 {{ leida_class }} notificacion-card--{{ nivel_class }}">
+            <div class="notificacion-card glass-surface study-card p-4 p-md-5 {{ leida_class }} notificacion-card--{{ nivel_class }}">
               <div class="card-blob" aria-hidden="true"></div>
               <div class="notificacion-card-content">
                 <div class="notificacion-icon-wrap">
@@ -182,56 +182,11 @@
             {% endfor %}
             {% else %}
             <div class="glass-surface study-card p-5 text-center">
-              <span class="ui-icon ui-icon-info"
-                style="font-size: 3rem; opacity: .2; margin-bottom: 1rem; display: block;"></span>
+              <span class="ui-icon ui-icon-info" style="font-size: 3rem; opacity: .2; margin-bottom: 1rem; display: block;"></span>
               <p class="text-muted">No hay notificaciones disponibles para este filtro.</p>
             </div>
             {% endif %}
           </div>
-
-          <aside class="notificaciones-sidebar">
-            <div class="insight-blob study-card">
-              <div class="insight-title">
-                <span class="ui-icon ui-icon-warning" style="color: #f59e0b; font-size: 1.5rem;"></span>
-                <h4>Próximas Actividades</h4>
-              </div>
-              <div class="insight-limits">
-                {% if calendario_eventos_docente %}
-                {% for evento in calendario_eventos_docente[:2] %}
-                <div class="insight-limit-item {% if loop.index is divisibleby 2 %}blue{% endif %}"
-                  onclick="window.location.href='/dashboard?seccion=calendario'" style="cursor: pointer;"
-                  title="Ir al calendario">
-                  <span class="limit-time">{{ evento.fecha_formateada }}</span>
-                  <span class="limit-name">{% if evento.tipo_evento == 'sesion' %}Sesión Programada{% else %}Inicio de
-                    Curso{% endif %}</span>
-                  <span class="limit-sub">{{ evento.nombre_curso }}</span>
-                </div>
-                {% endfor %}
-                {% else %}
-                <p class="text-xs text-muted">No hay actividades próximas programadas.</p>
-                {% endif %}
-              </div>
-              <a href="/dashboard?seccion=calendario" class="btn-insight-nav">
-                VER CALENDARIO
-              </a>
-            </div>
-
-            <div class="insight-stat-card study-card shadow-xl">
-              <h4>Estado de Formación</h4>
-              <p>Has completado el registro de asistencia en todas tus sesiones activas esta semana.</p>
-
-              {% set total_m = matriculados|length %}
-              {% set pct_m = 100 if total_m > 0 else 0 %}
-              <div class="insight-stat-progress">
-                <div class="stat-bar-bg"></div>
-                <div class="stat-bar-fill" data-pct="{{ pct_m }}"></div>
-                <div class="stat-progress-label">
-                  <span>Asistencia Semanal</span>
-                  <span>{{ pct_m }}%</span>
-                </div>
-              </div>
-            </div>
-          </aside>
         </div>
       </section>
 
@@ -289,12 +244,25 @@
             </div>
           </div>
 
-          {# --- Tarjeta resumen (oscura) --- #}
+          {# --- Tarjeta resumen (oscura) + Certificados --- #}
           {% set total = resumen_historial['todas'] %}
           {% set aprobadas = resumen_historial['aprobadas'] %}
           {% set pct = ((aprobadas / total) * 100) | int if total > 0 else 0 %}
-          <div class="historial-bento-summary-cell">
-            <div class="historial-glass-card historial-glass-card--dark">
+          <div class="historial-bento-summary-cell" style="display:flex; flex-direction:column; gap:.75rem;">
+
+            {# Mini-card certificados #}
+            <a href="/dashboard?seccion=historial&filtro_historial=aprobadas" class="historial-cert-card">
+              <div class="historial-cert-icon">
+                <span class="material-symbols-outlined" style="font-size:1.3rem;">workspace_premium</span>
+              </div>
+              <div class="historial-cert-info">
+                <span class="historial-cert-num">{{ aprobadas }}</span>
+                <span class="historial-cert-label">Certificados obtenidos</span>
+              </div>
+              <span class="historial-cert-arrow">→</span>
+            </a>
+
+            <div class="historial-glass-card historial-glass-card--dark" style="flex:1;">
               <span class="historial-summary-label"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Resumen de Actividades</span>
               <div class="historial-summary-stats">
                 <div class="historial-summary-stat">
@@ -527,17 +495,37 @@
             </div>
           </div>
 
-          <aside class="portal-kpi-stack" aria-label="Indicadores docentes">
-            <article class="portal-kpi-card portal-kpi-gold">
-              <span class="portal-kpi-icon portal-kpi-icon-cert" aria-hidden="true"></span>
-              <strong>{{ resumen_historial['aprobadas'] if resumen_historial else 0 }}</strong>
-              <small>CERTIFICADOS</small>
-            </article>
-            <article class="portal-kpi-card portal-kpi-blue">
-              <span class="portal-kpi-icon portal-kpi-icon-event" aria-hidden="true"></span>
-              <strong>{{ calendario_eventos_docente|default([], true)|length }}</strong>
-              <small>EVENTOS PRÓXIMOS</small>
-            </article>
+          <aside class="portal-proximas-panel" aria-label="Próximas actividades">
+            <div class="proximas-panel-head">
+              <span class="material-symbols-outlined" style="font-size:1.05rem;color:#f59e0b;">bolt</span>
+              <span class="proximas-panel-title">Próximas Actividades</span>
+            </div>
+            <div class="proximas-panel-list">
+              {% if calendario_eventos_docente %}
+              {% for evento in calendario_eventos_docente[:5] %}
+              <a href="/dashboard?seccion=calendario" class="proximas-item" title="Ir al calendario">
+                <div class="proximas-item-date">
+                  <span class="proximas-item-day">{{ evento.fecha_formateada.split(',')[0][:3].upper() if ',' in (evento.fecha_formateada or '') else (evento.fecha_formateada or '')[:3].upper() }}</span>
+                  <span class="proximas-item-num">{{ evento.fecha_formateada[-2:] if evento.fecha_formateada else '—' }}</span>
+                </div>
+                <div class="proximas-item-info">
+                  <span class="proximas-item-type">{% if evento.tipo_evento == 'sesion' %}Sesión{% else %}Inicio{% endif %}</span>
+                  <span class="proximas-item-name">{{ evento.nombre_curso }}</span>
+                </div>
+                <span class="proximas-item-arrow">→</span>
+              </a>
+              {% endfor %}
+              {% else %}
+              <div class="proximas-empty">
+                <span class="material-symbols-outlined" style="font-size:1.6rem;opacity:.3;">calendar_today</span>
+                <p>Sin eventos próximos</p>
+              </div>
+              {% endif %}
+            </div>
+            <a href="/dashboard?seccion=calendario" class="proximas-panel-footer">
+              <span class="material-symbols-outlined" style="font-size:.9rem;">calendar_month</span>
+              Ver calendario completo
+            </a>
           </aside>
         </div>
 
@@ -871,5 +859,37 @@
       }
     });
   })();
+</script>
+
+<script>
+/* ── DARK MODE TOGGLE (portal docente) ── */
+(function () {
+  const HTML = document.documentElement;
+  const ICON = document.getElementById('theme-toggle-icon');
+  const BTN  = document.getElementById('theme-toggle');
+  const KEY  = 'ipsd-theme';
+
+  function applyTheme(theme) {
+    HTML.setAttribute('data-theme', theme);
+    if (ICON) ICON.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+    if (BTN)  BTN.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+    localStorage.setItem(KEY, theme);
+  }
+
+  const saved = localStorage.getItem(KEY);
+  if (saved) {
+    applyTheme(saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    applyTheme('dark');
+  } else {
+    applyTheme('light');
+  }
+
+  if (BTN) {
+    BTN.addEventListener('click', function () {
+      applyTheme((HTML.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark');
+    });
+  }
+})();
 </script>
 {% endblock %}

@@ -14,8 +14,8 @@ if PROJECT_ROOT not in sys.path:
 
 from config import DB_PATH
 
-DEFAULT_EXCEL_PATH = r"C:\Users\Carlo\Desktop\Base de Prueba.xlsx"
-# DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
+#DEFAULT_EXCEL_PATH = r"C:\Users\Carlo\Desktop\Base de Prueba.xlsx"
+DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
 
 def normalizar_texto(valor):
     return str(valor or '').strip()

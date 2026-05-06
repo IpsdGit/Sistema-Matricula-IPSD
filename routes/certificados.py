@@ -172,7 +172,7 @@ def descargar_certificado(matricula_id):
     # El servicio ya valida que la matrícula esté aprobada = 1
     pdf_binario = generar_binario_pdf(matricula_id)
     
-    if not pdf_binario:
+    if not isinstance(pdf_binario, (bytes, bytearray)):
         return (
             '<h3>Certificado no disponible</h3>'
             '<p>Este certificado no está configurado todavía (plantilla incompleta) o la matrícula no ha sido aprobada.</p>',
@@ -181,13 +181,15 @@ def descargar_certificado(matricula_id):
         )
     
     # Obtener nombre y número de empleado para el nombre del archivo
-    nombre_empleado, numero_empleado = obtener_datos_empleado(matricula_id)
+    nombre_empleado, numero_empleado, tipo_documento = obtener_datos_empleado(matricula_id)
+    tipo_archivo = (tipo_documento or 'Certificado').strip().title() or 'Certificado'
+    prefijo_archivo = tipo_archivo.replace(' ', '_')
     
     # Construir nombre del archivo
     if nombre_empleado and numero_empleado:
-        nombre_archivo = f'Certificado_{numero_empleado}_{nombre_empleado.replace(" ", "_")}.pdf'
+        nombre_archivo = f'{prefijo_archivo}_{numero_empleado}_{nombre_empleado.replace(" ", "_")}.pdf'
     else:
-        nombre_archivo = f'Certificado_{matricula_id}.pdf'
+        nombre_archivo = f'{prefijo_archivo}_{matricula_id}.pdf'
         
     response = make_response(pdf_binario)
     response.headers['Content-Type'] = 'application/pdf'
