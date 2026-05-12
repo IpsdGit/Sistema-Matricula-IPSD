@@ -27,6 +27,12 @@
     font-size: 0.72rem;
     border-radius: 7px;
     box-shadow: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-icon-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
   }
 
   .top-user-chip {
@@ -738,15 +744,15 @@
       </a>
       <a href="/admin?view=cursos" class="sidebar-link" data-view="cursos">
         <span class="link-icon"><span class="material-symbols-outlined"
-        style="vertical-align: middle; font-size: inherit;">layers</span></span> Catálogos
+            style="vertical-align: middle; font-size: inherit;">layers</span></span> Catálogos
       </a>
       <a href="/admin?view=ediciones" class="sidebar-link" data-view="ediciones">
         <span class="link-icon"><span class="material-symbols-outlined"
-        style="vertical-align: middle; font-size: inherit;">calendar_month</span></span> Ediciones
+            style="vertical-align: middle; font-size: inherit;">calendar_month</span></span> Ediciones
       </a>
       <a href="/admin?view=matriculas" class="sidebar-link" data-view="matriculas">
         <span class="link-icon"><span class="material-symbols-outlined"
-        style="vertical-align: middle; font-size: inherit;">list_alt</span></span> Reportes / Historial
+            style="vertical-align: middle; font-size: inherit;">list_alt</span></span> Reportes / Historial
       </a>
       <a href="/admin?view=certificados" class="sidebar-link" data-view="certificados">
         <span class="link-icon"><span class="material-symbols-outlined"
@@ -1105,11 +1111,9 @@
 
                 <div class="form-group">
                   <label class="form-label">Código (ID Autogenerado)</label>
-                  {% set codigo_preview = (direcciones[0]['codigo'] if direcciones else 'IPSD') if es_superadmin else
-                  admin_direccion %}
+                  {% set codigo_preview = (direcciones[0]['codigo'] if direcciones else 'IPSD') if es_superadmin else admin_direccion %}
                   <div class="form-input" style="background:#f8fafc; color:#334155;">
-                    Se generará automáticamente con formato <strong id="preview-codigo">{{ codigo_preview
-                      }}-V-001</strong>
+                    Se generará automáticamente con formato <strong id="preview-codigo">{{ codigo_preview }}-V-001</strong>
                   </div>
                 </div>
 
@@ -1142,6 +1146,7 @@
                     <select class="form-select" name="modalidad" id="modalidad" required>
                       <option value="Virtual" selected>Virtual</option>
                       <option value="Presencial">Presencial</option>
+                      <option value="B-Learning">B-Learning</option>
                     </select>
                   </div>
                 </div>
@@ -1152,20 +1157,8 @@
                     <select class="form-select" name="tipo_accion" id="tipo_accion" required>
                       <option value="CONFERENCIA">Conferencia</option>
                       <option value="SEMINARIO">Seminario</option>
+                      <option value="SEMINARIO-TALLER">Seminario-Taller</option>
                       <option value="CURSO" selected>Curso</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Plantilla de Certificado (Opcional)</label>
-                    <select class="form-select" name="id_plantilla_certificado">
-                      <option value="">-- Ninguna --</option>
-                      {% for p in plantillas %}
-                      <option value="{{ p.id }}">{{ p.nombre_plantilla }} ({{ p.direccion_codigo }} - {{
-                        p.tipo_documento }})</option>
-                      {% endfor %}
                     </select>
                   </div>
                 </div>
@@ -1210,36 +1203,21 @@
                     </td>
                     <td style="text-align:center;">
                       {% if catalogo['total_ediciones'] == 0 %}
-                        <span class="badge-pill danger text-xs" style="background:#fee2e2; color:#991b1b; border-color:#fecaca;">Sin Ediciones</span>
+                      <span class="badge-pill danger text-xs"
+                        style="background:#fee2e2; color:#991b1b; border-color:#fecaca;">Sin Ediciones</span>
                       {% else %}
-                        <span class="badge-pill secondary text-xs">{{ catalogo['total_ediciones'] }}</span>
+                      <span class="badge-pill secondary text-xs">{{ catalogo['total_ediciones'] }}</span>
                       {% endif %}
                     </td>
                     <td style="text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:.35rem;">
                         <button type="button" class="btn-ghost btn-icon-action" title="Editar Catálogo"
-                          data-id="{{ catalogo['id'] }}"
-                          data-nombre="{{ catalogo['nombre']|escape }}"
-                          data-modalidad="{{ catalogo['modalidad'] }}"
-                          data-tipo="{{ catalogo['tipo_accion'] }}"
-                          data-plantilla="{{ catalogo['id_plantilla_certificado'] or '' }}"
-                          data-requisitos="{{ (catalogo.get('requisitos') or '')|escape }}"
+                          data-id="{{ catalogo['id'] }}" data-nombre="{{ catalogo['nombre']|escape }}"
+                          data-modalidad="{{ catalogo['modalidad'] }}" data-tipo="{{ catalogo['tipo_accion'] }}"
                           onclick="prepararEdicionCatalogo(this)"
                           style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff;">
                           <span class="material-symbols-outlined"
                             style="vertical-align: middle; font-size: inherit;">edit</span>
-                        </button>
-
-                        <button type="button" class="btn-ghost btn-icon-action btn-catalogo-calendario"
-                          title="Ediciones / Calendario" aria-label="Ediciones / Calendario"
-                          data-catalogo-id="{{ catalogo['id'] }}"
-                          data-catalogo-nombre="{{ catalogo['nombre']|escape }}"
-                          data-catalogo-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}"
-                          data-catalogo-modalidad="{{ catalogo['modalidad'] }}"
-                          onclick="abrirModalCalendarioCatalogo(this)"
-                          style="color:#065f46; border-color:#99f6e4; background:#ecfeff;">
-                          <span class="material-symbols-outlined"
-                            style="vertical-align: middle; font-size: inherit;">calendar_month</span>
                         </button>
 
                         <form action="/admin/catalogo/eliminar" method="POST" style="display:inline; margin:0;"
@@ -1272,28 +1250,31 @@
       </section>
 
       <!-- MODAL EDITAR CATÁLOGO -->
-      <div class="modal-overlay" id="modal-editar-catalogo" aria-hidden="true" onclick="cerrarModalEditarCatalogo(event)">
+      <div class="modal-overlay" id="modal-editar-catalogo" aria-hidden="true"
+        onclick="cerrarModalEditarCatalogo(event)">
         <div class="modal-box" style="max-width:500px;">
           <div class="card-ipsd">
             <div class="card-header">
-              <span style="font-weight:700;"><span class="material-symbols-outlined" style="vertical-align:middle;">edit</span> Editar Catálogo</span>
+              <span style="font-weight:700;"><span class="material-symbols-outlined"
+                  style="vertical-align:middle;">edit</span> Editar Catálogo</span>
             </div>
             <div class="card-body">
               <form action="/admin/catalogo/editar" method="POST">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="catalogo_id" id="edit-cat-id">
-                
+
                 <div class="form-group">
                   <label class="form-label">Nombre de la Acción Formativa</label>
                   <input type="text" class="form-input" name="nombre_curso" id="edit-cat-nombre" required>
                 </div>
-                
+
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
                   <div class="form-group">
                     <label class="form-label">Modalidad</label>
                     <select class="form-select" name="modalidad" id="edit-cat-modalidad" required>
                       <option value="Virtual">Virtual</option>
                       <option value="Presencial">Presencial</option>
+                      <option value="B-Learning">B-Learning</option>
                     </select>
                   </div>
                   <div class="form-group">
@@ -1301,30 +1282,15 @@
                     <select class="form-select" name="tipo_accion" id="edit-cat-tipo" required>
                       <option value="CONFERENCIA">Conferencia</option>
                       <option value="SEMINARIO">Seminario</option>
+                      <option value="SEMINARIO-TALLER">Seminario-Taller</option>
                       <option value="CURSO">Curso</option>
                     </select>
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">Plantilla de Certificado</label>
-                  <select class="form-select" name="id_plantilla_certificado" id="edit-cat-plantilla">
-                    <option value="">-- Ninguna --</option>
-                    {% for p in plantillas %}
-                    <option value="{{ p.id }}">{{ p.nombre_plantilla }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Requisitos del Curso <span style="color:var(--text-muted); font-size:.78rem;">(separados por comas)</span></label>
-                  <textarea class="form-input" name="requisitos" id="edit-cat-requisitos" rows="2"
-                    placeholder="Ej: Docente activo, Mínimo 2 años de experiencia"
-                    style="resize:vertical; min-height:52px;"></textarea>
-                </div>
-
                 <div style="display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem;">
-                  <button type="button" class="btn-ghost" onclick="cerrarModal('modal-editar-catalogo')">Cancelar</button>
+                  <button type="button" class="btn-ghost"
+                    onclick="cerrarModal('modal-editar-catalogo')">Cancelar</button>
                   <button type="submit" class="btn-primary-ipsd">Guardar Cambios</button>
                 </div>
               </form>
@@ -1339,17 +1305,13 @@
           const nombre = btn.getAttribute('data-nombre');
           const modalidad = btn.getAttribute('data-modalidad');
           const tipo = btn.getAttribute('data-tipo');
-          const plantilla = btn.getAttribute('data-plantilla');
-          const requisitos = btn.getAttribute('data-requisitos') || '';
-          abrirModalEditarCatalogo(id, nombre, modalidad, tipo, plantilla, requisitos);
+          abrirModalEditarCatalogo(id, nombre, modalidad, tipo);
         }
-        function abrirModalEditarCatalogo(id, nombre, modalidad, tipo, plantilla, requisitos) {
+        function abrirModalEditarCatalogo(id, nombre, modalidad, tipo) {
           document.getElementById('edit-cat-id').value = id;
           document.getElementById('edit-cat-nombre').value = nombre;
           document.getElementById('edit-cat-modalidad').value = modalidad;
           document.getElementById('edit-cat-tipo').value = tipo;
-          document.getElementById('edit-cat-plantilla').value = plantilla;
-          document.getElementById('edit-cat-requisitos').value = requisitos || '';
           abrirModal('modal-editar-catalogo');
         }
         function cerrarModalEditarCatalogo(e) {
@@ -1392,8 +1354,8 @@
           const enlaceVirtual = document.getElementById('enlace_virtual_cal');
           const hoy = new Date();
           const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-          if (fechaInicio) fechaInicio.value = hoyIso;
-          if (fechaFin) fechaFin.value = hoyIso;
+          if (fechaInicio) { fechaInicio.min = hoyIso; fechaInicio.value = hoyIso; }
+          if (fechaFin) { fechaFin.min = hoyIso; fechaFin.value = hoyIso; }
           if (enlaceVirtual) enlaceVirtual.value = '';
 
           const jornadasContainer = document.getElementById('jornadas-container');
@@ -1457,6 +1419,30 @@
         }
       </script>
 
+      <script>
+        /* ─── Preview dinámico del código de nuevo catálogo ─── */
+        (function () {
+          const modalidadMap = { 'Virtual': 'V', 'Presencial': 'P', 'B-Learning': 'B' };
+          function actualizarPreviewCodigo() {
+            const dirSelect = document.getElementById('direccion_curso');
+            const modSelect = document.getElementById('modalidad');
+            const preview   = document.getElementById('preview-codigo');
+            if (!modSelect || !preview) return;
+            const dir = (dirSelect ? dirSelect.value : '') || '{{ admin_direccion }}';
+            const mod = modSelect.value || 'Virtual';
+            const letra = modalidadMap[mod] || 'V';
+            preview.textContent = `${dir}-${letra}-001`;
+          }
+          document.addEventListener('DOMContentLoaded', function () {
+            const dirSelect = document.getElementById('direccion_curso');
+            const modSelect = document.getElementById('modalidad');
+            if (dirSelect) dirSelect.addEventListener('change', actualizarPreviewCodigo);
+            if (modSelect) modSelect.addEventListener('change', actualizarPreviewCodigo);
+            actualizarPreviewCodigo();
+          });
+        })();
+      </script>
+
       <!-- ── MODAL: Seleccionar Catálogo para Nueva Edición ── -->
       <div class="modal-overlay" id="modal-seleccion-catalogo" aria-hidden="true">
         <div class="modal-box" style="max-width:480px;">
@@ -1472,10 +1458,8 @@
             <select class="form-select" id="select-catalogo-nueva-edicion">
               <option value="">-- Selecciona un catálogo --</option>
               {% for catalogo in catalogos %}
-              <option value="{{ catalogo['id'] }}"
-                data-nombre="{{ catalogo['nombre']|escape }}"
-                data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}"
-                data-modalidad="{{ catalogo['modalidad'] }}">
+              <option value="{{ catalogo['id'] }}" data-nombre="{{ catalogo['nombre']|escape }}"
+                data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}" data-modalidad="{{ catalogo['modalidad'] }}">
                 {{ catalogo['id'] }} · {{ catalogo['nombre'] }}
               </option>
               {% endfor %}
@@ -1485,9 +1469,9 @@
             <button class="btn-ghost"
               style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
               onclick="cerrarModal('modal-seleccion-catalogo')">Cancelar</button>
-            <button class="btn-primary-ipsd" style="justify-content:center;"
-              onclick="confirmarSeleccionCatalogo()">
-              <span class="material-symbols-outlined" style="vertical-align:middle; font-size:inherit;">arrow_forward</span>
+            <button class="btn-primary-ipsd" style="justify-content:center;" onclick="confirmarSeleccionCatalogo()">
+              <span class="material-symbols-outlined"
+                style="vertical-align:middle; font-size:inherit;">arrow_forward</span>
               Continuar
             </button>
           </div>
@@ -1566,9 +1550,9 @@
                   </td>
                   <td style="font-size:.78rem; color:var(--text-muted); max-width:220px;">
                     {% if curso.get('requisitos') %}
-                      {{ curso.get('requisitos') }}
+                    {{ curso.get('requisitos') }}
                     {% else %}
-                      Sin requisitos
+                    Sin requisitos
                     {% endif %}
                   </td>
                   <td>
@@ -1589,7 +1573,8 @@
                   <td style="text-align:center;">
                     <span
                       class="badge-pill {% if curso['total_inscritos'] > 0 %}success{% else %}secondary{% endif %} text-xs">
-                      {{ curso['total_inscritos'] }}{% if curso['cupos_maximos'] %} / {{ curso['cupos_maximos'] }}{% endif %}
+                      {{ curso['total_inscritos'] }}{% if curso['cupos_maximos'] %} / {{ curso['cupos_maximos'] }}{%
+                      endif %}
                     </span>
                   </td>
                   <td>
@@ -1603,35 +1588,29 @@
                         <span class="material-symbols-outlined"
                           style="vertical-align: middle; font-size: inherit;">calendar_month</span>
                       </a>
-                      <button type="button" class="btn-ghost btn-icon-action btn-editar-edicion"
-                        title="Editar edición" aria-label="Editar edición"
-                        style="color:#0f766e; border-color:#99f6e4; background:#f0fdfa;"
+                      <a href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id'], view='ediciones') }}"
+                        class="btn-primary-ipsd btn-icon-action" title="Participantes y Evaluación"
+                        aria-label="Participantes y Evaluación" style="text-decoration:none;">
+                        <span class="material-symbols-outlined"
+                          style="vertical-align: middle; font-size: inherit;">group</span>
+                      </a>
+                      <button type="button" class="btn-ghost btn-icon-action btn-editar-edicion" title="Editar edición"
+                        aria-label="Editar edición" style="color:#0f766e; border-color:#99f6e4; background:#f0fdfa;"
                         data-edicion-id="{{ curso['id'] }}"
                         data-etiqueta="{{ (curso.get('etiqueta_edicion') or '')|escape }}"
                         data-docente="{{ (curso.get('docente_responsable') or '')|escape }}"
-                        data-trimestre="{{ curso['trimestre'] or '' }}"
-                        data-jornada="{{ curso['jornada'] or '' }}"
-                        data-hora="{{ curso['hora'] or '' }}"
-                        data-cupos="{{ curso['cupos_maximos'] or '' }}"
+                        data-trimestre="{{ curso['trimestre'] or '' }}" data-jornada="{{ curso['jornada'] or '' }}"
+                        data-hora="{{ curso['hora'] or '' }}" data-cupos="{{ curso['cupos_maximos'] or '' }}"
                         data-privacidad="{{ curso['privacidad'] or 'Abierta' }}"
                         data-requisitos="{{ (curso.get('requisitos') or '')|escape }}"
                         data-duracion="{{ curso.get('duracion_horas') or '' }}"
                         data-enlace="{{ (curso.get('enlace_acceso') or '')|escape }}"
-                        data-modalidad="{{ curso['modalidad'] or '' }}"
-                        onclick="abrirModalEditarEdicion(this)">
+                        data-modalidad="{{ curso['modalidad'] or '' }}" onclick="abrirModalEditarEdicion(this)">
                         <span class="material-symbols-outlined"
                           style="vertical-align: middle; font-size: inherit;">edit</span>
                       </button>
-                      <a href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id'], view='ediciones') }}"
-                        class="btn-primary-ipsd btn-icon-action"
-                        title="Participantes y Evaluación" aria-label="Participantes y Evaluación"
-                        style="text-decoration:none;">
-                        <span class="material-symbols-outlined"
-                          style="vertical-align: middle; font-size: inherit;">group</span>
-                      </a>
                       <button type="button" class="btn-danger-ipsd btn-icon-action btn-del-edicion"
-                        title="Eliminar edición" aria-label="Eliminar edición"
-                        data-edicion-id="{{ curso['id'] }}"
+                        title="Eliminar edición" aria-label="Eliminar edición" data-edicion-id="{{ curso['id'] }}"
                         data-nombre="{{ curso['nombre']|escape }}">
                         <span class="material-symbols-outlined"
                           style="vertical-align: middle; font-size: inherit;">delete</span>
@@ -1656,7 +1635,8 @@
       <div class="modal-overlay" id="modal-editar-edicion" aria-hidden="true">
         <div class="modal-box" style="max-width:580px;">
           <div class="card-ipsd" style="box-shadow:none; border:none; border-radius:0;">
-            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+            <div class="card-header"
+              style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
               <span style="font-weight:700;">
                 <span class="material-symbols-outlined" style="vertical-align:middle;">edit</span>
                 Editar Edición
@@ -1674,7 +1654,8 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
                 <div class="form-group" style="margin-bottom:0;">
                   <label class="form-label">Etiqueta de Edición</label>
-                  <input type="text" class="form-input" id="edit-edicion-etiqueta" maxlength="20" placeholder="Ej: Grupo A">
+                  <input type="text" class="form-input" id="edit-edicion-etiqueta" maxlength="20"
+                    placeholder="Ej: Grupo A">
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                   <label class="form-label">Docente Responsable</label>
@@ -1738,17 +1719,17 @@
                   <span style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(separados por comas)</span>
                 </label>
                 <textarea class="form-input" id="edit-edicion-requisitos" rows="2"
-                  placeholder="Ej: Docente activo, asistencia mínima del 80%" 
+                  placeholder="Ej: Docente activo, asistencia mínima del 80%"
                   style="resize:vertical; min-height:48px;"></textarea>
               </div>
 
-              <div id="edit-edicion-error"
-                style="display:none; color:#b91c1c; font-size:.82rem; background:#fef2f2;
+              <div id="edit-edicion-error" style="display:none; color:#b91c1c; font-size:.82rem; background:#fef2f2;
                        border:1px solid #fecaca; border-radius:8px; padding:.5rem .75rem;"></div>
 
               <div style="display:flex; justify-content:flex-end; gap:.5rem;">
                 <button type="button" class="btn-ghost" onclick="cerrarModal('modal-editar-edicion')">Cancelar</button>
-                <button type="button" class="btn-primary-ipsd" id="btn-guardar-edicion" onclick="guardarEdicionEditada()">
+                <button type="button" class="btn-primary-ipsd" id="btn-guardar-edicion"
+                  onclick="guardarEdicionEditada()">
                   <span class="material-symbols-outlined" style="vertical-align:middle; font-size:1rem;">save</span>
                   Guardar Cambios
                 </button>
@@ -1761,49 +1742,51 @@
       <script>
         /* ─── Editar Edición ─── */
         function abrirModalEditarEdicion(btn) {
-          const id  = btn.getAttribute('data-edicion-id');
+          const id = btn.getAttribute('data-edicion-id');
           const mod = btn.getAttribute('data-modalidad') || '';
           document.getElementById('edit-edicion-hidden-id').value = id;
           document.getElementById('edit-edicion-id-label').textContent = id;
           document.getElementById('edit-edicion-modalidad').value = mod;
-          document.getElementById('edit-edicion-etiqueta').value  = btn.getAttribute('data-etiqueta')  || '';
-          document.getElementById('edit-edicion-docente').value   = btn.getAttribute('data-docente')   || '';
+          document.getElementById('edit-edicion-etiqueta').value = btn.getAttribute('data-etiqueta') || '';
+          document.getElementById('edit-edicion-docente').value = btn.getAttribute('data-docente') || '';
           document.getElementById('edit-edicion-trimestre').value = btn.getAttribute('data-trimestre') || 'I';
-          document.getElementById('edit-edicion-jornada').value   = btn.getAttribute('data-jornada')   || 'UNICA';
-          document.getElementById('edit-edicion-hora').value      = btn.getAttribute('data-hora')      || '';
-          document.getElementById('edit-edicion-cupos').value     = btn.getAttribute('data-cupos')     || '';
-          document.getElementById('edit-edicion-privacidad').value= btn.getAttribute('data-privacidad')|| 'Abierta';
-          document.getElementById('edit-edicion-requisitos').value= btn.getAttribute('data-requisitos')|| '';
-          document.getElementById('edit-edicion-duracion').value  = btn.getAttribute('data-duracion')  || '';
-          document.getElementById('edit-edicion-enlace').value    = btn.getAttribute('data-enlace')    || '';
+          document.getElementById('edit-edicion-jornada').value = btn.getAttribute('data-jornada') || 'UNICA';
+          document.getElementById('edit-edicion-hora').value = btn.getAttribute('data-hora') || '';
+          document.getElementById('edit-edicion-cupos').value = btn.getAttribute('data-cupos') || '';
+          document.getElementById('edit-edicion-privacidad').value = btn.getAttribute('data-privacidad') || 'Abierta';
+          document.getElementById('edit-edicion-requisitos').value = btn.getAttribute('data-requisitos') || '';
+          document.getElementById('edit-edicion-duracion').value = btn.getAttribute('data-duracion') || '';
+          document.getElementById('edit-edicion-enlace').value = btn.getAttribute('data-enlace') || '';
           document.getElementById('edit-edicion-error').style.display = 'none';
-          const esVirtual = mod.toLowerCase().includes('virtual') || mod.toLowerCase().includes('híbrida');
+          const esVirtual = mod.toLowerCase().includes('virtual') || 
+                            mod.toLowerCase().includes('híbrida') || 
+                            mod.toLowerCase().includes('learning');
           document.getElementById('edit-bloque-enlace').style.display = esVirtual ? '' : 'none';
           abrirModal('modal-editar-edicion');
         }
 
         async function guardarEdicionEditada() {
-          const id  = document.getElementById('edit-edicion-hidden-id').value;
+          const id = document.getElementById('edit-edicion-hidden-id').value;
           const btn = document.getElementById('btn-guardar-edicion');
           const err = document.getElementById('edit-edicion-error');
           err.style.display = 'none';
           btn.disabled = true;
           const csrfEl = document.querySelector('input[name="_csrf_token"]');
           const payload = {
-            _csrf_token:       csrfEl ? csrfEl.value : '',
-            etiqueta_edicion:  document.getElementById('edit-edicion-etiqueta').value,
+            _csrf_token: csrfEl ? csrfEl.value : '',
+            etiqueta_edicion: document.getElementById('edit-edicion-etiqueta').value,
             docente_responsable: document.getElementById('edit-edicion-docente').value,
-            trimestre:         document.getElementById('edit-edicion-trimestre').value,
-            jornada:           document.getElementById('edit-edicion-jornada').value,
-            hora:              document.getElementById('edit-edicion-hora').value,
-            cupos_maximos:     document.getElementById('edit-edicion-cupos').value,
-            privacidad:        document.getElementById('edit-edicion-privacidad').value,
-            requisitos:        document.getElementById('edit-edicion-requisitos').value,
-            duracion_horas:    document.getElementById('edit-edicion-duracion').value,
-            enlace_acceso:     document.getElementById('edit-edicion-enlace').value,
+            trimestre: document.getElementById('edit-edicion-trimestre').value,
+            jornada: document.getElementById('edit-edicion-jornada').value,
+            hora: document.getElementById('edit-edicion-hora').value,
+            cupos_maximos: document.getElementById('edit-edicion-cupos').value,
+            privacidad: document.getElementById('edit-edicion-privacidad').value,
+            requisitos: document.getElementById('edit-edicion-requisitos').value,
+            duracion_horas: document.getElementById('edit-edicion-duracion').value,
+            enlace_acceso: document.getElementById('edit-edicion-enlace').value,
           };
           try {
-            const res  = await fetch(`/admin/ediciones/${id}/editar`, {
+            const res = await fetch(`/admin/ediciones/${id}/editar`, {
               method: 'POST',
               credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1817,7 +1800,7 @@
         }
 
         /* ─── Eliminar Edición ─── */
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
           const btn = e.target.closest('.btn-del-edicion');
           if (!btn) return;
           const id = btn.getAttribute('data-edicion-id');
@@ -1836,20 +1819,24 @@
         /* ─── Enlace de Acceso condicional (modal Calendario) ─── */
         function _actualizarVisibilidadEnlaceCal(modalidad) {
           const esVirtual = (modalidad || '').toLowerCase().includes('virtual') ||
-                            (modalidad || '').toLowerCase().includes('híbrida');
+            (modalidad || '').toLowerCase().includes('híbrida') ||
+            (modalidad || '').toLowerCase().includes('learning');
           const bloque = document.getElementById('bloque-enlace-acceso');
           if (bloque) bloque.style.display = esVirtual ? '' : 'none';
         }
       </script>
 
       {% set modal_activo = (curso_sesiones_id or modo_nueva_edicion) %}
-      {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle is defined and curso_sesion_detalle else 'CURSO') %}
+      {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle is defined and
+      curso_sesion_detalle else 'CURSO') %}
       {% set modal_close_view = vista_inicial if vista_inicial in ['cursos', 'ediciones'] else 'ediciones' %}
       {% set modal_close_url = url_for('admin') ~ '?view=' ~ modal_close_view %}
-      {% set curso_sesion_config = curso_sesion_config if curso_sesion_config is defined and curso_sesion_config else {'fecha_inicio': fecha_hoy, 'fecha_fin': fecha_hoy} %}
+      {% set curso_sesion_config = curso_sesion_config if curso_sesion_config is defined and curso_sesion_config else
+      {'fecha_inicio': fecha_hoy, 'fecha_fin': fecha_hoy} %}
       {% set jornadas_config = jornadas_config if jornadas_config is defined and jornadas_config else [] %}
       <div class="modal-overlay{% if modal_activo %} active{% endif %}" id="modal-gestion-calendario"
-        aria-hidden="{{ 'false' if modal_activo else 'true' }}"{% if modal_activo %} data-close-url="{{ modal_close_url }}"{% endif %}>
+        aria-hidden="{{ 'false' if modal_activo else 'true' }}" {% if modal_activo %}
+        data-close-url="{{ modal_close_url }}" {% endif %}>
         <div class="modal-box"
           style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
           <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario"
@@ -1861,7 +1848,8 @@
                     style="vertical-align: middle; font-size: inherit;">calendar_month</span> Gestión de
                   Calendario</span>
                 <div id="modal-calendario-context" style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
-                  {% if modal_activo and modo_nueva_edicion and catalogo_seleccionado is defined and catalogo_seleccionado %}
+                  {% if modal_activo and modo_nueva_edicion and catalogo_seleccionado is defined and
+                  catalogo_seleccionado %}
                   Catálogo seleccionado: <strong>{{ catalogo_seleccionado['id'] }}</strong>
                   {% if catalogo_seleccionado['nombre'] %} · {{ catalogo_seleccionado['nombre'] }}{% endif %}
                   {% elif modal_activo and curso_sesiones_id %}
@@ -1871,14 +1859,16 @@
                   {% endif %}
                 </div>
                 <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
-                  Tipo: <strong id="modal-calendario-tipo">{{ curso_sesion_tipo|title if modal_activo else 'Curso' }}</strong>
+                  Tipo: <strong id="modal-calendario-tipo">{{ curso_sesion_tipo|title if modal_activo else 'Curso'
+                    }}</strong>
                 </div>
               </div>
               <div style="display:flex; align-items:center; gap:.5rem;">
                 {% if modal_activo %}
                 <a href="{{ modal_close_url }}" class="btn-danger-ipsd" style="text-decoration:none;">Cerrar</a>
                 {% else %}
-                <button type="button" class="btn-danger-ipsd" onclick="cerrarModal('modal-gestion-calendario')">Cerrar</button>
+                <button type="button" class="btn-danger-ipsd"
+                  onclick="cerrarModal('modal-gestion-calendario')">Cerrar</button>
                 {% endif %}
               </div>
             </div>
@@ -1888,8 +1878,10 @@
                 <form id="form-generar-calendario" action="/admin/sesion/generar_calendario" method="POST"
                   style="display:grid; gap:.75rem;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="id_curso" id="modal-calendario-id-curso" value="{{ curso_sesiones_id or '' }}">
-                    <input type="hidden" name="catalogo_id" id="modal-calendario-catalogo-id" value="{{ catalogo_id or '' }}">
+                  <input type="hidden" name="id_curso" id="modal-calendario-id-curso"
+                    value="{{ curso_sesiones_id or '' }}">
+                  <input type="hidden" name="catalogo_id" id="modal-calendario-catalogo-id"
+                    value="{{ catalogo_id or '' }}">
 
                   <div id="bloque-enlace-acceso" class="form-group" style="margin-bottom:0; display:none;">
                     <label class="form-label">Enlace de Acceso</label>
@@ -1901,7 +1893,8 @@
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">
                       Requisitos de la Edición
-                      <span style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(separados por comas)</span>
+                      <span style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(separados por
+                        comas)</span>
                     </label>
                     <textarea class="form-input" name="requisitos" id="cal-requisitos" rows="2"
                       placeholder="Ej: Docente activo, asistencia mínima del 80%"
@@ -1910,8 +1903,8 @@
 
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Duración en Horas</label>
-                    <input type="number" class="form-input" name="duracion_horas" id="cal-duracion-horas"
-                      min="1" max="999" placeholder="Ej: 40"
+                    <input type="number" class="form-input" name="duracion_horas" id="cal-duracion-horas" min="1"
+                      max="999" placeholder="Ej: 40"
                       value="{{ curso_sesion_detalle.get('duracion_horas') if curso_sesion_detalle and curso_sesion_detalle.get('duracion_horas') else '' }}">
                   </div>
 
@@ -1919,219 +1912,127 @@
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Fecha inicio</label>
                       <input type="date" class="form-input" name="fecha_inicio" id="fecha_inicio_cal"
-                        value="{{ curso_sesion_config['fecha_inicio'] }}" required>
+                        value="{{ curso_sesion_config['fecha_inicio'] }}" min="{{ fecha_hoy }}" required>
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                       <label class="form-label">Fecha fin</label>
                       <input type="date" class="form-input" name="fecha_fin" id="fecha_fin_cal"
-                        value="{{ curso_sesion_config['fecha_fin'] }}" required>
+                        value="{{ curso_sesion_config['fecha_fin'] }}" min="{{ fecha_hoy }}" required>
                     </div>
                   </div>
 
-                    <div id="jornadas-container" style="display:grid; gap:.75rem;">
-                      {% if jornadas_config and jornadas_config|length > 0 %}
-                        {% for jornada in jornadas_config %}
-                        <div class="jornada-block" data-edicion-id="{{ jornada['edicion_id'] }}"
-                          style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
-                          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
-                            <strong style="font-size:.85rem; color:#1e3a8a;">Jornada {{ loop.index }}</strong>
-                            <button type="button" class="btn-ghost btn-remove-jornada"{% if jornada['edicion_id'] %} style="display:none;"{% endif %}>
-                              Quitar
-                            </button>
-                          </div>
+                  <div id="jornadas-container" style="display:grid; gap:.75rem;">
+                    {% if jornadas_config and jornadas_config|length > 0 %}
+                    {% for jornada in jornadas_config %}
+                    <div class="jornada-block" data-edicion-id="{{ jornada['edicion_id'] }}"
+                      style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                        <strong style="font-size:.85rem; color:#1e3a8a;">Jornada {{ loop.index }}</strong>
+                        <button type="button" class="btn-ghost btn-remove-jornada" {% if jornada['edicion_id'] %}
+                          style="display:none;" {% endif %}>
+                          Quitar
+                        </button>
+                      </div>
 
-                          <input type="hidden" class="jornada-edicion-id" value="{{ jornada['edicion_id'] }}">
+                      <input type="hidden" class="jornada-edicion-id" value="{{ jornada['edicion_id'] }}">
 
-                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Etiqueta de Edicion</label>
-                              <input type="text" class="form-input jornada-etiqueta" maxlength="20"
-                                value="{{ jornada['etiqueta_edicion'] }}" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Docente Responsable</label>
-                              <input type="text" class="form-input jornada-docente" maxlength="120"
-                                value="{{ jornada['docente_responsable'] }}" required>
-                            </div>
-                          </div>
-
-                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Jornada</label>
-                              <select class="form-select jornada-jornada" required>
-                                <option value="UNICA" {% if jornada['jornada']=='UNICA' %}selected{% endif %}>Unica</option>
-                                <option value="MATUTINA" {% if jornada['jornada']=='MATUTINA' %}selected{% endif %}>Matutina</option>
-                                <option value="VESPERTINA" {% if jornada['jornada']=='VESPERTINA' %}selected{% endif %}>Vespertina</option>
-                                <option value="NOCTURNA" {% if jornada['jornada']=='NOCTURNA' %}selected{% endif %}>Nocturna</option>
-                              </select>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Hora inicio</label>
-                              <input type="time" class="form-input jornada-hora-inicio"
-                                value="{{ jornada['hora_inicio'] }}" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Hora fin</label>
-                              <input type="time" class="form-input jornada-hora-fin"
-                                value="{{ jornada['hora_fin'] }}" required>
-                            </div>
-                          </div>
-
-                          <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Dias de clase</label>
-                            <div class="calendar-days-grid">
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0" {% if 0 in
-                                  jornada['dias_semana'] %}checked{% endif %}> L</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1" {% if 1 in
-                                  jornada['dias_semana'] %}checked{% endif %}> M</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2" {% if 2 in
-                                  jornada['dias_semana'] %}checked{% endif %}> X</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3" {% if 3 in
-                                  jornada['dias_semana'] %}checked{% endif %}> J</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4" {% if 4 in
-                                  jornada['dias_semana'] %}checked{% endif %}> V</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5" {% if 5 in
-                                  jornada['dias_semana'] %}checked{% endif %}> S</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6" {% if 6 in
-                                  jornada['dias_semana'] %}checked{% endif %}> D</label>
-                            </div>
-                          </div>
-
-                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Trimestre</label>
-                              <select class="form-select jornada-trimestre" required>
-                                <option value="I" {% if jornada['trimestre']=='I' %}selected{% endif %}>I</option>
-                                <option value="II" {% if jornada['trimestre']=='II' %}selected{% endif %}>II</option>
-                                <option value="III" {% if jornada['trimestre']=='III' %}selected{% endif %}>III</option>
-                                <option value="IV" {% if jornada['trimestre']=='IV' %}selected{% endif %}>IV</option>
-                              </select>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Cupos Maximos</label>
-                              <input type="number" class="form-input jornada-cupos" min="0" step="1"
-                                value="{{ jornada['cupos_maximos'] }}" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Privacidad</label>
-                              <select class="form-select jornada-privacidad" required>
-                                <option value="Abierta" {% if jornada['privacidad']=='Abierta' %}selected{% endif %}>Abierta</option>
-                                <option value="Cerrada" {% if jornada['privacidad']=='Cerrada' %}selected{% endif %}>Cerrada</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Fecha Limite de Matricula</label>
-                            <input type="datetime-local" class="form-input jornada-fecha-limite"
-                              value="{{ jornada['fecha_limite_input'] }}">
-                          </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Etiqueta de Edicion</label>
+                          <input type="text" class="form-input jornada-etiqueta" maxlength="20"
+                            value="{{ jornada['etiqueta_edicion'] }}" required>
                         </div>
-                        {% endfor %}
-                      {% else %}
-                        <div class="jornada-block" data-edicion-id=""
-                          style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
-                          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
-                            <strong style="font-size:.85rem; color:#1e3a8a;">Jornada 1</strong>
-                            <button type="button" class="btn-ghost btn-remove-jornada" style="display:none;">Quitar</button>
-                          </div>
-
-                          <input type="hidden" class="jornada-edicion-id" value="">
-
-                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Etiqueta de Edicion</label>
-                              <input type="text" class="form-input jornada-etiqueta" maxlength="20" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Docente Responsable</label>
-                              <input type="text" class="form-input jornada-docente" maxlength="120" required>
-                            </div>
-                          </div>
-
-                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Jornada</label>
-                              <select class="form-select jornada-jornada" required>
-                                <option value="UNICA">Unica</option>
-                                <option value="MATUTINA">Matutina</option>
-                                <option value="VESPERTINA">Vespertina</option>
-                                <option value="NOCTURNA">Nocturna</option>
-                              </select>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Hora inicio</label>
-                              <input type="time" class="form-input jornada-hora-inicio" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Hora fin</label>
-                              <input type="time" class="form-input jornada-hora-fin" required>
-                            </div>
-                          </div>
-
-                          <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Dias de clase</label>
-                            <div class="calendar-days-grid">
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0"> L</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1"> M</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2"> X</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3"> J</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4"> V</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5"> S</label>
-                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6"> D</label>
-                            </div>
-                          </div>
-
-                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Trimestre</label>
-                              <select class="form-select jornada-trimestre" required>
-                                <option value="I" selected>I</option>
-                                <option value="II">II</option>
-                                <option value="III">III</option>
-                                <option value="IV">IV</option>
-                              </select>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Cupos Maximos</label>
-                              <input type="number" class="form-input jornada-cupos" min="0" step="1" value="0" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                              <label class="form-label">Privacidad</label>
-                              <select class="form-select jornada-privacidad" required>
-                                <option value="Abierta" selected>Abierta</option>
-                                <option value="Cerrada">Cerrada</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Fecha Limite de Matricula</label>
-                            <input type="datetime-local" class="form-input jornada-fecha-limite">
-                          </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Docente Responsable</label>
+                          <input type="text" class="form-input jornada-docente" maxlength="120"
+                            value="{{ jornada['docente_responsable'] }}" required>
                         </div>
-                      {% endif %}
-                    </div>
+                      </div>
 
-                    <div style="display:flex; justify-content:flex-start;">
-                      <button type="button" id="btn-agregar-jornada" class="btn-primary-ipsd"
-                        style="height:34px; padding:.35rem .8rem;">
-                        + Agregar jornada
-                      </button>
-                    </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Jornada</label>
+                          <select class="form-select jornada-jornada" required>
+                            <option value="UNICA" {% if jornada['jornada']=='UNICA' %}selected{% endif %}>Unica</option>
+                            <option value="MATUTINA" {% if jornada['jornada']=='MATUTINA' %}selected{% endif %}>Matutina
+                            </option>
+                            <option value="VESPERTINA" {% if jornada['jornada']=='VESPERTINA' %}selected{% endif %}>
+                              Vespertina</option>
+                            <option value="NOCTURNA" {% if jornada['jornada']=='NOCTURNA' %}selected{% endif %}>Nocturna
+                            </option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Hora inicio</label>
+                          <input type="time" class="form-input jornada-hora-inicio" value="{{ jornada['hora_inicio'] }}"
+                            required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Hora fin</label>
+                          <input type="time" class="form-input jornada-hora-fin" value="{{ jornada['hora_fin'] }}"
+                            required>
+                        </div>
+                      </div>
 
-                    <div style="display:flex; justify-content:flex-end;">
-                      <button type="submit" class="btn-primary-ipsd"
-                        style="height:42px; min-width:150px;">Generar</button>
-                    </div>
-                  </form>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Dias de clase</label>
+                        <div class="calendar-days-grid">
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0" {% if 0
+                              in jornada['dias_semana'] %}checked{% endif %}> L</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1" {% if 1
+                              in jornada['dias_semana'] %}checked{% endif %}> M</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2" {% if 2
+                              in jornada['dias_semana'] %}checked{% endif %}> X</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3" {% if 3
+                              in jornada['dias_semana'] %}checked{% endif %}> J</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4" {% if 4
+                              in jornada['dias_semana'] %}checked{% endif %}> V</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5" {% if 5
+                              in jornada['dias_semana'] %}checked{% endif %}> S</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6" {% if 6
+                              in jornada['dias_semana'] %}checked{% endif %}> D</label>
+                        </div>
+                      </div>
 
-                  <template id="jornada-template">
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Trimestre</label>
+                          <select class="form-select jornada-trimestre" required>
+                            <option value="I" {% if jornada['trimestre']=='I' %}selected{% endif %}>I</option>
+                            <option value="II" {% if jornada['trimestre']=='II' %}selected{% endif %}>II</option>
+                            <option value="III" {% if jornada['trimestre']=='III' %}selected{% endif %}>III</option>
+                            <option value="IV" {% if jornada['trimestre']=='IV' %}selected{% endif %}>IV</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Cupos Maximos</label>
+                          <input type="number" class="form-input jornada-cupos" min="0" step="1"
+                            value="{{ jornada['cupos_maximos'] }}" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Privacidad</label>
+                          <select class="form-select jornada-privacidad" required>
+                            <option value="Abierta" {% if jornada['privacidad']=='Abierta' %}selected{% endif %}>Abierta
+                            </option>
+                            <option value="Cerrada" {% if jornada['privacidad']=='Cerrada' %}selected{% endif %}>Cerrada
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Fecha Limite de Matricula</label>
+                        <input type="datetime-local" class="form-input jornada-fecha-limite"
+                          value="{{ jornada['fecha_limite_input'] }}">
+                      </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
                     <div class="jornada-block" data-edicion-id=""
                       style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
                       <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
-                        <strong style="font-size:.85rem; color:#1e3a8a;">Jornada</strong>
-                        <button type="button" class="btn-ghost btn-remove-jornada">Quitar</button>
+                        <strong style="font-size:.85rem; color:#1e3a8a;">Jornada 1</strong>
+                        <button type="button" class="btn-ghost btn-remove-jornada" style="display:none;">Quitar</button>
                       </div>
 
                       <input type="hidden" class="jornada-edicion-id" value="">
@@ -2170,13 +2071,20 @@
                       <div class="form-group" style="margin-bottom:0;">
                         <label class="form-label">Dias de clase</label>
                         <div class="calendar-days-grid">
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0"> L</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1"> M</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2"> X</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3"> J</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4"> V</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5"> S</label>
-                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6"> D</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0">
+                            L</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1">
+                            M</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2">
+                            X</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3">
+                            J</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4">
+                            V</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5">
+                            S</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6">
+                            D</label>
                         </div>
                       </div>
 
@@ -2208,123 +2116,220 @@
                         <input type="datetime-local" class="form-input jornada-fecha-limite">
                       </div>
                     </div>
-                  </template>
-                </div>
+                    {% endif %}
+                  </div>
 
-                <div style="overflow-x:auto;">
-                  <table class="table-ipsd">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Fecha</th>
-                        <th>Hora</th>
-                        <th>Jornada</th>
-                        <th>Docente</th>
-                        <th>Estado</th>
-                        <th>Token</th>
-                        <th style="text-align:right;">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% for sesion in sesiones_curso|default([]) %}
-                      <tr>
-                        <td><span class="badge-pill secondary text-xs">#{{ sesion['id_sesion'] }}</span></td>
-                        <td>{{ sesion['fecha'] }}</td>
-                        <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
-                        <td>
-                          {{ sesion['jornada'] or 'UNICA' }}
-                          {% if sesion['etiqueta_edicion'] %}
-                          <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['etiqueta_edicion'] }}</span>
+                  <div style="display:flex; justify-content:flex-start;">
+                    <button type="button" id="btn-agregar-jornada" class="btn-primary-ipsd"
+                      style="height:34px; padding:.35rem .8rem;">
+                      + Agregar jornada
+                    </button>
+                  </div>
+
+                  <div style="display:flex; justify-content:flex-end;">
+                    <button type="submit" class="btn-primary-ipsd"
+                      style="height:42px; min-width:150px;">Generar</button>
+                  </div>
+                </form>
+
+                <template id="jornada-template">
+                  <div class="jornada-block" data-edicion-id=""
+                    style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                      <strong style="font-size:.85rem; color:#1e3a8a;">Jornada</strong>
+                      <button type="button" class="btn-ghost btn-remove-jornada">Quitar</button>
+                    </div>
+
+                    <input type="hidden" class="jornada-edicion-id" value="">
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Etiqueta de Edicion</label>
+                        <input type="text" class="form-input jornada-etiqueta" maxlength="20" required>
+                      </div>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Docente Responsable</label>
+                        <input type="text" class="form-input jornada-docente" maxlength="120" required>
+                      </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Jornada</label>
+                        <select class="form-select jornada-jornada" required>
+                          <option value="UNICA">Unica</option>
+                          <option value="MATUTINA">Matutina</option>
+                          <option value="VESPERTINA">Vespertina</option>
+                          <option value="NOCTURNA">Nocturna</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Hora inicio</label>
+                        <input type="time" class="form-input jornada-hora-inicio" required>
+                      </div>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Hora fin</label>
+                        <input type="time" class="form-input jornada-hora-fin" required>
+                      </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Dias de clase</label>
+                      <div class="calendar-days-grid">
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0"> L</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1"> M</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2"> X</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3"> J</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4"> V</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5"> S</label>
+                        <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6"> D</label>
+                      </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Trimestre</label>
+                        <select class="form-select jornada-trimestre" required>
+                          <option value="I" selected>I</option>
+                          <option value="II">II</option>
+                          <option value="III">III</option>
+                          <option value="IV">IV</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Cupos Maximos</label>
+                        <input type="number" class="form-input jornada-cupos" min="0" step="1" value="0" required>
+                      </div>
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Privacidad</label>
+                        <select class="form-select jornada-privacidad" required>
+                          <option value="Abierta" selected>Abierta</option>
+                          <option value="Cerrada">Cerrada</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Fecha Limite de Matricula</label>
+                      <input type="datetime-local" class="form-input jornada-fecha-limite">
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <div style="overflow-x:auto;">
+                <table class="table-ipsd">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Fecha</th>
+                      <th>Hora</th>
+                      <th>Jornada</th>
+                      <th>Docente</th>
+                      <th>Estado</th>
+                      <th>Token</th>
+                      <th style="text-align:right;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for sesion in sesiones_curso|default([]) %}
+                    <tr>
+                      <td><span class="badge-pill secondary text-xs">#{{ sesion['id_sesion'] }}</span></td>
+                      <td>{{ sesion['fecha'] }}</td>
+                      <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
+                      <td>
+                        {{ sesion['jornada'] or 'UNICA' }}
+                        {% if sesion['etiqueta_edicion'] %}
+                        <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['etiqueta_edicion']
+                          }}</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ sesion['docente_responsable'] or '—' }}</td>
+                      <td>
+                        {% if sesion['estado'] == 1 %}
+                        <span class="badge-pill success text-xs">Abierta</span>
+                        {% elif sesion['estado'] == 2 %}
+                        <span class="badge-pill primary text-xs">Finalizada</span>
+                        {% else %}
+                        <span class="badge-pill secondary text-xs">Cerrada</span>
+                        {% endif %}
+                      </td>
+                      <td
+                        style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:.78rem;">
+                        {{ sesion['token_asistencia'] or '—' }}
+                      </td>
+                      <td style="text-align:right;">
+                        <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
+                          {% if sesion['estado'] != 1 %}
+                          <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                            <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                            <button type="submit" class="btn-success-ipsd btn-icon-action" title="Habilitar asistencia"
+                              aria-label="Habilitar asistencia"><span class="material-symbols-outlined"
+                                style="vertical-align: middle; font-size: inherit;">lock_open</span></button>
+                          </form>
                           {% endif %}
-                        </td>
-                        <td>{{ sesion['docente_responsable'] or '—' }}</td>
-                        <td>
+
                           {% if sesion['estado'] == 1 %}
-                          <span class="badge-pill success text-xs">Abierta</span>
-                          {% elif sesion['estado'] == 2 %}
-                          <span class="badge-pill primary text-xs">Finalizada</span>
-                          {% else %}
-                          <span class="badge-pill secondary text-xs">Cerrada</span>
+                          <form action="/admin/sesion/cerrar" method="POST" style="display:inline; margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                            <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                            <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Desactivar asistencia"
+                              aria-label="Desactivar asistencia"><span class="material-symbols-outlined"
+                                style="vertical-align: middle; font-size: inherit;">lock</span></button>
+                          </form>
                           {% endif %}
-                        </td>
-                        <td
-                          style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:.78rem;">
-                          {{ sesion['token_asistencia'] or '—' }}
-                        </td>
-                        <td style="text-align:right;">
-                          <div style="display:flex; justify-content:flex-end; gap:.35rem; flex-wrap:wrap;">
-                            {% if sesion['estado'] != 1 %}
-                            <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
-                              <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                              <button type="submit" class="btn-success-ipsd btn-icon-action"
-                                title="Habilitar asistencia" aria-label="Habilitar asistencia"><span
-                                  class="material-symbols-outlined"
-                                  style="vertical-align: middle; font-size: inherit;">lock_open</span></button>
-                            </form>
-                            {% endif %}
 
-                            {% if sesion['estado'] == 1 %}
-                            <form action="/admin/sesion/cerrar" method="POST" style="display:inline; margin:0;">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
-                              <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                              <button type="submit" class="btn-danger-ipsd btn-icon-action"
-                                title="Desactivar asistencia" aria-label="Desactivar asistencia"><span
-                                  class="material-symbols-outlined"
-                                  style="vertical-align: middle; font-size: inherit;">lock</span></button>
-                            </form>
-                            {% endif %}
+                          {% if sesion['estado'] == 1 and sesion['token_asistencia'] %}
+                          <button type="button" class="btn-primary-ipsd btn-icon-action btn-view-qr-admin"
+                            title="Ver y descargar QR" aria-label="Ver y descargar QR"
+                            data-id-sesion="{{ sesion['id_sesion'] }}" data-id-curso="{{ curso_sesiones_id }}"
+                            data-fecha="{{ sesion['fecha'] }}" data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                            data-hora-fin="{{ sesion['hora_fin'] }}" data-token="{{ sesion['token_asistencia'] }}">
+                            QR
+                          </button>
+                          {% endif %}
 
-                            {% if sesion['estado'] == 1 and sesion['token_asistencia'] %}
-                            <button type="button" class="btn-primary-ipsd btn-icon-action btn-view-qr-admin"
-                              title="Ver y descargar QR" aria-label="Ver y descargar QR"
-                              data-id-sesion="{{ sesion['id_sesion'] }}" data-id-curso="{{ curso_sesiones_id }}"
-                              data-fecha="{{ sesion['fecha'] }}" data-hora-inicio="{{ sesion['hora_inicio'] }}"
-                              data-hora-fin="{{ sesion['hora_fin'] }}" data-token="{{ sesion['token_asistencia'] }}">
-                              QR
-                            </button>
-                            {% endif %}
+                          <button type="button" class="btn-primary-ipsd btn-icon-action btn-edit-sesion"
+                            title="Editar sesión" aria-label="Editar sesión" data-id-sesion="{{ sesion['id_sesion'] }}"
+                            data-id-curso="{{ curso_sesiones_id }}" data-fecha="{{ sesion['fecha'] }}"
+                            data-hora-inicio="{{ sesion['hora_inicio'] }}" data-hora-fin="{{ sesion['hora_fin'] }}"
+                            data-jornada="{{ sesion['jornada'] or 'UNICA' }}"
+                            data-docente-sesion="{{ sesion['docente_responsable'] or '' }}"
+                            data-edicion="{{ sesion['etiqueta_edicion'] or '' }}" data-estado="{{ sesion['estado'] }}">
+                            <span class="material-symbols-outlined"
+                              style="vertical-align: middle; font-size: inherit;">edit</span>
+                          </button>
 
-                            <button type="button" class="btn-primary-ipsd btn-icon-action btn-edit-sesion"
-                              title="Editar sesión" aria-label="Editar sesión"
-                              data-id-sesion="{{ sesion['id_sesion'] }}" data-id-curso="{{ curso_sesiones_id }}"
-                              data-fecha="{{ sesion['fecha'] }}" data-hora-inicio="{{ sesion['hora_inicio'] }}"
-                              data-hora-fin="{{ sesion['hora_fin'] }}" data-jornada="{{ sesion['jornada'] or 'UNICA' }}"
-                              data-docente-sesion="{{ sesion['docente_responsable'] or '' }}"
-                              data-edicion="{{ sesion['etiqueta_edicion'] or '' }}" data-estado="{{ sesion['estado'] }}">
+                          <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                            <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                            <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Eliminar sesión"
+                              aria-label="Eliminar sesión" onclick="return confirm('¿Eliminar esta sesión?');">
                               <span class="material-symbols-outlined"
-                                style="vertical-align: middle; font-size: inherit;">edit</span>
+                                style="vertical-align: middle; font-size: inherit;">delete</span>
                             </button>
-
-                            <form action="/admin/sesion/eliminar" method="POST" style="display:inline; margin:0;">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
-                              <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                              <button type="submit" class="btn-danger-ipsd btn-icon-action" title="Eliminar sesión"
-                                aria-label="Eliminar sesión" onclick="return confirm('¿Eliminar esta sesión?');">
-                                <span class="material-symbols-outlined"
-                                  style="vertical-align: middle; font-size: inherit;">delete</span>
-                              </button>
-                            </form>
-                          </div>
-                        </td>
-                      </tr>
-                      {% else %}
-                      <tr>
-                        <td colspan="8" style="text-align:center; color:var(--text-muted); padding:1.6rem;">
-                          Aún no hay sesiones creadas para este curso.
-                        </td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                </div>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                      <td colspan="8" style="text-align:center; color:var(--text-muted); padding:1.6rem;">
+                        Aún no hay sesiones creadas para este curso.
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
+      </div>
       <!-- CALENDARIO GENERAL -->
       <section id="section-calendario" class="admin-screen" data-screen="calendario">
         <div class="card-ipsd animate-fade-up-2">
@@ -2703,19 +2708,20 @@
                 {% set resultado_texto = 'Pendiente' %}
                 {% set resultado_clase = 'secondary' %}
                 {% if fila['aprobado'] == 1 %}
-                  {% set resultado_texto = 'Aprobado' %}
-                  {% set resultado_clase = 'success' %}
+                {% set resultado_texto = 'Aprobado' %}
+                {% set resultado_clase = 'success' %}
                 {% elif fila['aprobado'] == 0 %}
-                  {% set resultado_texto = 'No aprobado' %}
-                  {% set resultado_clase = 'danger' %}
+                {% set resultado_texto = 'No aprobado' %}
+                {% set resultado_clase = 'danger' %}
                 {% elif fila['aprobado'] == 2 %}
-                  {% set resultado_texto = 'Abandonó' %}
-                  {% set resultado_clase = 'warning' %}
+                {% set resultado_texto = 'Abandonó' %}
+                {% set resultado_clase = 'warning' %}
                 {% endif %}
                 <tr>
                   <td>
                     <strong style="font-size:.9rem;">{{ fila['nombre'] }}</strong><br>
-                    <span style="font-size:.75rem; color:var(--text-muted);">Empleado #{{ fila['numero_empleado'] }}</span>
+                    <span style="font-size:.75rem; color:var(--text-muted);">Empleado #{{ fila['numero_empleado']
+                      }}</span>
                   </td>
                   <td><span class="badge-pill primary text-xs">{{ fila['edicion_id'] }}</span></td>
                   <td style="font-size:.82rem; color:var(--text-muted);">
@@ -2856,7 +2862,7 @@
               style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
               <div>
                 <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
-                  style="vertical-align: middle; font-size: inherit;">school</span> Libro de Calificaciones</span>
+                    style="vertical-align: middle; font-size: inherit;">school</span> Libro de Calificaciones</span>
                 <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
                   Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
                 </div>
@@ -2912,11 +2918,11 @@
                       {% set progreso_clase = 'danger' %}
                       {% set progreso_color = '#dc2626' %}
                       {% if docente['porcentaje'] >= 80 %}
-                        {% set progreso_clase = 'success' %}
-                        {% set progreso_color = '#16a34a' %}
+                      {% set progreso_clase = 'success' %}
+                      {% set progreso_color = '#16a34a' %}
                       {% elif docente['porcentaje'] >= 50 %}
-                        {% set progreso_clase = 'warning' %}
-                        {% set progreso_color = '#f59e0b' %}
+                      {% set progreso_clase = 'warning' %}
+                      {% set progreso_color = '#f59e0b' %}
                       {% endif %}
                       <tr>
                         <td>
@@ -2958,14 +2964,15 @@
                           <div style="display:grid; gap:.35rem; min-width:200px;">
                             <select class="form-select select-evaluacion" name="aprobado"
                               style="font-size:.78rem; padding:.3rem .45rem;">
-                              <option value="" {% if docente['aprobado'] is none %}selected{% endif %}>Pendiente</option>
+                              <option value="" {% if docente['aprobado'] is none %}selected{% endif %}>Pendiente
+                              </option>
                               <option value="1" {% if docente['aprobado']==1 %}selected{% endif %}>Aprobado</option>
                               <option value="0" {% if docente['aprobado']==0 %}selected{% endif %}>No aprobado</option>
                               <option value="2" {% if docente['aprobado']==2 %}selected{% endif %}>Abandonó</option>
                             </select>
                             <input type="text" class="form-input input-comentario" name="comentario_validacion"
-                              value="{{ docente['comentario_validacion'] or '' }}" placeholder="Comentario de evaluación"
-                              style="font-size:.78rem; padding:.35rem .45rem;">
+                              value="{{ docente['comentario_validacion'] or '' }}"
+                              placeholder="Comentario de evaluación" style="font-size:.78rem; padding:.35rem .45rem;">
                             <span class="evaluacion-sync-status">Listo</span>
                           </div>
                         </td>

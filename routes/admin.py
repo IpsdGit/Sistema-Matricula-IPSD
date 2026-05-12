@@ -1231,7 +1231,7 @@ def register_admin_routes(app):
             id_plantilla_certificado = int(id_plantilla_certificado)
         es_superadmin = session.get('admin_rol') == 'superadmin'
 
-        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
+        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'SEMINARIO-TALLER', 'CURSO'}:
             tipo_accion = 'CURSO'
 
         if es_superadmin:
@@ -1242,7 +1242,7 @@ def register_admin_routes(app):
         if (
             not nombre_curso
             or not direccion_curso
-            or modalidad not in ['Virtual', 'Presencial']
+            or modalidad not in ['Virtual', 'Presencial', 'B-Learning']
         ):
             flash('Completa correctamente los campos obligatorios para crear la acción formativa.', 'danger')
             return redireccion_admin_vista('cursos')
@@ -1296,7 +1296,7 @@ def register_admin_routes(app):
         else:
             id_plantilla_certificado = int(id_plantilla_certificado)
 
-        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'CURSO'}:
+        if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'SEMINARIO-TALLER', 'CURSO'}:
             tipo_accion = 'CURSO'
 
         if not id_curso or not nombre_curso or trimestre not in ['I', 'II', 'III', 'IV']:
@@ -1321,7 +1321,7 @@ def register_admin_routes(app):
         except (TypeError, ValueError):
             semanas_duracion = 1
 
-        if modalidad not in ['Virtual', 'Presencial'] or cupos_maximos < 0 or horas_totales < 1 or semanas_duracion < 1:
+        if modalidad not in ['Virtual', 'Presencial', 'B-Learning'] or cupos_maximos < 0 or horas_totales < 1 or semanas_duracion < 1:
             return redireccion_admin_vista('cursos')
 
         if modalidad == 'Virtual':

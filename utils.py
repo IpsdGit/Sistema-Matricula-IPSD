@@ -100,7 +100,9 @@ def obtener_codigo_modalidad(modalidad):
         return 'V'
     if modalidad == 'Presencial':
         return 'P'
-    return None
+    if modalidad == 'B-Learning':
+        return 'B'
+    return 'X'
 
 
 def validar_enlace_virtual(url):
@@ -340,7 +342,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     cursos_matriculados_list = []
     for fila in cursos_matriculados:
         modalidad = (fila['modalidad'] or '').strip()
-        if modalidad not in {'Virtual', 'Presencial'}:
+        if modalidad not in {'Virtual', 'Presencial', 'B-Learning'}:
             modalidad = 'Virtual'
 
         fecha_dt = _fecha_desde_iso(fila['fecha_inicio'])
@@ -363,7 +365,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'aprobado': fila['aprobado'],
                 'sesiones_habilitadas': fila['sesiones_habilitadas'],
                 'modalidad': modalidad,
-                'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
+                'modalidad_icono': 'B' if modalidad == 'B-Learning' else ('V' if modalidad == 'Virtual' else 'P'),
             }
         )
 
@@ -414,7 +416,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
 
         mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
         modalidad = (c['modalidad'] or '').strip()
-        if modalidad not in {'Virtual', 'Presencial'}:
+        if modalidad not in {'Virtual', 'Presencial', 'B-Learning'}:
             modalidad = 'Virtual'
 
         fecha_dt = _fecha_desde_iso(c['fecha_inicio'])
@@ -433,7 +435,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
             'mes': mes,
             'dia': dia,
                 'modalidad': modalidad,
-                'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
+                'modalidad_icono': 'B' if modalidad == 'B-Learning' else ('V' if modalidad == 'Virtual' else 'P'),
                 'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(c['fecha_inicio']),
                 'horarios': horarios_disponibles,
                 'horarios_preview': horarios_disponibles[:2],

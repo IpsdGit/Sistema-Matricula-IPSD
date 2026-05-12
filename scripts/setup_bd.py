@@ -21,8 +21,8 @@ def resolver_db_path():
 
 DB_PATH = resolver_db_path()
 
-if os.path.exists(DB_PATH):
-    os.remove(DB_PATH)
+#if os.path.exists(DB_PATH):
+#    os.remove(DB_PATH)
 
 def inicializar_bd():
     conexion = sqlite3.connect(DB_PATH)
@@ -122,7 +122,9 @@ def inicializar_bd():
         [
             ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
             ('SEMINARIO', 'Seminario', 16, 120, 1, 16),
+            ('SEMINARIO-TALLER', 'Seminario-Taller', 16, 100, 1, 8),
             ('CURSO', 'Curso', 20, 240, 1, 52),
+            
         ]
     )
 
@@ -229,6 +231,17 @@ def inicializar_bd():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)')
 
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS historial_chat (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_tipo TEXT NOT NULL,
+            usuario_id TEXT NOT NULL,
+            mensaje_usuario TEXT NOT NULL,
+            respuesta_modelo TEXT NOT NULL,
+            fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS admin_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -255,6 +268,7 @@ def inicializar_bd():
             (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
         )
 
+ 
     conexion.commit()
     conexion.close()
     print("¡Base de datos lista con soporte de roles de administración!")

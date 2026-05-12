@@ -4682,7 +4682,34 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
+### Cambio 16.5: Integración de Modalidades, Tipos de Acción y Optimizaciones de UI
+**Fecha**: Mayo 12, 2026  
+**Archivos afectados**: `routes/admin.py`, `services/admin_service.py`, `utils.py`, `templates/admin.html`
+
+**QUÉ**:
+- Implementación completa de la modalidad **B-Learning** y el tipo de acción **SEMINARIO-TALLER** en todo el sistema (backend y frontend).
+- Actualización de las validaciones de backend en las rutas de administración para permitir los nuevos valores permitidos.
+- Corrección de la lógica de generación de IDs automáticos: ahora asigna el prefijo **'B'** a la modalidad B-Learning (ej: `IPSD-B-001`).
+- Optimizaciones profundas en la interfaz del Panel Admin:
+  - **Preview dinámico**: El código del catálogo se actualiza en tiempo real al cambiar dirección o modalidad vía JS.
+  - **Limpieza de formularios**: Eliminación de campos redundantes (Requisitos y Plantilla) en la gestión de Catálogos para evitar duplicidad con Ediciones.
+  - **Validación de fechas**: Los campos de fecha en el modal de calendario ahora impiden seleccionar días pasados (`min` date validation).
+  - **Mejora UX**: Reordenamiento de botones de acción y adición de efectos visuales (`hover`) para una navegación más fluida.
+- Saneamiento de base de datos: Ejecución de scripts para corregir IDs inválidos (`IPSD-None-001`) generados durante la fase de desarrollo.
+
+**POR QUÉ**:
+- El sistema presentaba bloqueos en el servidor que impedían registrar las nuevas modalidades solicitadas.
+- La interfaz de Catálogos contenía campos que competen exclusivamente a las Ediciones, generando confusión administrativa.
+- Se detectó que la generación automática de IDs fallaba al no tener un mapeo para B-Learning.
+
+**PARA QUÉ**:
+- Dotar a la institución de herramientas para gestionar capacitaciones híbridas y talleres especializados de forma oficial.
+- Garantizar la integridad referencial de los cursos mediante una nomenclatura estandarizada y automática.
+- Refinar la experiencia de usuario del administrador, eliminando ruido visual y previniendo errores de entrada de datos.
+
+---
+
 **Última actualización**: Mayo 12, 2026  
-**Versión actual**: 1.14.0 (Arquitectura Catálogos/Ediciones y Sesiones)  
-**Estado**: Development - Refactorización de núcleo completada; listo para pruebas de integración.
+**Versión actual**: 1.15.0 (Soporte B-Learning y Optimización de UI)  
+**Estado**: Development - Integración de modalidades completada; sistema de validación robustecido.
 
