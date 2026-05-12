@@ -22,8 +22,8 @@ pip install -r requirements.txt
 
 ## 3. Migración de la Base de Datos
 El sistema cuenta con una función de **auto-migración** en `app.py`. 
-- Simplemente al ejecutar `python app.py`, el sistema detectará si falta la nueva tabla `certificados_emitidos` y la creará automáticamente.
-- **Importante**: Si vienes de una versión muy antigua, asegúrate de que no haya errores en la consola al iniciar.
+- Al iniciar la aplicación (`python app.py`), el sistema detectará y creará automáticamente las nuevas tablas del núcleo: `catalogo_acciones`, `ediciones_formativas` y `sesiones_curso`.
+- **Importante**: Si estás migrando una base de datos existente desde la versión 1.13 o anterior, es **obligatorio** ejecutar el script de reparación de llaves foráneas (ver sección 6).
 
 ## 4. Dependencias del Sistema (PDF)
 Para que la generación de PDFs y códigos QR funcione, la nueva computadora **debe tener instalado wkhtmltopdf**:
@@ -37,20 +37,24 @@ Asegúrate de tener el archivo `.env` en la raíz del proyecto con las claves ne
 GOOGLE_GEMINI_API_KEY=tu_clave_aqui
 ```
 
-## 6. Scripts Especiales (Si aplica)
-Si necesitas sincronizar datos de docentes desde un Excel o aplicar parches manuales:
-- **Sincronizar Docentes**: `python scripts/sync_docentes_excel.py`
-- **Reparar Claves Foráneas**: `python scripts/migrate_db_fks.py`
+## 6. Scripts de Mantenimiento y Migración
+Si estás configurando el proyecto con datos existentes o necesitas aplicar parches:
+- **Sincronizar Docentes**: `python scripts/sync_docentes_excel.py` (Carga masiva desde archivo Excel).
+- **Reparar Estructura y FKs**: `python scripts/migrate_db_fks.py`
+  - *Uso*: `python scripts/migrate_db_fks.py --backup`
+  - *Propósito*: Reestructura las tablas de matrículas y asistencias para que apunten correctamente a las nuevas **Ediciones** y **Sesiones**.
 
 ---
 
 ## 🏁 Checklist de Verificación
 Para confirmar que todo está bien en la nueva PC:
 1. [ ] El servidor inicia sin errores de "ModuleNotFoundError".
-2. [ ] Puedes entrar al Dashboard y ver el nuevo diseño de "Bento Grid".
-3. [ ] Al generar un certificado, el código QR es visible en el PDF.
-4. [ ] Al escanear el QR, la URL redirige correctamente (verificar configuración de Ngrok si es prueba local).
+2. [ ] El Panel Admin muestra las nuevas pestañas de **Catálogos** y **Ediciones**.
+3. [ ] Puedes crear un Catálogo y programar una Edición con al menos una sesión.
+4. [ ] Al generar un certificado, los metadatos de horas y fechas se calculan automáticamente.
+5. [ ] Al escanear el QR, la URL redirige correctamente al validador.
 
 ---
-**Última revisión**: Mayo 6, 2026  
-**Cambios clave incluidos**: Tabla `certificados_emitidos`, librería `qrcode`, nombres de archivo dinámicos.
+**Última revisión**: Mayo 12, 2026  
+**Versión actual**: 1.14.0 (Arquitectura Catálogos/Ediciones y Sesiones)  
+**Estado**: Production Ready - Núcleo de datos refactorizado.

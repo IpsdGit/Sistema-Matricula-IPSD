@@ -4598,7 +4598,91 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Mayo 6, 2026  
-**Versión actual**: 1.13.0 (Validación QR y Dashboard Moderno)  
-**Estado**: Development - Sistema de validación funcional (PoC); UI optimizada para despliegue.
+## 🏗️ Evolución de Arquitectura: Catálogos y Ediciones
+
+### Cambio 16.1: Desacoplamiento de Acciones Formativas (Catálogos vs Ediciones)
+**Fecha**: Mayo 12, 2026  
+**Archivos afectados**: `setup_bd.py`, `services/admin_service.py`, `services/portal_service.py`, `templates/admin.html`, `templates/dashboard.html`
+
+**QUÉ**:
+- Rediseño completo del modelo de datos:
+  - `catalogo_acciones`: Funciona como plantilla (Nombre, tipo, dirección, requisitos).
+  - `ediciones_formativas`: Instancias específicas de un catálogo (Trimestre, cupos, docente, jornada).
+- Migración de la lógica de matrícula para apuntar a `ediciones_formativas` en lugar de capacitaciones genéricas.
+- Implementación de eliminación en cascada (`ON DELETE CASCADE`) para mantener la integridad referencial.
+
+**POR QUÉ**:
+- El modelo anterior era rígido; obligaba a duplicar información básica para cada nuevo curso.
+- Se requería una separación clara entre "qué se enseña" (Catálogo) y "cuándo/cómo se imparte" (Edición).
+- Facilita la reutilización de contenido pedagógico en diferentes períodos académicos.
+
+**PARA QUÉ**:
+- Escalar el sistema para manejar cientos de ediciones sin información redundante.
+- Permitir que administradores creen plantillas una sola vez y las programen múltiples veces.
+
+---
+
+### Cambio 16.2: Gestión Granular de Sesiones y Calendario
+**Fecha**: Mayo 12, 2026  
+**Archivos afectados**: `services/admin_service.py`, `services/certificate_service.py`, `templates/admin.html`
+
+**QUÉ**:
+- Nueva tabla `sesiones_curso` que registra cada encuentro individual (fecha, hora inicio, hora fin).
+- Automatización de metadatos:
+  - Cálculo automático de `total_horas` sumando la duración de todas las sesiones.
+  - Cálculo automático de `fecha_inicio` y `semanas` de duración.
+  - Generación dinámica de etiquetas de horario (ej: "Lunes-Viernes 08:00-12:00").
+
+**POR QUÉ**:
+- Los certificados requieren precisión en el número de horas impartidas.
+- Se necesitaba una vista de calendario real para evitar traslapes de aulas o docentes.
+
+**PARA QUÉ**:
+- Garantizar la validez legal de las horas acreditadas en los certificados.
+- Simplificar la labor administrativa al automatizar cálculos manuales.
+
+---
+
+### Cambio 16.3: Refactorización Integral del Panel Administrador
+**Fecha**: Mayo 12, 2026  
+**Archivos afectados**: `templates/admin.html`, `static/main.js`, `static/style.css`
+
+**QUÉ**:
+- Reemplazo de la pestaña "Cursos" por dos nuevas vistas: "Catálogos" y "Ediciones".
+- Implementación de modales avanzados para gestión de sesiones y requisitos.
+- Optimización de la carga de datos mediante filtrado inteligente por dirección.
+- Mejora de la UI con iconos semánticos (`layers`, `calendar_month`).
+
+**POR QUÉ**:
+- La complejidad del nuevo modelo requería una interfaz más organizada.
+- Los administradores necesitaban un flujo de trabajo lineal: Catálogo -> Edición -> Sesiones.
+
+**PARA QUÉ**:
+- Reducir el tiempo de gestión de los coordinadores.
+- Proveer una experiencia de usuario más profesional y fluida.
+
+---
+
+### Cambio 16.4: Robustez, Migración y Terminología
+**Fecha**: Mayo 12, 2026  
+**Archivos afectados**: `scripts/migrate_db_fks.py`, `scripts/migrate_certs.py`, `utils.py`, `services/ia_service.py`
+
+**QUÉ**:
+- Scripts de migración para inyectar llaves foráneas en bases de datos existentes.
+- Refactorización de `utils.py` para normalizar el manejo de fechas y jornadas.
+- Actualización de terminología en el Chatbot IA ("Mis Acciones Formativas").
+
+**POR QUÉ**:
+- La transición al nuevo modelo no debía comprometer los datos históricos.
+- Se requería consistencia terminológica en toda la plataforma.
+
+**PARA QUÉ**:
+- Asegurar una transición suave (Zero-downtime) hacia la nueva arquitectura.
+- Centralizar la lógica de negocio para facilitar el mantenimiento.
+
+---
+
+**Última actualización**: Mayo 12, 2026  
+**Versión actual**: 1.14.0 (Arquitectura Catálogos/Ediciones y Sesiones)  
+**Estado**: Development - Refactorización de núcleo completada; listo para pruebas de integración.
 

@@ -37,46 +37,66 @@ def add_docentes_centro_universitario(conn):
 def migrate_matriculas(conn):
     if not table_exists(conn, 'matriculas'):
         return (0, 0)
+    if not column_exists(conn, 'matriculas', 'edicion_id'):
+        return (0, 0)
 
     total = conn.execute('SELECT COUNT(*) FROM matriculas').fetchone()[0]
+
+    tiene_comentario = column_exists(conn, 'matriculas', 'comentario_validacion')
 
     conn.execute(
         '''
         CREATE TABLE matriculas_new (
             id INTEGER PRIMARY KEY,
             numero_empleado TEXT NOT NULL,
-            id_capacitacion TEXT NOT NULL,
-            horario_elegido TEXT NOT NULL,
+            edicion_id TEXT NOT NULL,
             fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
             aprobado INTEGER,
             fecha_aprobacion TEXT,
+            comentario_validacion TEXT,
             FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado),
-            FOREIGN KEY(id_capacitacion) REFERENCES capacitaciones(id)
+            FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id)
         )
         '''
     )
 
-    conn.execute(
-        '''
-        INSERT INTO matriculas_new (
-            id, numero_empleado, id_capacitacion, horario_elegido,
-            fecha_matricula, aprobado, fecha_aprobacion
+    if tiene_comentario:
+        conn.execute(
+            '''
+            INSERT INTO matriculas_new (
+                id, numero_empleado, edicion_id,
+                fecha_matricula, aprobado, fecha_aprobacion, comentario_validacion
+            )
+            SELECT
+                m.id, m.numero_empleado, m.edicion_id,
+                m.fecha_matricula, m.aprobado, m.fecha_aprobacion, m.comentario_validacion
+            FROM matriculas m
+            JOIN docentes d ON d.numero_empleado = m.numero_empleado
+            JOIN ediciones_formativas e ON e.id = m.edicion_id
+            '''
         )
-        SELECT
-            m.id, m.numero_empleado, m.id_capacitacion, m.horario_elegido,
-            m.fecha_matricula, m.aprobado, m.fecha_aprobacion
-        FROM matriculas m
-        JOIN docentes d ON d.numero_empleado = m.numero_empleado
-        JOIN capacitaciones c ON c.id = m.id_capacitacion
-        '''
-    )
+    else:
+        conn.execute(
+            '''
+            INSERT INTO matriculas_new (
+                id, numero_empleado, edicion_id,
+                fecha_matricula, aprobado, fecha_aprobacion, comentario_validacion
+            )
+            SELECT
+                m.id, m.numero_empleado, m.edicion_id,
+                m.fecha_matricula, m.aprobado, m.fecha_aprobacion, NULL
+            FROM matriculas m
+            JOIN docentes d ON d.numero_empleado = m.numero_empleado
+            JOIN ediciones_formativas e ON e.id = m.edicion_id
+            '''
+        )
 
     insertados = conn.execute('SELECT COUNT(*) FROM matriculas_new').fetchone()[0]
 
     conn.execute('DROP TABLE matriculas')
     conn.execute('ALTER TABLE matriculas_new RENAME TO matriculas')
     conn.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_numero ON matriculas (numero_empleado)')
-    conn.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_capacitacion ON matriculas (id_capacitacion)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion ON matriculas (edicion_id)')
 
     return (total, insertados)
 
@@ -84,8 +104,12 @@ def migrate_matriculas(conn):
 def migrate_matricula_historial(conn):
     if not table_exists(conn, 'matricula_historial'):
         return (0, 0)
+    if not column_exists(conn, 'matricula_historial', 'edicion_id'):
+        return (0, 0)
 
     total = conn.execute('SELECT COUNT(*) FROM matricula_historial').fetchone()[0]
+
+    nombre_columna = 'nombre_accion' if column_exists(conn, 'matricula_historial', 'nombre_accion') else 'nombre_curso'
 
     conn.execute(
         '''
@@ -93,33 +117,32 @@ def migrate_matricula_historial(conn):
             id INTEGER PRIMARY KEY,
             matricula_id INTEGER,
             numero_empleado TEXT NOT NULL,
-            id_capacitacion TEXT NOT NULL,
-            nombre_curso TEXT NOT NULL,
-            horario_elegido TEXT,
+            edicion_id TEXT NOT NULL,
+            nombre_accion TEXT NOT NULL,
             estado_codigo TEXT NOT NULL,
             detalle TEXT,
             fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(matricula_id) REFERENCES matriculas(id),
             FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado),
-            FOREIGN KEY(id_capacitacion) REFERENCES capacitaciones(id),
+            FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id),
             FOREIGN KEY(estado_codigo) REFERENCES estado_matricula_catalogo(codigo)
         )
         '''
     )
 
     conn.execute(
-        '''
+        f'''
         INSERT INTO matricula_historial_new (
-            id, matricula_id, numero_empleado, id_capacitacion, nombre_curso,
-            horario_elegido, estado_codigo, detalle, fecha_evento
+            id, matricula_id, numero_empleado, edicion_id, nombre_accion,
+            estado_codigo, detalle, fecha_evento
         )
         SELECT
-            mh.id, mh.matricula_id, mh.numero_empleado, mh.id_capacitacion, mh.nombre_curso,
-            mh.horario_elegido, mh.estado_codigo, mh.detalle, mh.fecha_evento
+            mh.id, mh.matricula_id, mh.numero_empleado, mh.edicion_id, mh.{nombre_columna},
+            mh.estado_codigo, mh.detalle, mh.fecha_evento
         FROM matricula_historial mh
         JOIN docentes d ON d.numero_empleado = mh.numero_empleado
-        JOIN capacitaciones c ON c.id = mh.id_capacitacion
-        JOIN estado_matricula_catalogo e ON e.codigo = mh.estado_codigo
+        JOIN ediciones_formativas e ON e.id = mh.edicion_id
+        JOIN estado_matricula_catalogo ec ON ec.codigo = mh.estado_codigo
         LEFT JOIN matriculas m ON m.id = mh.matricula_id
         WHERE mh.matricula_id IS NULL OR m.id IS NOT NULL
         '''
@@ -131,7 +154,7 @@ def migrate_matricula_historial(conn):
     conn.execute('ALTER TABLE matricula_historial_new RENAME TO matricula_historial')
     conn.execute('CREATE INDEX IF NOT EXISTS idx_historial_numero ON matricula_historial (numero_empleado)')
     conn.execute('CREATE INDEX IF NOT EXISTS idx_historial_matricula ON matricula_historial (matricula_id)')
-    conn.execute('CREATE INDEX IF NOT EXISTS idx_historial_capacitacion ON matricula_historial (id_capacitacion)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_historial_edicion ON matricula_historial (edicion_id)')
 
     return (total, insertados)
 

@@ -2943,6 +2943,15 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
   font-weight: 700;
   letter-spacing: .09em;
   color: var(--text-muted);
+
+.curso-jornada-preview {
+  margin: 0;
+  padding: .45rem .6rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: .85rem;
+  color: var(--text-muted);
+}
   text-transform: uppercase;
   margin-bottom: .38rem;
 }

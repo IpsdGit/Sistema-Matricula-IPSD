@@ -160,15 +160,15 @@ def register_portal_routes(app):
             abort(403)
 
         numero_empleado = request.form.get('numero_empleado', '').strip()
-        id_capacitacion = request.form.get('id_capacitacion', '').strip()
+        edicion_id = (request.form.get('edicion_id') or '').strip()
         horario_elegido = request.form.get('horario_elegido', '').strip()
 
         if not validar_numero_empleado(numero_empleado):
             abort(400)
-        if not id_capacitacion or not horario_elegido:
+        if not edicion_id:
             abort(400)
 
-        resultado = process_matricula(numero_empleado, id_capacitacion, horario_elegido)
+        resultado = process_matricula(numero_empleado, edicion_id, horario_elegido)
         if not resultado['ok']:
             if resultado.get('error_view') == 'dashboard':
                 return render_template('dashboard.html', **resultado['contexto'], error=resultado['error'])
@@ -177,9 +177,9 @@ def register_portal_routes(app):
         session['matricula_feedback'] = {
             'tipo': 'success',
             'titulo': 'Matricula exitosa',
-            'mensaje': f"Te inscribiste en {resultado['nombre_curso']} ({resultado['id_curso']}).",
-            'curso': resultado['nombre_curso'],
-            'codigo': resultado['id_curso'],
+            'mensaje': f"Te inscribiste en {resultado['nombre_accion']} ({resultado['edicion_id']}).",
+            'curso': resultado['nombre_accion'],
+            'codigo': resultado['edicion_id'],
             'horario': resultado['horario'],
         }
         return redirect(
@@ -195,7 +195,7 @@ def register_portal_routes(app):
             abort(403)
 
         numero_empleado = request.form.get('numero_empleado', '').strip()
-        id_capacitacion = request.form.get('id_capacitacion', '').strip()
+        edicion_id = (request.form.get('edicion_id') or '').strip()
         matricula_id_raw = request.form.get('matricula_id', '').strip()
 
         if not validar_numero_empleado(numero_empleado):
@@ -205,10 +205,10 @@ def register_portal_routes(app):
         if matricula_id_raw.isdigit():
             matricula_id = int(matricula_id_raw)
 
-        if not matricula_id and not id_capacitacion:
+        if not matricula_id and not edicion_id:
             abort(400)
 
-        resultado = process_cancelar_matricula(numero_empleado, id_capacitacion, matricula_id)
+        resultado = process_cancelar_matricula(numero_empleado, edicion_id, matricula_id)
         if not resultado['ok']:
             if resultado.get('http_status') == 404:
                 abort(404)
@@ -217,8 +217,9 @@ def register_portal_routes(app):
         return render_template(
             'matricula_cancelada.html',
             empleado=resultado['empleado'],
-            nombre_curso=resultado['nombre_curso'],
-            id_curso=resultado['id_curso'],
+            nombre_curso=resultado['nombre_accion'],
+            id_curso=resultado['edicion_id'],
+            edicion_id=resultado['edicion_id'],
         )
 
     @app.route('/api/curso_detalle/<id_curso>', methods=['GET'])

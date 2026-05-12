@@ -58,7 +58,7 @@ def _try_domain_answer(user_type, user_message):
             return (
                 'Si deseas cancelar una matricula, hazlo asi: '\
                 '1) Entra a Disponibles para matricula. '\
-                '2) En Mis Capacitaciones Actuales ubica el curso. '\
+                '2) En Mis Acciones Formativas ubica el curso. '\
                 '3) Pulsa el boton X para cancelar. '\
                 'Nota: si la matricula ya tiene resultado (aprobado/no aprobado/abandono), aparece bloqueada y no se puede cancelar.'
             )
@@ -69,7 +69,7 @@ def _try_domain_answer(user_type, user_message):
                 '1) Abre Disponibles para matricula. '\
                 '2) Elige el curso y la Jornada preferida. '\
                 '3) Pulsa Matricularme. '\
-                '4) Verifica que aparezca en Mis Capacitaciones Actuales. '\
+                '4) Verifica que aparezca en Mis Acciones Formativas. '\
                 'Si no ves oferta, no hay cursos habilitados en este periodo.'
             )
 

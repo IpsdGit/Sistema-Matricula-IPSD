@@ -26,7 +26,31 @@ if os.path.exists(DB_PATH):
 
 def inicializar_bd():
     conexion = sqlite3.connect(DB_PATH)
+    conexion.execute('PRAGMA foreign_keys = ON')
     cursor = conexion.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS direcciones (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            ruta_firma_img TEXT NOT NULL DEFAULT '',
+            ruta_logo_img TEXT NOT NULL DEFAULT ''
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS docentes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_empleado TEXT UNIQUE NOT NULL,
+            nombre_completo TEXT NOT NULL,
+            correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+            activo INTEGER NOT NULL DEFAULT 1,
+            fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            centro_universitario_regional TEXT NOT NULL DEFAULT ''
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_numero ON docentes (numero_empleado)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS plantillas_certificados (
@@ -34,7 +58,7 @@ def inicializar_bd():
             direccion_codigo TEXT NOT NULL,
             nombre_plantilla TEXT NOT NULL, 
             tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
-            ruta_firma_img TEXT NOT NULL,
+            ruta_firma_img TEXT NOT NULL DEFAULT '',
             texto_certificado TEXT NOT NULL,
             firmante_nombre TEXT NOT NULL, 
             firmante_cargo TEXT NOT NULL, 
@@ -43,28 +67,41 @@ def inicializar_bd():
         )
     ''')
 
-    # Agregamos las 3 columnas nuevas: anio, trimestre, mes, y el id_plantilla_certificado
+    # Catalogo de acciones formativas (molde)
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS capacitaciones (
+        CREATE TABLE IF NOT EXISTS catalogo_acciones (
             id TEXT PRIMARY KEY,
             nombre TEXT NOT NULL,
-            anio TEXT NOT NULL,
-            trimestre TEXT NOT NULL,
-            mes TEXT NOT NULL,
-            dia TEXT NOT NULL DEFAULT '1',
-            anio_fin TEXT NOT NULL DEFAULT '',
-            mes_fin TEXT NOT NULL DEFAULT '',
-            dia_fin TEXT NOT NULL DEFAULT '',
-            modalidad TEXT NOT NULL DEFAULT 'Virtual',
-            cupos_maximos INTEGER NOT NULL DEFAULT 0,
-            enlace_virtual TEXT,
-            duracion_tipo TEXT NOT NULL DEFAULT 'un_dia',
-            tipo_accion TEXT NOT NULL DEFAULT 'CURSO',
-            horas_totales INTEGER NOT NULL DEFAULT 20,
-            semanas_duracion INTEGER NOT NULL DEFAULT 1,
-            id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)
+            modalidad TEXT,
+            tipo_accion TEXT,
+            id_plantilla_certificado INTEGER,
+            direccion_codigo TEXT,
+            FOREIGN KEY (id_plantilla_certificado) REFERENCES plantillas_certificados (id),
+            FOREIGN KEY (direccion_codigo) REFERENCES direcciones (codigo),
+            FOREIGN KEY (tipo_accion) REFERENCES tipo_accion_formativa (codigo)
         )
     ''')
+
+    # Ediciones formativas (ejecucion/jornada)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ediciones_formativas (
+            id TEXT PRIMARY KEY,
+            catalogo_id TEXT,
+            etiqueta_edicion TEXT DEFAULT '',
+            trimestre TEXT,
+            fecha_inicio DATE,
+            fecha_limite_matricula DATETIME,
+            jornada TEXT,
+            hora TEXT,
+            cupos_maximos INTEGER,
+            enlace_acceso TEXT,
+            docente_responsable TEXT,
+            privacidad TEXT DEFAULT 'Abierta',
+            estado TEXT DEFAULT 'Programada',
+            FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_ediciones_catalogo ON ediciones_formativas (catalogo_id)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
@@ -90,43 +127,31 @@ def inicializar_bd():
     )
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS horarios_curso (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_capacitacion TEXT NOT NULL,
-            horario TEXT NOT NULL,
-            FOREIGN KEY (id_capacitacion) REFERENCES capacitaciones (id) ON DELETE CASCADE
-        )
-    ''')
-
-    cursor.execute('''
         CREATE TABLE IF NOT EXISTS matriculas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero_empleado TEXT NOT NULL,
-            id_capacitacion TEXT NOT NULL,
-            horario_elegido TEXT NOT NULL,
+            edicion_id TEXT NOT NULL,
             fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
             aprobado INTEGER,
-            FOREIGN KEY (id_capacitacion) REFERENCES capacitaciones (id) ON DELETE CASCADE
+            fecha_aprobacion TEXT,
+            comentario_validacion TEXT,
+            FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
         )
     ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sesiones_curso (
             id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_curso TEXT NOT NULL,
+            edicion_id TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora_inicio TEXT NOT NULL,
             hora_fin TEXT NOT NULL,
-            jornada TEXT NOT NULL DEFAULT 'UNICA',
-            docente_sesion TEXT,
-            edicion TEXT,
             estado INTEGER NOT NULL DEFAULT 0,
             token_asistencia TEXT,
-            FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+            FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
         )
     ''')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_edicion ON sesiones_curso (id_curso, edicion)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (edicion_id, fecha, hora_inicio)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS registro_asistencia (
@@ -157,13 +182,13 @@ def inicializar_bd():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             matricula_id INTEGER,
             numero_empleado TEXT NOT NULL,
-            id_capacitacion TEXT NOT NULL,
-            nombre_curso TEXT NOT NULL,
-            horario_elegido TEXT,
+            edicion_id TEXT NOT NULL,
+            nombre_accion TEXT NOT NULL,
             estado_codigo TEXT NOT NULL,
             detalle TEXT,
             fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo)
+            FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo),
+            FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id)
         )
     ''')
 
@@ -186,6 +211,24 @@ def inicializar_bd():
     )
 
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS certificados_emitidos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token_validacion TEXT UNIQUE NOT NULL,
+            matricula_id INTEGER NOT NULL,
+            numero_empleado TEXT NOT NULL,
+            edicion_id TEXT NOT NULL,
+            fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
+            tipo_documento TEXT NOT NULL,
+            veces_validado INTEGER NOT NULL DEFAULT 0,
+            activo INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY(matricula_id) REFERENCES matriculas(id),
+            FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado),
+            FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id)
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)')
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS admin_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -194,26 +237,6 @@ def inicializar_bd():
             direccion TEXT NOT NULL DEFAULT 'IPSD'
         )
     ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS direcciones (
-            codigo TEXT PRIMARY KEY,
-            nombre TEXT NOT NULL
-        )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS docentes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            numero_empleado TEXT UNIQUE NOT NULL,
-            nombre_completo TEXT NOT NULL,
-            correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
-            activo INTEGER NOT NULL DEFAULT 1,
-            fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_numero ON docentes (numero_empleado)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)')
 
     superadmin_username = os.environ.get('SUPERADMIN_USERNAME', 'admin').strip() or 'admin'
     superadmin_password = os.environ.get(

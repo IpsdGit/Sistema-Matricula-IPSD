@@ -1,6 +1,7 @@
 import os
 import shutil
 import pdfkit
+from datetime import datetime
 from flask import render_template, current_app, url_for
 from werkzeug.utils import secure_filename
 from markupsafe import escape
@@ -44,6 +45,94 @@ def _resolver_wkhtmltopdf_path() -> str:
 
     which_path = shutil.which('wkhtmltopdf')
     return which_path or ''
+
+
+def _parse_fecha_iso(fecha_str: str):
+    texto = (fecha_str or '').strip()
+    if not texto:
+        return None
+    try:
+        return datetime.strptime(texto[:10], '%Y-%m-%d')
+    except ValueError:
+        return None
+
+
+def _partes_fecha(dt_obj):
+    if not dt_obj:
+        return '', '', ''
+    meses = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ]
+    mes = meses[dt_obj.month - 1].capitalize()
+    return str(dt_obj.day), mes, str(dt_obj.year)
+
+
+def _etiqueta_horario_edicion(jornada, hora):
+    nombres = {
+        'UNICA': 'Unica',
+        'MATUTINA': 'Matutina',
+        'VESPERTINA': 'Vespertina',
+        'NOCTURNA': 'Nocturna',
+    }
+    jornada_norm = (jornada or '').strip().upper()
+    jornada_texto = nombres.get(jornada_norm, 'Unica')
+    hora_texto = (hora or '').strip()
+    if not hora_texto:
+        return jornada_texto
+    if jornada_texto.lower() in hora_texto.lower():
+        return hora_texto
+    return f"{jornada_texto} {hora_texto}".strip()
+
+
+def _horas_default_por_tipo(tipo_accion):
+    tipo = (tipo_accion or '').strip().upper()
+    if tipo == 'CONFERENCIA':
+        return 4
+    if tipo == 'SEMINARIO':
+        return 16
+    return 20
+
+
+def _calcular_datos_sesiones(conn, edicion_id):
+    filas = conn.execute(
+        '''
+        SELECT fecha, hora_inicio, hora_fin
+        FROM sesiones_curso
+        WHERE edicion_id = ?
+        ''',
+        (edicion_id,),
+    ).fetchall()
+
+    if not filas:
+        return None
+
+    fechas = []
+    total_horas = 0.0
+    for fila in filas:
+        fecha_dt = _parse_fecha_iso(fila['fecha'])
+        if fecha_dt:
+            fechas.append(fecha_dt)
+
+        hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
+        hora_fin = (fila['hora_fin'] or '').strip()[:5]
+        try:
+            hi = datetime.strptime(hora_inicio, '%H:%M')
+            hf = datetime.strptime(hora_fin, '%H:%M')
+            delta = (hf - hi).seconds / 3600
+            if delta > 0:
+                total_horas += delta
+        except Exception:
+            continue
+
+    if not fechas:
+        return None
+
+    fecha_inicio = min(fechas)
+    fecha_fin = max(fechas)
+    delta_dias = max(0, (fecha_fin.date() - fecha_inicio.date()).days)
+    semanas = (delta_dias // 7) + 1
+    return fecha_inicio, fecha_fin, int(round(total_horas)), semanas
 
 
 def _formatear_fecha_larga(dia: str, mes: str, anio: str) -> str:
@@ -175,8 +264,8 @@ def eliminar_plantilla(id_plantilla):
     conn = get_db_connection()
     try:
         conn.execute('UPDATE plantillas_certificados SET activo = 0 WHERE id = ?', (id_plantilla,))
-        # Opcional: Podríamos también setear id_plantilla_certificado a NULL en capacitaciones
-        # conn.execute('UPDATE capacitaciones SET id_plantilla_certificado = NULL WHERE id_plantilla_certificado = ?', (id_plantilla,))
+        # Opcional: Podríamos también setear id_plantilla_certificado a NULL en catalogo_acciones
+        # conn.execute('UPDATE catalogo_acciones SET id_plantilla_certificado = NULL WHERE id_plantilla_certificado = ?', (id_plantilla,))
         conn.commit()
     finally:
         conn.close()
@@ -368,18 +457,19 @@ def generar_binario_pdf(matricula_id):
         # Obtener datos de la matrícula, docente, curso y plantilla
         query = '''
             SELECT
-                m.id_capacitacion,
+                m.edicion_id,
                 d.nombre_completo as nombre_docente, d.numero_empleado, d.centro_universitario_regional,
-                m.horario_elegido, m.fecha_aprobacion,
-                c.nombre as curso_nombre, c.modalidad, c.horas_totales, c.semanas_duracion, c.tipo_accion,
-                c.anio, c.mes, c.dia, c.anio_fin, c.mes_fin, c.dia_fin,
+                m.fecha_aprobacion,
+                ca.nombre as curso_nombre, ca.modalidad, ca.tipo_accion,
+                ef.fecha_inicio, ef.jornada, ef.hora,
                 p.tipo_documento, p.direccion_codigo,
                 ddir.ruta_firma_img, ddir.ruta_logo_img,
                 p.texto_certificado, p.firmante_nombre, p.firmante_cargo
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
-            JOIN capacitaciones c ON m.id_capacitacion = c.id
-            JOIN plantillas_certificados p ON c.id_plantilla_certificado = p.id
+            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            JOIN plantillas_certificados p ON ca.id_plantilla_certificado = p.id
             LEFT JOIN direcciones ddir ON p.direccion_codigo = ddir.codigo
             WHERE m.id = ? AND m.aprobado = 1
         '''
@@ -389,6 +479,30 @@ def generar_binario_pdf(matricula_id):
             return None
             
         contexto = dict(datos)
+
+        # Completar datos faltantes desde sesiones
+        contexto['horario_elegido'] = _etiqueta_horario_edicion(contexto.get('jornada'), contexto.get('hora'))
+
+        datos_sesiones = _calcular_datos_sesiones(conn, contexto.get('edicion_id'))
+        if datos_sesiones:
+            fecha_inicio_dt, fecha_fin_dt, horas_totales, semanas_duracion = datos_sesiones
+        else:
+            fecha_inicio_dt = _parse_fecha_iso(contexto.get('fecha_inicio'))
+            fecha_fin_dt = fecha_inicio_dt
+            horas_totales = _horas_default_por_tipo(contexto.get('tipo_accion'))
+            semanas_duracion = 1
+
+        contexto['horas_totales'] = horas_totales
+        contexto['semanas_duracion'] = semanas_duracion
+
+        dia_ini, mes_ini, anio_ini = _partes_fecha(fecha_inicio_dt)
+        dia_fin, mes_fin, anio_fin = _partes_fecha(fecha_fin_dt)
+        contexto['dia'] = dia_ini
+        contexto['mes'] = mes_ini
+        contexto['anio'] = anio_ini
+        contexto['dia_fin'] = dia_fin
+        contexto['mes_fin'] = mes_fin
+        contexto['anio_fin'] = anio_fin
 
         # Formatear fecha de aprobación para el sello
         fecha_emision_str = ''
@@ -480,13 +594,13 @@ def generar_binario_pdf(matricula_id):
         token_cert = ''
         qr_b64 = ''
         try:
-            id_cap = contexto.get('id_capacitacion') or ''
+            id_edicion = contexto.get('edicion_id') or ''
             cod_dir = contexto.get('direccion_codigo') or 'IPSD'
             token_cert = validacion_service.registrar_o_obtener_certificado(
                 conn=conn,
                 matricula_id=int(matricula_id),
                 numero_empleado=contexto.get('numero_empleado', ''),
-                id_capacitacion=id_cap,
+                edicion_id=id_edicion,
                 tipo_documento=contexto['tipo_documento'],
                 codigo_direccion=cod_dir,
             )
@@ -543,8 +657,9 @@ def obtener_datos_empleado(matricula_id):
             SELECT d.nombre_completo, d.numero_empleado, p.tipo_documento
             FROM matriculas m
             JOIN docentes d ON m.numero_empleado = d.numero_empleado
-            JOIN capacitaciones c ON m.id_capacitacion = c.id
-            JOIN plantillas_certificados p ON c.id_plantilla_certificado = p.id
+            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            JOIN plantillas_certificados p ON ca.id_plantilla_certificado = p.id
             WHERE m.id = ? AND m.aprobado = 1
         '''
         datos = conn.execute(query, (matricula_id,)).fetchone()

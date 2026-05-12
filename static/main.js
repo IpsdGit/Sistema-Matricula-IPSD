@@ -65,20 +65,6 @@
       const btn = this.querySelector('[type=submit]');
       if (!btn) return;
 
-      // Si es un form de matrícula, validar selección de horario
-      const select = this.querySelector('select[name="horario_elegido"]');
-      if (select && !select.value) {
-        e.preventDefault();
-        select.classList.add('is-invalid');
-        select.focus();
-        const label = this.querySelector('.form-label');
-        if (label) {
-          label.style.color = 'var(--danger)';
-          setTimeout(() => { label.style.color = ''; }, 2500);
-        }
-        return;
-      }
-
       // Agregar estado de carga
       btn.classList.add('btn-loading');
       const originalText = btn.innerHTML;
@@ -202,6 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const feedbackEl = document.getElementById('curso-sesion-feedback');
   const marcarBtn = document.getElementById('btn-marcar-asistencia');
   const certContainerEl = document.getElementById('csd-cert-container');
+  const requisitosContainerEl = document.getElementById('csd-requisitos-container');
+  const requisitosListEl = document.getElementById('csd-requisitos-list');
+  const requisitosSubtitleEl = document.getElementById('csd-requisitos-subtitle');
 
   let sesionAbiertaActual = null;
 
@@ -249,6 +238,49 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tipoAccion === 'CONFERENCIA') return 'Conferencia';
     if (tipoAccion === 'SEMINARIO') return 'Seminario';
     return 'Curso';
+  }
+
+  function escapeHtml(texto) {
+    return String(texto || '').replace(/[&<>"']/g, function(match) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[match];
+    });
+  }
+
+  function renderRequisitos(curso) {
+    if (!requisitosContainerEl) return;
+    const raw = String((curso && curso.requisitos) || '').trim();
+    if (!raw) {
+      if (requisitosSubtitleEl) requisitosSubtitleEl.textContent = 'Sin requisitos definidos';
+      if (requisitosListEl) {
+        requisitosListEl.innerHTML = '';
+        requisitosListEl.style.display = 'none';
+      }
+      return;
+    }
+
+    const items = raw.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
+    if (!items.length) {
+      if (requisitosSubtitleEl) requisitosSubtitleEl.textContent = 'Sin requisitos definidos';
+      if (requisitosListEl) {
+        requisitosListEl.innerHTML = '';
+        requisitosListEl.style.display = 'none';
+      }
+      return;
+    }
+
+    if (requisitosSubtitleEl) {
+      requisitosSubtitleEl.textContent = `${items.length} requisito(s) para aprobar`;
+    }
+    if (requisitosListEl) {
+      requisitosListEl.style.display = 'block';
+      requisitosListEl.innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    }
   }
 
   function renderCertificado(curso) {
@@ -411,6 +443,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (futurasEl) futurasEl.innerHTML = '<p class="curso-sesiones-empty" style="font-size:.8rem;color:#747780;padding:.5rem 0;">Cargando...</p>';
     if (pasadasEl) pasadasEl.innerHTML = '<p class="curso-sesiones-empty" style="font-size:.8rem;color:#747780;padding:.5rem 0;">Cargando...</p>';
     if (qrCardEl) qrCardEl.style.display = 'none';
+    if (requisitosSubtitleEl) requisitosSubtitleEl.textContent = 'Cargando requisitos...';
+    if (requisitosListEl) {
+      requisitosListEl.innerHTML = '';
+      requisitosListEl.style.display = 'none';
+    }
 
     abrirModalSesiones();
 
@@ -431,6 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       renderInfoCurso(curso);
       renderCertificado(curso);
+      renderRequisitos(curso);
 
       const sesionesFuturas = payload.sesiones_futuras || [];
       const sesionesPasadas = payload.sesiones_pasadas || [];
@@ -449,6 +487,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (futurasEl) futurasEl.innerHTML = `<p style="font-size:.82rem;color:#dc2626;padding:.4rem 0;">${msg}</p>`;
       if (pasadasEl) pasadasEl.innerHTML = '';
       if (qrCardEl) qrCardEl.style.display = 'none';
+      if (requisitosSubtitleEl) requisitosSubtitleEl.textContent = 'No disponible';
+      if (requisitosListEl) {
+        requisitosListEl.innerHTML = '';
+        requisitosListEl.style.display = 'none';
+      }
     }
   }
 
@@ -641,7 +684,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function categoriaEvento(evento) {
-    const idCurso = String(evento.id_curso || '').toUpperCase();
     const modalidad = String(evento.modalidad || '').toLowerCase();
 
     if (evento.tipo_evento === 'curso') {
@@ -650,17 +692,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (Number(evento.estado) === 2) {
       return 'is-fin';
     }
-    if (modalidad.includes('presencial') || idCurso.includes('-P-')) {
+    if (modalidad.includes('presencial')) {
       return 'is-presencial';
     }
-    if (modalidad.includes('virtual') || idCurso.includes('-V-')) {
+    if (modalidad.includes('virtual')) {
       return 'is-virtual';
     }
     return 'is-otros';
   }
 
   function textoEvento(evento) {
-    const nombre = evento.nombre_curso || evento.id_curso || 'Curso';
+    const nombre = evento.nombre_curso || evento.edicion_id || evento.id_curso || 'Curso';
     if (evento.tipo_evento === 'curso') {
       return `Inicio: ${nombre}`;
     }

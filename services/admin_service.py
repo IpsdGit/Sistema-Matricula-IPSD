@@ -1,9 +1,11 @@
 import sqlite3
 import re
 import uuid
+import os
 from datetime import datetime, timedelta
 
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 from config import DIAS_SEMANA, MESES_ES
 from database import get_db_connection
@@ -40,6 +42,93 @@ def _fecha_mostrar_desde_iso(fecha_iso):
         return datetime.strptime((fecha_iso or '').strip(), '%Y-%m-%d').strftime('%d/%m/%Y')
     except ValueError:
         return fecha_iso or ''
+
+
+def _mes_numero_desde_nombre(nombre):
+    if not nombre:
+        return None
+    nombre_norm = (nombre or '').strip().lower()
+    for idx, mes in enumerate(MESES_ES, start=1):
+        if mes.lower() == nombre_norm:
+            return idx
+    return None
+
+
+def _mes_nombre_desde_numero(valor):
+    try:
+        idx = int(valor)
+    except (TypeError, ValueError):
+        return valor or ''
+    if 1 <= idx <= len(MESES_ES):
+        return MESES_ES[idx - 1]
+    return valor or ''
+
+
+def _etiqueta_horario_edicion(jornada, hora):
+    jornada_norm = _normalizar_jornada(jornada)
+    hora_texto = (hora or '').strip()
+    if not hora_texto:
+        return _nombre_jornada(jornada_norm)
+    if _nombre_jornada(jornada_norm).lower() in hora_texto.lower():
+        return hora_texto
+    return f"{_nombre_jornada(jornada_norm)} {hora_texto}".strip()
+
+
+def _generar_id_edicion(conn, catalogo_id):
+    existentes = conn.execute(
+        'SELECT id FROM ediciones_formativas WHERE id LIKE ? ORDER BY id ASC',
+        (f'{catalogo_id}-E%',),
+    ).fetchall()
+
+    ultimo = 0
+    patron = re.compile(rf'^{re.escape(catalogo_id)}-E(\d{{3}})$')
+    for row in existentes:
+        match = patron.match((row['id'] or '').upper())
+        if match:
+            ultimo = max(ultimo, int(match.group(1)))
+
+    return f'{catalogo_id}-E{ultimo + 1:03d}'
+
+
+def _sincronizar_edicion_desde_sesiones(conn, edicion_id, jornada=None, hora_texto=None):
+    primer = conn.execute(
+        '''
+        SELECT fecha, hora_inicio, hora_fin
+        FROM sesiones_curso
+        WHERE edicion_id = ?
+        ORDER BY fecha ASC, hora_inicio ASC
+        LIMIT 1
+        ''',
+        (edicion_id,),
+    ).fetchone()
+
+    fecha_inicio = (primer['fecha'] or '').strip() if primer else ''
+    if not hora_texto and primer:
+        hora_inicio = (primer['hora_inicio'] or '').strip()[:5]
+        hora_fin = (primer['hora_fin'] or '').strip()[:5]
+        if hora_inicio and hora_fin:
+            hora_texto = f'{hora_inicio}-{hora_fin}'
+
+    campos = []
+    params = []
+    if fecha_inicio:
+        campos.append('fecha_inicio = ?')
+        params.append(fecha_inicio)
+    if jornada:
+        campos.append('jornada = ?')
+        params.append(_normalizar_jornada(jornada))
+    if hora_texto is not None:
+        campos.append('hora = ?')
+        params.append(hora_texto)
+
+    if not campos:
+        return
+
+    params.append(edicion_id)
+    conn.execute(
+        f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = ?",
+        tuple(params),
+    )
 
 
 def _normalizar_duracion_tipo(valor):
@@ -231,28 +320,43 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
     try:
         conn = get_db_connection()
         direcciones = obtener_direcciones(conn)
-
         query_matriculas = '''
-            SELECT m.id as matricula_id, m.numero_empleado, c.id, c.nombre, c.anio, c.trimestre, c.mes, m.horario_elegido, m.fecha_matricula, m.aprobado
+            SELECT
+                m.id as matricula_id,
+                m.numero_empleado,
+                ef.id AS edicion_id,
+                ca.nombre,
+                ef.trimestre,
+                ef.fecha_inicio,
+                ef.jornada,
+                ef.hora,
+                m.fecha_matricula,
+                m.aprobado,
+                strftime('%Y', ef.fecha_inicio) AS anio,
+                strftime('%m', ef.fecha_inicio) AS mes_num,
+                strftime('%d', ef.fecha_inicio) AS dia
             FROM matriculas m
-            JOIN capacitaciones c ON m.id_capacitacion = c.id
+            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
             WHERE 1=1
         '''
         params = []
 
         if not es_superadmin:
-            query_matriculas += ' AND c.id LIKE ?'
-            params.append(f'AF-{admin_direccion}-%')
+            query_matriculas += ' AND ca.direccion_codigo = ?'
+            params.append(admin_direccion)
 
         if anio_filtro:
-            query_matriculas += ' AND c.anio = ?'
+            query_matriculas += " AND strftime('%Y', ef.fecha_inicio) = ?"
             params.append(anio_filtro)
         if trimestre_filtro:
-            query_matriculas += ' AND c.trimestre = ?'
+            query_matriculas += ' AND ef.trimestre = ?'
             params.append(trimestre_filtro)
         if mes_filtro:
-            query_matriculas += ' AND c.mes = ?'
-            params.append(mes_filtro)
+            mes_num = _mes_numero_desde_nombre(mes_filtro)
+            if mes_num:
+                query_matriculas += " AND strftime('%m', ef.fecha_inicio) = ?"
+                params.append(f'{mes_num:02d}')
         if resultado_filtro == 'aprobado':
             query_matriculas += ' AND m.aprobado = 1'
         elif resultado_filtro == 'reprobado':
@@ -262,38 +366,109 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         elif resultado_filtro == 'pendiente':
             query_matriculas += ' AND m.aprobado IS NULL'
 
-        query_matriculas += ' ORDER BY c.anio DESC, c.mes, c.id, m.numero_empleado'
-        registros = conn.execute(query_matriculas, params).fetchall()
+        query_matriculas += ' ORDER BY ef.fecha_inicio DESC, ef.id, m.numero_empleado'
+        registros_raw = conn.execute(query_matriculas, params).fetchall()
+        registros = []
+        for fila in registros_raw:
+            item = dict(fila)
+            item['mes'] = _mes_nombre_desde_numero(item.get('mes_num'))
+            registros.append(item)
 
         query_cursos = '''
-                 SELECT c.id, c.nombre, c.anio, c.trimestre, c.mes, c.dia, c.modalidad, c.cupos_maximos, c.enlace_virtual,
-                                     c.duracion_tipo, c.tipo_accion, c.horas_totales, c.semanas_duracion,
-                                     c.id_plantilla_certificado,
-                   GROUP_CONCAT(h.horario, '<br>') as horarios_html,
-                   COUNT(DISTINCT m.numero_empleado) as total_inscritos
-            FROM capacitaciones c
-            LEFT JOIN horarios_curso h ON c.id = h.id_capacitacion
-            LEFT JOIN matriculas m ON c.id = m.id_capacitacion
+            SELECT
+                ef.id AS edicion_id,
+                ca.id AS catalogo_id,
+                ca.nombre,
+                ca.modalidad,
+                ca.tipo_accion,
+                ef.trimestre,
+                ef.fecha_inicio,
+                ef.jornada,
+                ef.hora,
+                ef.cupos_maximos,
+                ef.enlace_acceso,
+                ef.privacidad,
+                ef.estado,
+                ef.etiqueta_edicion,
+                ef.docente_responsable,
+                ef.requisitos,
+                ef.duracion_horas,
+                ca.id_plantilla_certificado,
+                ca.requisitos AS requisitos_catalogo,
+                strftime('%Y', ef.fecha_inicio) AS anio,
+                strftime('%m', ef.fecha_inicio) AS mes_num,
+                strftime('%d', ef.fecha_inicio) AS dia,
+                COUNT(DISTINCT m.numero_empleado) as total_inscritos
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            LEFT JOIN matriculas m ON m.edicion_id = ef.id
         '''
         cursos_params = []
         if not es_superadmin:
-            query_cursos += ' WHERE c.id LIKE ?'
-            cursos_params.append(f'AF-{admin_direccion}-%')
+            query_cursos += ' WHERE ca.direccion_codigo = ?'
+            cursos_params.append(admin_direccion)
 
-        query_cursos += ' GROUP BY c.id ORDER BY c.anio DESC, c.mes'
-        cursos = conn.execute(query_cursos, cursos_params).fetchall()
+        query_cursos += ' GROUP BY ef.id ORDER BY ef.fecha_inicio DESC, ef.id'
+        cursos_raw = conn.execute(query_cursos, cursos_params).fetchall()
+        cursos = []
+        for fila in cursos_raw:
+            item = dict(fila)
+            item['id'] = item['edicion_id']
+            item['mes'] = _mes_nombre_desde_numero(item.get('mes_num'))
+            item['horarios_html'] = _etiqueta_horario_edicion(item.get('jornada'), item.get('hora'))
+            item['horas_totales'] = _normalizar_horas_totales(None, item.get('tipo_accion'))
+            item['semanas_duracion'] = 1
+            if not item.get('fecha_inicio'):
+                item['horarios_html'] = ''
+            cursos.append(item)
+
+        query_catalogos = '''
+            SELECT
+                ca.id AS catalogo_id,
+                ca.nombre,
+                ca.modalidad,
+                ca.tipo_accion,
+                ca.id_plantilla_certificado,
+                ca.direccion_codigo,
+                ca.requisitos,
+                COUNT(DISTINCT ef.id) as total_ediciones,
+                COUNT(DISTINCT m.numero_empleado) as total_inscritos
+            FROM catalogo_acciones ca
+            LEFT JOIN ediciones_formativas ef ON ef.catalogo_id = ca.id
+            LEFT JOIN matriculas m ON m.edicion_id = ef.id
+        '''
+        catalogos_params = []
+        if not es_superadmin:
+            query_catalogos += ' WHERE ca.direccion_codigo = ?'
+            catalogos_params.append(admin_direccion)
+
+        query_catalogos += ' GROUP BY ca.id ORDER BY ca.id'
+        catalogos_raw = conn.execute(query_catalogos, catalogos_params).fetchall()
+        catalogos = []
+        for fila in catalogos_raw:
+            item = dict(fila)
+            item['id'] = item['catalogo_id']
+            catalogos.append(item)
 
         query_calendario = '''
-            SELECT s.fecha, s.hora_inicio, s.hora_fin, s.estado, c.id AS id_curso, c.nombre AS nombre_curso, c.tipo_accion
+            SELECT
+                s.fecha,
+                s.hora_inicio,
+                s.hora_fin,
+                s.estado,
+                ef.id AS edicion_id,
+                ca.nombre AS nombre_curso,
+                ca.tipo_accion
             FROM sesiones_curso s
-            JOIN capacitaciones c ON c.id = s.id_curso
+            JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         '''
         calendario_params = []
         if not es_superadmin:
-            query_calendario += ' WHERE c.id LIKE ?'
-            calendario_params.append(f'AF-{admin_direccion}-%')
+            query_calendario += ' WHERE ca.direccion_codigo = ?'
+            calendario_params.append(admin_direccion)
 
-        query_calendario += ' ORDER BY s.fecha ASC, s.hora_inicio ASC, c.id ASC'
+        query_calendario += ' ORDER BY s.fecha ASC, s.hora_inicio ASC, ef.id ASC'
         calendario_sesiones = conn.execute(query_calendario, calendario_params).fetchall()
 
         cursos_con_sesion = set()
@@ -303,9 +478,9 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             if not fecha_iso:
                 continue
 
-            id_curso = (fila['id_curso'] or '').strip().upper()
-            if id_curso:
-                cursos_con_sesion.add(id_curso)
+            edicion_id = (fila['edicion_id'] or '').strip().upper()
+            if edicion_id:
+                cursos_con_sesion.add(edicion_id)
 
             calendario_eventos.append(
                 {
@@ -314,7 +489,8 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                     'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_iso),
                     'hora_inicio': fila['hora_inicio'],
                     'hora_fin': fila['hora_fin'],
-                    'id_curso': id_curso,
+                    'id_curso': edicion_id,
+                    'edicion_id': edicion_id,
                     'nombre_curso': fila['nombre_curso'],
                     'estado': fila['estado'],
                     'tipo_accion': _normalizar_tipo_accion(fila['tipo_accion']),
@@ -322,11 +498,11 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             )
 
         for curso in cursos:
-            id_curso = (curso['id'] or '').strip().upper()
-            if not id_curso or id_curso in cursos_con_sesion:
+            edicion_id = (curso.get('edicion_id') or '').strip().upper()
+            if not edicion_id or edicion_id in cursos_con_sesion:
                 continue
 
-            fecha_iso = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+            fecha_iso = (curso.get('fecha_inicio') or '').strip()[:10]
             if not fecha_iso:
                 continue
 
@@ -337,10 +513,11 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                     'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_iso),
                     'hora_inicio': None,
                     'hora_fin': None,
-                    'id_curso': id_curso,
-                    'nombre_curso': curso['nombre'],
+                    'id_curso': edicion_id,
+                    'edicion_id': edicion_id,
+                    'nombre_curso': curso.get('nombre'),
                     'estado': None,
-                    'tipo_accion': _normalizar_tipo_accion(curso['tipo_accion']),
+                    'tipo_accion': _normalizar_tipo_accion(curso.get('tipo_accion')),
                 }
             )
 
@@ -352,40 +529,67 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             )
         )
 
+        trimestre_actual = ['I', 'II', 'III', 'IV'][(datetime.now().month - 1) // 3]
+        query_ediciones_trimestre = '''
+            SELECT COUNT(*)
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            WHERE ef.trimestre = ?
+              AND (ef.estado IS NULL OR ef.estado NOT IN ('Finalizada', 'Cancelada'))
+        '''
+        trimestre_params = [trimestre_actual]
+        if not es_superadmin:
+            query_ediciones_trimestre += ' AND ca.direccion_codigo = ?'
+            trimestre_params.append(admin_direccion)
+
+        ediciones_trimestre_actual = conn.execute(
+            query_ediciones_trimestre,
+            trimestre_params,
+        ).fetchone()[0]
+
         if es_superadmin:
             total_matriculas = conn.execute('SELECT COUNT(*) FROM matriculas').fetchone()[0]
-            total_cursos = conn.execute('SELECT COUNT(*) FROM capacitaciones').fetchone()[0]
+            total_cursos = conn.execute('SELECT COUNT(*) FROM ediciones_formativas').fetchone()[0]
             total_profesores = conn.execute('SELECT COUNT(DISTINCT numero_empleado) FROM matriculas').fetchone()[0]
         else:
             total_matriculas = conn.execute(
                 '''
                 SELECT COUNT(*)
                 FROM matriculas m
-                JOIN capacitaciones c ON c.id = m.id_capacitacion
-                WHERE c.id LIKE ?
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ca.direccion_codigo = ?
                 ''',
-                (f'AF-{admin_direccion}-%',),
+                (admin_direccion,),
             ).fetchone()[0]
 
             total_cursos = conn.execute(
-                'SELECT COUNT(*) FROM capacitaciones WHERE id LIKE ?',
-                (f'AF-{admin_direccion}-%',),
+                '''
+                SELECT COUNT(*)
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ca.direccion_codigo = ?
+                ''',
+                (admin_direccion,),
             ).fetchone()[0]
 
             total_profesores = conn.execute(
                 '''
                 SELECT COUNT(DISTINCT m.numero_empleado)
                 FROM matriculas m
-                JOIN capacitaciones c ON c.id = m.id_capacitacion
-                WHERE c.id LIKE ?
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ca.direccion_codigo = ?
                 ''',
-                (f'AF-{admin_direccion}-%',),
+                (admin_direccion,),
             ).fetchone()[0]
 
         stats = {
             'total_matriculas': total_matriculas,
             'total_cursos': total_cursos,
             'total_profesores': total_profesores,
+            'ediciones_trimestre_actual': ediciones_trimestre_actual,
+            'trimestre_actual': trimestre_actual,
         }
 
         usuarios_admin = []
@@ -403,7 +607,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 '''
                 SELECT d.codigo, d.nombre, d.ruta_firma_img,
                        (SELECT COUNT(*) FROM admin_users a WHERE a.direccion = d.codigo AND a.rol = 'admin') as total_admins,
-                       (SELECT COUNT(*) FROM capacitaciones c WHERE c.id LIKE 'AF-' || d.codigo || '-%') as total_cursos
+                       (SELECT COUNT(*) FROM catalogo_acciones ca WHERE ca.direccion_codigo = d.codigo) as total_cursos
                 FROM direcciones d
                 ORDER BY d.codigo
                 '''
@@ -419,6 +623,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'direcciones': direcciones,
             'registros': registros,
             'cursos': cursos,
+            'catalogos': catalogos,
             'calendario_eventos': calendario_eventos,
             'stats': stats,
             'usuarios_admin': usuarios_admin,
@@ -439,8 +644,15 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'direcciones': [],
             'registros': [],
             'cursos': [],
+            'catalogos': [],
             'calendario_eventos': [],
-            'stats': {'total_matriculas': 0, 'total_cursos': 0, 'total_profesores': 0},
+            'stats': {
+                'total_matriculas': 0,
+                'total_cursos': 0,
+                'total_profesores': 0,
+                'ediciones_trimestre_actual': 0,
+                'trimestre_actual': 'I',
+            },
             'usuarios_admin': [],
             'direcciones_gestion': [],
             'filtros': {
@@ -461,16 +673,17 @@ def get_admin_stats_payload(admin_rol, admin_direccion):
         where_stats = ''
         params = []
         if admin_rol != 'superadmin':
-            where_stats = ' WHERE c.id LIKE ? '
-            params.append(f'AF-{admin_direccion}-%')
+            where_stats = ' WHERE ca.direccion_codigo = ? '
+            params.append(admin_direccion)
 
         datos_cursos = conn.execute(
             f'''
-            SELECT c.nombre, COUNT(m.numero_empleado) as total
-            FROM capacitaciones c
-            LEFT JOIN matriculas m ON c.id = m.id_capacitacion
+            SELECT ca.nombre, COUNT(m.numero_empleado) as total
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            LEFT JOIN matriculas m ON ef.id = m.edicion_id
             {where_stats}
-            GROUP BY c.id
+            GROUP BY ef.id
             ORDER BY total DESC
             LIMIT 10
             ''',
@@ -479,12 +692,13 @@ def get_admin_stats_payload(admin_rol, admin_direccion):
 
         datos_meses = conn.execute(
             f'''
-            SELECT c.mes || ' ' || c.anio as periodo, COUNT(m.id) as total
+            SELECT strftime('%m %Y', m.fecha_matricula) as periodo, COUNT(m.id) as total
             FROM matriculas m
-            JOIN capacitaciones c ON m.id_capacitacion = c.id
+            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
             {where_stats}
             GROUP BY periodo
-            ORDER BY c.anio DESC, c.mes
+            ORDER BY MAX(m.fecha_matricula) DESC
             LIMIT 12
             ''',
             params,
@@ -514,25 +728,37 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
         conn = get_db_connection()
 
         query = '''
-            SELECT m.numero_empleado, c.id, c.nombre, c.anio, c.trimestre, c.mes,
-                   m.horario_elegido, m.fecha_matricula, m.aprobado
+            SELECT m.numero_empleado,
+                   ef.id AS edicion_id,
+                   ca.nombre,
+                   ef.trimestre,
+                   ef.fecha_inicio,
+                   ef.jornada,
+                   ef.hora,
+                   m.fecha_matricula,
+                   m.aprobado,
+                   strftime('%Y', ef.fecha_inicio) AS anio,
+                   strftime('%m', ef.fecha_inicio) AS mes_num
             FROM matriculas m
-            JOIN capacitaciones c ON m.id_capacitacion = c.id
+            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
             WHERE 1=1
         '''
         params = []
         if admin_rol != 'superadmin':
-            query += ' AND c.id LIKE ?'
-            params.append(f'AF-{admin_direccion}-%')
+            query += ' AND ca.direccion_codigo = ?'
+            params.append(admin_direccion)
         if anio_filtro:
-            query += ' AND c.anio = ?'
+            query += " AND strftime('%Y', ef.fecha_inicio) = ?"
             params.append(anio_filtro)
         if trimestre_filtro:
-            query += ' AND c.trimestre = ?'
+            query += ' AND ef.trimestre = ?'
             params.append(trimestre_filtro)
         if mes_filtro:
-            query += ' AND c.mes = ?'
-            params.append(mes_filtro)
+            mes_num = _mes_numero_desde_nombre(mes_filtro)
+            if mes_num:
+                query += " AND strftime('%m', ef.fecha_inicio) = ?"
+                params.append(f'{mes_num:02d}')
         if resultado_filtro == 'aprobado':
             query += ' AND m.aprobado = 1'
         elif resultado_filtro == 'reprobado':
@@ -542,58 +768,91 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
         elif resultado_filtro == 'pendiente':
             query += ' AND m.aprobado IS NULL'
 
-        query += ' ORDER BY c.anio DESC, c.mes, c.id, m.numero_empleado'
-        registros = conn.execute(query, params).fetchall()
+        query += ' ORDER BY ef.fecha_inicio DESC, ef.id, m.numero_empleado'
+        registros_raw = conn.execute(query, params).fetchall()
+        registros = []
+        for fila in registros_raw:
+            item = dict(fila)
+            item['mes'] = _mes_nombre_desde_numero(item.get('mes_num'))
+            registros.append(item)
         conn.close()
         return {'ok': True, 'registros': registros}
     except sqlite3.Error:
         return {'ok': False, 'registros': []}
 
 
-def update_matricula_resultado(numero_empleado, id_capacitacion, matricula_id, aprobado, estado_codigo, admin_rol, admin_direccion):
+def update_matricula_resultado(
+    numero_empleado,
+    edicion_id,
+    matricula_id,
+    aprobado,
+    estado_codigo,
+    admin_rol,
+    admin_direccion,
+    comentario_validacion=None,
+):
     admin_direccion = normalizar_direccion(admin_direccion) or 'IPSD'
-
-    if admin_rol != 'superadmin' and not id_capacitacion.upper().startswith(f'AF-{admin_direccion}-'):
-        return {'ok': False, 'error': 'No autorizado para este curso', 'status_code': 403}
 
     try:
         conn = get_db_connection()
+        if admin_rol != 'superadmin':
+            permiso = conn.execute(
+                '''
+                SELECT 1
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ef.id = ? AND ca.direccion_codigo = ?
+                LIMIT 1
+                ''',
+                (edicion_id, admin_direccion),
+            ).fetchone()
+            if not permiso:
+                conn.close()
+                return {'ok': False, 'error': 'No autorizado para esta acción', 'status_code': 403}
+
         matricula_actual = conn.execute(
             '''
-            SELECT m.id, m.horario_elegido, c.nombre
+            SELECT m.id, ca.nombre
             FROM matriculas m
-            JOIN capacitaciones c ON c.id = m.id_capacitacion
-            WHERE m.id = ? AND m.numero_empleado = ? AND m.id_capacitacion = ?
+            JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            WHERE m.id = ? AND m.numero_empleado = ? AND m.edicion_id = ?
             ''',
-            (matricula_id, numero_empleado, id_capacitacion),
+            (matricula_id, numero_empleado, edicion_id),
         ).fetchone()
 
         if not matricula_actual:
             conn.close()
             return {'ok': False, 'error': 'Matrícula no encontrada', 'status_code': 404}
 
+        comentario_limpio = (comentario_validacion or '').strip()
+        comentario_db = comentario_limpio if comentario_limpio else None
+
         # Actualizar aprobación y fecha de aprobación si corresponde
         if aprobado == 1:
             fecha_aprobacion = datetime.now().strftime('%Y-%m-%d')
             cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ? WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
-                (aprobado, fecha_aprobacion, matricula_id, numero_empleado, id_capacitacion),
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ?, comentario_validacion = ? WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
+                (aprobado, fecha_aprobacion, comentario_db, matricula_id, numero_empleado, edicion_id),
             )
         else:
             cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
-                (aprobado, matricula_id, numero_empleado, id_capacitacion),
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL, comentario_validacion = ? WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
+                (aprobado, comentario_db, matricula_id, numero_empleado, edicion_id),
             )
+
+        detalle_evento = 'Resultado actualizado desde panel administrativo'
+        if comentario_limpio:
+            detalle_evento = f"{detalle_evento}. Comentario: {comentario_limpio}"
 
         registrar_evento_matricula(
             conn,
             numero_empleado=numero_empleado,
-            id_capacitacion=id_capacitacion,
-            nombre_curso=matricula_actual['nombre'],
-            horario_elegido=matricula_actual['horario_elegido'],
+            edicion_id=edicion_id,
+            nombre_accion=matricula_actual['nombre'],
             estado_codigo=estado_codigo,
             matricula_id=matricula_id,
-            detalle='Resultado actualizado desde panel administrativo',
+            detalle=detalle_evento,
         )
 
         conn.commit()
@@ -607,18 +866,48 @@ def update_matricula_resultado(numero_empleado, id_capacitacion, matricula_id, a
         return {'ok': False, 'error': 'No se pudo actualizar el resultado', 'status_code': 500}
 
 
+def actualizar_catalogo_accion(catalogo_id, nombre, modalidad, tipo_accion, id_plantilla_certificado=None, requisitos=None):
+    catalogo_id = (catalogo_id or '').strip().upper()
+    if not catalogo_id or not nombre:
+        return {'ok': False, 'error': 'ID y nombre son obligatorios.'}
+        
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            '''
+            UPDATE catalogo_acciones
+            SET nombre = ?, modalidad = ?, tipo_accion = ?, id_plantilla_certificado = ?, requisitos = ?
+            WHERE id = ?
+            ''',
+            (nombre, modalidad, tipo_accion, id_plantilla_certificado or None, requisitos or '', catalogo_id)
+        )
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except sqlite3.Error as e:
+        return {'ok': False, 'error': f'Error al actualizar catálogo: {str(e)}'}
+
+def eliminar_catalogo_accion(catalogo_id):
+    catalogo_id = (catalogo_id or '').strip().upper()
+    if not catalogo_id:
+        return {'ok': False, 'error': 'ID de catálogo inválido.'}
+        
+    try:
+        conn = get_db_connection()
+        # El ON DELETE CASCADE se encarga de las ediciones y matrículas
+        conn.execute('DELETE FROM catalogo_acciones WHERE id = ?', (catalogo_id,))
+        conn.commit()
+        conn.close()
+        return {'ok': True}
+    except sqlite3.Error as e:
+        return {'ok': False, 'error': f'Error al eliminar catálogo: {str(e)}'}
+
+
 def create_curso_records(
     nombre_curso,
-    trimestre,
     modalidad,
     tipo_accion,
-    horas_totales,
-    semanas_duracion,
-    cupos_maximos,
-    enlace_virtual,
     direccion_curso,
-    fechas_objetivo,
-    franjas_horarias,
     id_plantilla_certificado=None,
 ):
     try:
@@ -627,66 +916,219 @@ def create_curso_records(
             conn.close()
             return {'ok': False, 'invalid_direction': True}
 
-        franjas_norm = [str(franja).strip() for franja in (franjas_horarias or []) if str(franja).strip()]
-        if not franjas_norm:
-            franjas_norm = ['Por definir']
-
         tipo_accion_norm = _normalizar_tipo_accion(tipo_accion)
-        horas_totales_norm = _normalizar_horas_totales(horas_totales, tipo_accion_norm)
-        semanas_duracion_norm = _normalizar_semanas_duracion(semanas_duracion)
-        error_regla = _validar_reglas_tipo_accion(tipo_accion_norm, horas_totales_norm, semanas_duracion_norm)
-        if error_regla:
-            conn.close()
-            return {'ok': False, 'validation_error': error_regla}
 
-        duracion_tipo_norm = _duracion_tipo_desde_semanas(semanas_duracion_norm)
-
-        for fecha_actual in fechas_objetivo:
-            anio_actual = str(fecha_actual.year)
-            mes_actual = MESES_ES[fecha_actual.month - 1]
-            dia_actual = str(fecha_actual.day)
-            dia_semana_actual = DIAS_SEMANA[fecha_actual.weekday()]
-
-            id_curso = generar_id_curso(conn, direccion_curso, modalidad)
-            conn.execute(
-                '''
-                INSERT INTO capacitaciones
-                (id, nombre, anio, trimestre, mes, dia, anio_fin, mes_fin, dia_fin,
-                 modalidad, cupos_maximos, enlace_virtual, duracion_tipo,
-                 tipo_accion, horas_totales, semanas_duracion, id_plantilla_certificado)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (
-                    id_curso,
-                    nombre_curso,
-                    anio_actual,
-                    trimestre,
-                    mes_actual,
-                    dia_actual,
-                    anio_actual,
-                    mes_actual,
-                    dia_actual,
-                    modalidad,
-                    cupos_maximos,
-                    enlace_virtual,
-                    duracion_tipo_norm,
-                    tipo_accion_norm,
-                    horas_totales_norm,
-                    semanas_duracion_norm,
-                    id_plantilla_certificado,
-                ),
-            )
-            for franja in franjas_norm:
-                conn.execute(
-                    'INSERT INTO horarios_curso (id_capacitacion, horario) VALUES (?, ?)',
-                    (id_curso, f'{dia_semana_actual} {franja}'),
-                )
+        catalogo_id = generar_id_curso(conn, direccion_curso, modalidad)
+        conn.execute(
+            '''
+            INSERT INTO catalogo_acciones
+            (id, nombre, modalidad, tipo_accion, id_plantilla_certificado, direccion_codigo)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                catalogo_id,
+                nombre_curso,
+                modalidad,
+                tipo_accion_norm,
+                id_plantilla_certificado,
+                direccion_curso,
+            ),
+        )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        print(f"Error al crear: {e}")
         return {'ok': False}
+    except sqlite3.Error as e:
+        print(f"Error al crear: {e}")
+        return {'ok': False}
+    except Exception as e:
+        print(f"Error al crear: {e}")
+        return {'ok': False}
+
+
+def update_edicion_metadata(
+    edicion_id,
+    trimestre=None,
+    fecha_inicio=None,
+    cupos_maximos=None,
+    jornada=None,
+    hora=None,
+    docente_responsable=None,
+    etiqueta_edicion=None,
+    privacidad=None,
+    fecha_limite_matricula=None,
+    enlace_acceso=None,
+    requisitos=None,
+    duracion_horas=None,
+):
+    try:
+        conn = get_db_connection()
+
+        campos = []
+        params = []
+
+        if trimestre:
+            campos.append('trimestre = ?')
+            params.append(trimestre)
+
+        if fecha_inicio:
+            campos.append('fecha_inicio = ?')
+            params.append(fecha_inicio)
+
+        if cupos_maximos is not None:
+            campos.append('cupos_maximos = ?')
+            params.append(cupos_maximos)
+
+        if jornada is not None:
+            campos.append('jornada = ?')
+            params.append(_normalizar_jornada(jornada))
+
+        if hora is not None:
+            campos.append('hora = ?')
+            params.append(hora)
+
+        if docente_responsable is not None:
+            campos.append('docente_responsable = ?')
+            params.append(docente_responsable)
+
+        if etiqueta_edicion is not None:
+            campos.append('etiqueta_edicion = ?')
+            params.append(etiqueta_edicion)
+
+        if privacidad is not None:
+            campos.append('privacidad = ?')
+            params.append(privacidad)
+
+        if fecha_limite_matricula is not None:
+            campos.append('fecha_limite_matricula = ?')
+            valor_fecha_limite = fecha_limite_matricula or None
+            params.append(valor_fecha_limite)
+
+        if enlace_acceso is not None:
+            campos.append('enlace_acceso = ?')
+            params.append(enlace_acceso)
+
+        if requisitos is not None:
+            campos.append('requisitos = ?')
+            params.append(requisitos)
+
+        if duracion_horas is not None:
+            campos.append('duracion_horas = ?')
+            params.append(duracion_horas)
+
+        if not campos:
+            conn.close()
+            return {'ok': True}
+
+        params.append(edicion_id)
+        cursor = conn.execute(
+            f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = ?",
+            tuple(params),
+        )
+        conn.commit()
+        conn.close()
+
+        if cursor.rowcount == 0:
+            return {'ok': False, 'not_found': True}
+        return {'ok': True}
+    except sqlite3.Error:
+        return {'ok': False}
+
+
+def obtener_catalogo_id_por_edicion(edicion_id):
+    edicion_id_limpio = (edicion_id or '').strip().upper()
+    if not edicion_id_limpio:
+        return None
+
+    try:
+        conn = get_db_connection()
+        fila = conn.execute(
+            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ? LIMIT 1',
+            (edicion_id_limpio,),
+        ).fetchone()
+        conn.close()
+        return fila['catalogo_id'] if fila else None
+    except sqlite3.Error:
+        return None
+
+
+def listar_ediciones_catalogo(catalogo_id):
+    catalogo_id_limpio = (catalogo_id or '').strip().upper()
+    if not catalogo_id_limpio:
+        return []
+
+    try:
+        conn = get_db_connection()
+        ediciones = conn.execute(
+            '''
+            SELECT id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula,
+                   jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, privacidad,
+                   requisitos, duracion_horas
+            FROM ediciones_formativas
+            WHERE catalogo_id = ?
+            ORDER BY id ASC
+            ''',
+            (catalogo_id_limpio,),
+        ).fetchall()
+        conn.close()
+        return ediciones
+    except sqlite3.Error:
+        return []
+
+
+def crear_edicion_formativa(
+    catalogo_id,
+    trimestre=None,
+    fecha_inicio=None,
+    fecha_limite_matricula=None,
+    jornada='UNICA',
+    hora='',
+    cupos_maximos=None,
+    enlace_acceso=None,
+    docente_responsable='',
+    privacidad='Abierta',
+    etiqueta_edicion='',
+    requisitos='',
+    duracion_horas=None,
+):
+    catalogo_id_limpio = (catalogo_id or '').strip().upper()
+    if not catalogo_id_limpio:
+        return {'ok': False, 'error': 'Catalogo invalido'}
+
+    try:
+        conn = get_db_connection()
+        edicion_id = _generar_id_edicion(conn, catalogo_id_limpio)
+        conn.execute(
+            '''
+            INSERT INTO ediciones_formativas
+            (id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula, jornada,
+             hora, cupos_maximos, enlace_acceso, docente_responsable, privacidad, estado, requisitos, duracion_horas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                edicion_id,
+                catalogo_id_limpio,
+                etiqueta_edicion,
+                trimestre,
+                fecha_inicio,
+                fecha_limite_matricula,
+                _normalizar_jornada(jornada),
+                hora,
+                cupos_maximos,
+                enlace_acceso,
+                docente_responsable,
+                privacidad or 'Abierta',
+                'Programada',
+                requisitos or '',
+                duracion_horas,
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return {'ok': True, 'edicion_id': edicion_id}
     except sqlite3.Error:
         return {'ok': False}
 
@@ -710,7 +1152,7 @@ def update_curso_record(
     try:
         conn = get_db_connection()
         curso = conn.execute(
-            'SELECT id FROM capacitaciones WHERE id = ?',
+            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ?',
             (id_curso,),
         ).fetchone()
 
@@ -726,52 +1168,43 @@ def update_curso_record(
             conn.close()
             return {'ok': False, 'validation_error': error_regla}
 
-        duracion_tipo_norm = _duracion_tipo_desde_semanas(semanas_duracion_norm)
+        fecha_iso = _fecha_iso_desde_partes_curso(anio, mes, dia)
+
+        if fecha_iso:
+            conn.execute(
+                '''
+                UPDATE ediciones_formativas
+                SET trimestre = ?,
+                    fecha_inicio = ?,
+                    fecha_limite_matricula = ?,
+                    cupos_maximos = ?,
+                    enlace_acceso = ?
+                WHERE id = ?
+                ''',
+                (
+                    trimestre,
+                    fecha_iso,
+                    fecha_iso,
+                    cupos_maximos,
+                    enlace_virtual,
+                    id_curso,
+                ),
+            )
 
         conn.execute(
             '''
-            UPDATE capacitaciones
-            SET nombre = ?, anio = ?, trimestre = ?, mes = ?, dia = ?, modalidad = ?, duracion_tipo = ?,
-                tipo_accion = ?, horas_totales = ?, semanas_duracion = ?, cupos_maximos = ?, enlace_virtual = ?,
-                id_plantilla_certificado = ?,
-                anio_fin = COALESCE(NULLIF(anio_fin, ''), ?),
-                mes_fin = COALESCE(NULLIF(mes_fin, ''), ?),
-                dia_fin = COALESCE(NULLIF(dia_fin, ''), ?)
+            UPDATE catalogo_acciones
+            SET nombre = ?, modalidad = ?, tipo_accion = ?, id_plantilla_certificado = ?
             WHERE id = ?
             ''',
             (
                 nombre_curso,
-                anio,
-                trimestre,
-                mes,
-                dia,
                 modalidad,
-                duracion_tipo_norm,
                 tipo_accion_norm,
-                horas_totales_norm,
-                semanas_duracion_norm,
-                cupos_maximos,
-                enlace_virtual,
                 id_plantilla_certificado,
-                anio,
-                mes,
-                dia,
-                id_curso,
+                curso['catalogo_id'],
             ),
         )
-
-        horarios = conn.execute(
-            'SELECT id, horario FROM horarios_curso WHERE id_capacitacion = ?',
-            (id_curso,),
-        ).fetchall()
-        for h in horarios:
-            partes = (h['horario'] or '').split(' ', 1)
-            franja = partes[1] if len(partes) == 2 else h['horario']
-            nuevo_horario = f'{dia_semana} {franja}'
-            conn.execute(
-                'UPDATE horarios_curso SET horario = ? WHERE id = ?',
-                (nuevo_horario, h['id']),
-            )
 
         conn.commit()
         conn.close()
@@ -880,36 +1313,10 @@ def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo, ruta_firm
                 conn.close()
                 return {'ok': False, 'duplicate': True}
 
-            existe_destino = conn.execute(
-                'SELECT 1 FROM capacitaciones WHERE id LIKE ? LIMIT 1',
-                (f'AF-{codigo_nuevo}-%',),
-            ).fetchone()
-            if existe_destino:
-                conn.close()
-                return {'ok': False, 'duplicate': True}
-
-            cursos_a_renombrar = conn.execute(
-                'SELECT id FROM capacitaciones WHERE id LIKE ?',
-                (f'AF-{codigo_actual}-%',),
-            ).fetchall()
-
-            for fila in cursos_a_renombrar:
-                id_anterior = fila['id']
-                sufijo = id_anterior[len(f'AF-{codigo_actual}-'):]
-                id_nuevo = f'AF-{codigo_nuevo}-{sufijo}'
-
-                conn.execute(
-                    'UPDATE horarios_curso SET id_capacitacion = ? WHERE id_capacitacion = ?',
-                    (id_nuevo, id_anterior),
-                )
-                conn.execute(
-                    'UPDATE matriculas SET id_capacitacion = ? WHERE id_capacitacion = ?',
-                    (id_nuevo, id_anterior),
-                )
-                conn.execute(
-                    'UPDATE capacitaciones SET id = ? WHERE id = ?',
-                    (id_nuevo, id_anterior),
-                )
+            conn.execute(
+                'UPDATE catalogo_acciones SET direccion_codigo = ? WHERE direccion_codigo = ?',
+                (codigo_nuevo, codigo_actual),
+            )
 
             conn.execute(
                 'UPDATE admin_users SET direccion = ? WHERE direccion = ? AND rol = ?',
@@ -948,9 +1355,6 @@ def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo, ruta_firm
 
 
 def actualizar_identidad_direccion(direccion_codigo, file_firma, file_logo, upload_folder):
-    import os
-    from werkzeug.utils import secure_filename
-    
     try:
         conn = get_db_connection()
         if not direccion_existe(conn, direccion_codigo):
@@ -999,8 +1403,8 @@ def delete_direccion_record(codigo):
             (codigo, 'admin'),
         ).fetchone()[0]
         total_cursos = conn.execute(
-            'SELECT COUNT(*) FROM capacitaciones WHERE id LIKE ?',
-            (f'AF-{codigo}-%',),
+            'SELECT COUNT(*) FROM catalogo_acciones WHERE direccion_codigo = ?',
+            (codigo,),
         ).fetchone()[0]
 
         if total_direcciones <= 1 or total_admins > 0 or total_cursos > 0:
@@ -1018,9 +1422,24 @@ def delete_direccion_record(codigo):
 def delete_curso_record(id_curso):
     try:
         conn = get_db_connection()
-        conn.execute('DELETE FROM matriculas WHERE id_capacitacion = ?', (id_curso,))
-        conn.execute('DELETE FROM horarios_curso WHERE id_capacitacion = ?', (id_curso,))
-        conn.execute('DELETE FROM capacitaciones WHERE id = ?', (id_curso,))
+        catalogo = conn.execute(
+            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ?',
+            (id_curso,),
+        ).fetchone()
+
+        conn.execute('DELETE FROM certificados_emitidos WHERE edicion_id = ?', (id_curso,))
+        conn.execute('DELETE FROM matricula_historial WHERE edicion_id = ?', (id_curso,))
+        conn.execute('DELETE FROM matriculas WHERE edicion_id = ?', (id_curso,))
+        conn.execute('DELETE FROM sesiones_curso WHERE edicion_id = ?', (id_curso,))
+        conn.execute('DELETE FROM ediciones_formativas WHERE id = ?', (id_curso,))
+
+        if catalogo:
+            restante = conn.execute(
+                'SELECT 1 FROM ediciones_formativas WHERE catalogo_id = ? LIMIT 1',
+                (catalogo['catalogo_id'],),
+            ).fetchone()
+            if not restante:
+                conn.execute('DELETE FROM catalogo_acciones WHERE id = ?', (catalogo['catalogo_id'],))
         conn.commit()
         conn.close()
         return {'ok': True}
@@ -1102,98 +1521,61 @@ def _generar_token_asistencia_unico(conn):
     return uuid.uuid4().hex
 
 
-def _recalcular_duracion_desde_sesiones(conn, id_curso):
-    fila = conn.execute(
-        '''
-        SELECT MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin
-        FROM sesiones_curso
-        WHERE id_curso = ?
-        ''',
-        (id_curso,),
-    ).fetchone()
-
-    semanas = 1
-    fecha_inicio = (fila['fecha_inicio'] or '').strip() if fila else ''
-    fecha_fin = (fila['fecha_fin'] or '').strip() if fila else ''
-
-    if fecha_inicio and fecha_fin:
-        try:
-            fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            delta_dias = max(0, (fecha_fin_dt - fecha_inicio_dt).days)
-            semanas = (delta_dias // 7) + 1
-        except ValueError:
-            semanas = 1
-
-    semanas = _normalizar_semanas_duracion(semanas)
-    conn.execute(
-        '''
-        UPDATE capacitaciones
-        SET semanas_duracion = ?,
-            duracion_tipo = ?
-        WHERE id = ?
-        ''',
-        (semanas, _duracion_tipo_desde_semanas(semanas), id_curso),
-    )
+def _recalcular_duracion_desde_sesiones(conn, edicion_id):
+    _sincronizar_edicion_desde_sesiones(conn, edicion_id)
 
 
-def _sincronizar_horarios_desde_sesiones(conn, id_curso):
-    franjas = conn.execute(
-        '''
-        SELECT jornada, hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
-        FROM sesiones_curso
-        WHERE id_curso = ?
-        GROUP BY jornada, hora_inicio, hora_fin
-        ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
-        ''',
-        (id_curso,),
-    ).fetchall()
-
-    conn.execute('DELETE FROM horarios_curso WHERE id_capacitacion = ?', (id_curso,))
-
-    for fila in franjas:
-        jornada = _normalizar_jornada(fila['jornada'])
-        hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
-        hora_fin = (fila['hora_fin'] or '').strip()[:5]
-        if not hora_inicio or not hora_fin:
-            continue
-
-        horario_legible = _etiqueta_horario_jornada(jornada, hora_inicio, hora_fin)
-        conn.execute(
-            'INSERT INTO horarios_curso (id_capacitacion, horario) VALUES (?, ?)',
-            (id_curso, horario_legible),
-        )
+def _sincronizar_horarios_desde_sesiones(conn, edicion_id):
+    _sincronizar_edicion_desde_sesiones(conn, edicion_id)
 
 
-def listar_sesiones_curso(id_curso):
-    id_curso_limpio = (id_curso or '').strip().upper()
-    if not id_curso_limpio:
-        return {'ok': False, 'error': 'Curso inválido'}
+def listar_sesiones_curso(id_target):
+    id_limpio = (id_target or '').strip().upper()
+    if not id_limpio:
+        return {'ok': False, 'error': 'Identificador inválido'}
 
     try:
         conn = get_db_connection()
+        # Intentar buscar por edicion_id directamente primero
         sesiones = conn.execute(
             '''
-            SELECT id_sesion, id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia
-            FROM sesiones_curso
-            WHERE id_curso = ?
-            ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
+            SELECT s.id_sesion, s.edicion_id, s.fecha, s.hora_inicio, s.hora_fin, s.estado, s.token_asistencia,
+                   ef.jornada, ef.docente_responsable, ef.etiqueta_edicion
+            FROM sesiones_curso s
+            JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+            WHERE s.edicion_id = ?
+            ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
             ''',
-            (id_curso_limpio,),
+            (id_limpio,),
         ).fetchall()
+        
+        if not sesiones:
+            # Si no hay, intentar buscar todas las sesiones de todas las ediciones de un catalogo_id
+            sesiones = conn.execute(
+                '''
+                SELECT s.id_sesion, s.edicion_id, s.fecha, s.hora_inicio, s.hora_fin, s.estado, s.token_asistencia,
+                       ef.jornada, ef.docente_responsable, ef.etiqueta_edicion
+                FROM sesiones_curso s
+                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                WHERE ef.catalogo_id = ?
+                ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+                ''',
+                (id_limpio,),
+            ).fetchall()
+            
         conn.close()
         return {'ok': True, 'sesiones': sesiones}
     except sqlite3.Error:
         return {'ok': False, 'error': 'No se pudieron cargar las sesiones'}
 
 
-def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', edicion=''):
-    id_curso_limpio = (id_curso or '').strip().upper()
+def crear_sesion_manual(edicion_id, fecha, hora_inicio, hora_fin, jornada='UNICA', docente_sesion='', edicion=''):
+    edicion_id_limpio = (edicion_id or '').strip().upper()
     fecha_obj = _normalizar_fecha_iso(fecha)
     hora_inicio_norm = _normalizar_hora_24(hora_inicio)
     hora_fin_norm = _normalizar_hora_24(hora_fin)
 
-    if not id_curso_limpio:
+    if not edicion_id_limpio:
         return {'ok': False, 'error': 'Curso inválido'}
     if not fecha_obj or not hora_inicio_norm or not hora_fin_norm:
         return {'ok': False, 'error': 'Fecha u horas inválidas'}
@@ -1201,14 +1583,12 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
         return {'ok': False, 'error': 'La hora de fin debe ser mayor a la de inicio'}
 
     jornada_norm = _normalizar_jornada(jornada)
-    docente_sesion_norm = (docente_sesion or '').strip()
-    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
         curso = conn.execute(
-            'SELECT id FROM capacitaciones WHERE id = ? LIMIT 1',
-            (id_curso_limpio,),
+            'SELECT id FROM ediciones_formativas WHERE id = ? LIMIT 1',
+            (edicion_id_limpio,),
         ).fetchone()
         if not curso:
             conn.close()
@@ -1218,10 +1598,10 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
             '''
             SELECT 1
             FROM sesiones_curso
-            WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ?
+            WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
             LIMIT 1
             ''',
-            (id_curso_limpio, fecha_obj.isoformat(), hora_inicio_norm, hora_fin_norm, jornada_norm),
+            (edicion_id_limpio, fecha_obj.isoformat(), hora_inicio_norm, hora_fin_norm),
         ).fetchone()
         if existe:
             conn.close()
@@ -1229,21 +1609,17 @@ def crear_sesion_manual(id_curso, fecha, hora_inicio, hora_fin, jornada='UNICA',
 
         cursor = conn.execute(
             '''
-            INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
+            INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
+            VALUES (?, ?, ?, ?, 0, NULL)
             ''',
             (
-                id_curso_limpio,
+                edicion_id_limpio,
                 fecha_obj.isoformat(),
                 hora_inicio_norm,
                 hora_fin_norm,
-                jornada_norm,
-                docente_sesion_norm or None,
-                edicion_norm or None,
             ),
         )
-        _recalcular_duracion_desde_sesiones(conn, id_curso_limpio)
-        _sincronizar_horarios_desde_sesiones(conn, id_curso_limpio)
+        _sincronizar_edicion_desde_sesiones(conn, edicion_id_limpio, jornada=jornada_norm)
         conn.commit()
         id_sesion = cursor.lastrowid
         conn.close()
@@ -1268,13 +1644,11 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
         return {'ok': False, 'error': 'La hora de fin debe ser mayor a la de inicio'}
 
     jornada_norm = _normalizar_jornada(jornada)
-    docente_sesion_norm = (docente_sesion or '').strip()
-    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
         sesion = conn.execute(
-            'SELECT id_curso, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+            'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
             (id_sesion_int,),
         ).fetchone()
         if not sesion:
@@ -1289,15 +1663,14 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
             '''
             SELECT 1
             FROM sesiones_curso
-            WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ? AND id_sesion <> ?
+            WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND id_sesion <> ?
             LIMIT 1
             ''',
             (
-                sesion['id_curso'],
+                sesion['edicion_id'],
                 fecha_obj.isoformat(),
                 hora_inicio_norm,
                 hora_fin_norm,
-                jornada_norm,
                 id_sesion_int,
             ),
         ).fetchone()
@@ -1308,21 +1681,17 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
         conn.execute(
             '''
             UPDATE sesiones_curso
-            SET fecha = ?, hora_inicio = ?, hora_fin = ?, jornada = ?, docente_sesion = ?, edicion = ?
+            SET fecha = ?, hora_inicio = ?, hora_fin = ?
             WHERE id_sesion = ?
             ''',
             (
                 fecha_obj.isoformat(),
                 hora_inicio_norm,
                 hora_fin_norm,
-                jornada_norm,
-                docente_sesion_norm or None,
-                edicion_norm or None,
                 id_sesion_int,
             ),
         )
-        _recalcular_duracion_desde_sesiones(conn, sesion['id_curso'])
-        _sincronizar_horarios_desde_sesiones(conn, sesion['id_curso'])
+        _sincronizar_edicion_desde_sesiones(conn, sesion['edicion_id'], jornada=jornada_norm)
         conn.commit()
         conn.close()
         return {'ok': True}
@@ -1339,7 +1708,7 @@ def eliminar_sesion(id_sesion):
     try:
         conn = get_db_connection()
         sesion = conn.execute(
-            'SELECT id_curso, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
+            'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
             (id_sesion_int,),
         ).fetchone()
         if not sesion:
@@ -1359,8 +1728,7 @@ def eliminar_sesion(id_sesion):
             return {'ok': False, 'error': 'No se puede eliminar una sesión abierta'}
 
         conn.execute('DELETE FROM sesiones_curso WHERE id_sesion = ?', (id_sesion_int,))
-        _recalcular_duracion_desde_sesiones(conn, sesion['id_curso'])
-        _sincronizar_horarios_desde_sesiones(conn, sesion['id_curso'])
+        _sincronizar_edicion_desde_sesiones(conn, sesion['edicion_id'])
         conn.commit()
         conn.close()
         return {'ok': True}
@@ -1368,14 +1736,14 @@ def eliminar_sesion(id_sesion):
         return {'ok': False, 'error': 'No se pudo eliminar la sesión'}
 
 
-def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', edicion=''):
-    id_curso_limpio = (id_curso or '').strip().upper()
+def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', edicion=''):
+    edicion_id_limpio = (edicion_id or '').strip().upper()
     fecha_inicio_obj = _normalizar_fecha_iso(fecha_inicio)
     fecha_fin_obj = _normalizar_fecha_iso(fecha_fin)
     dias_norm = _normalizar_dias_semana(dias_semana)
     bloques_horarios = _normalizar_bloques_horarios(horas)
 
-    if not id_curso_limpio:
+    if not edicion_id_limpio:
         return {'ok': False, 'error': 'Curso inválido'}
     if not fecha_inicio_obj or not fecha_fin_obj:
         return {'ok': False, 'error': 'Fechas inválidas'}
@@ -1387,14 +1755,12 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
         return {'ok': False, 'error': 'Debes enviar al menos un bloque horario válido'}
 
     jornada_norm = _normalizar_jornada(jornada)
-    docente_sesion_norm = (docente_sesion or '').strip()
-    edicion_norm = (edicion or '').strip().upper()
 
     try:
         conn = get_db_connection()
         curso = conn.execute(
-            'SELECT id FROM capacitaciones WHERE id = ? LIMIT 1',
-            (id_curso_limpio,),
+            'SELECT id FROM ediciones_formativas WHERE id = ? LIMIT 1',
+            (edicion_id_limpio,),
         ).fetchone()
         if not curso:
             conn.close()
@@ -1411,35 +1777,36 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
                         '''
                         SELECT 1
                         FROM sesiones_curso
-                        WHERE id_curso = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND jornada = ?
+                        WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
                         LIMIT 1
                         ''',
-                        (id_curso_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm, jornada_norm),
+                        (edicion_id_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm),
                     ).fetchone()
                     if existe:
                         continue
 
                     conn.execute(
                         '''
-                        INSERT INTO sesiones_curso (id_curso, fecha, hora_inicio, hora_fin, jornada, docente_sesion, edicion, estado, token_asistencia)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
+                        INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
+                        VALUES (?, ?, ?, ?, 0, NULL)
                         ''',
                         (
-                            id_curso_limpio,
+                            edicion_id_limpio,
                             fecha_iso,
                             hora_inicio_norm,
                             hora_fin_norm,
-                            jornada_norm,
-                            docente_sesion_norm or None,
-                            edicion_norm or None,
                         ),
                     )
                     sesiones_creadas += 1
 
             fecha_cursor += timedelta(days=1)
 
-        _recalcular_duracion_desde_sesiones(conn, id_curso_limpio)
-        _sincronizar_horarios_desde_sesiones(conn, id_curso_limpio)
+        hora_texto = None
+        if len(bloques_horarios) == 1:
+            hora_texto = f"{bloques_horarios[0][0]}-{bloques_horarios[0][1]}"
+        elif len(bloques_horarios) > 1:
+            hora_texto = 'Varias'
+        _sincronizar_edicion_desde_sesiones(conn, edicion_id_limpio, jornada=jornada_norm, hora_texto=hora_texto)
         conn.commit()
         conn.close()
         return {'ok': True, 'sesiones_creadas': sesiones_creadas}
@@ -1447,88 +1814,120 @@ def generar_calendario_base(id_curso, fecha_inicio, fecha_fin, dias_semana, hora
         return {'ok': False, 'error': 'No se pudo generar el calendario base'}
 
 
-def obtener_reporte_asistencia_curso(id_curso):
-    id_curso_limpio = (id_curso or '').strip().upper()
-    if not id_curso_limpio:
-        return {'ok': False, 'error': 'Curso inválido'}
+def obtener_reporte_asistencia_curso(id_target):
+    id_limpio = (id_target or '').strip().upper()
+    if not id_limpio:
+        return {'ok': False, 'error': 'Identificador inválido'}
 
     try:
         conn = get_db_connection()
+        # Intentar obtener detalle como edicion
         curso = conn.execute(
             '''
-            SELECT id, nombre, anio, trimestre, mes, dia, modalidad, tipo_accion
-            FROM capacitaciones
-            WHERE id = ?
+            SELECT ef.id, ca.nombre, ef.trimestre, ef.fecha_inicio, ca.modalidad, ca.tipo_accion, ef.jornada, ef.hora, ca.id as catalogo_id
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            WHERE ef.id = ?
             LIMIT 1
             ''',
-            (id_curso_limpio,),
+            (id_limpio,),
         ).fetchone()
+        
+        es_catalogo = False
+        if not curso:
+            # Intentar como catalogo
+            curso = conn.execute(
+                '''
+                SELECT id as catalogo_id, id, nombre, modalidad, tipo_accion, NULL as trimestre, NULL as fecha_inicio, 'UNICA' as jornada, '' as hora
+                FROM catalogo_acciones
+                WHERE id = ?
+                LIMIT 1
+                ''',
+                (id_limpio,),
+            ).fetchone()
+            es_catalogo = True
+            
         if not curso:
             conn.close()
-            return {'ok': False, 'error': 'Curso no encontrado'}
+            return {'ok': False, 'error': 'Registro no encontrado'}
 
-        sesiones = conn.execute(
-            '''
-            SELECT id_sesion, jornada, hora_inicio, hora_fin, fecha, estado
-            FROM sesiones_curso
-            WHERE id_curso = ?
-            ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
-            ''',
-            (id_curso_limpio,),
-        ).fetchall()
+        if es_catalogo:
+            sesiones = conn.execute(
+                '''
+                SELECT s.id_sesion, s.hora_inicio, s.hora_fin, s.fecha, s.estado, s.edicion_id
+                FROM sesiones_curso s
+                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                WHERE ef.catalogo_id = ?
+                ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+                ''',
+                (id_limpio,),
+            ).fetchall()
+        else:
+            sesiones = conn.execute(
+                '''
+                SELECT id_sesion, hora_inicio, hora_fin, fecha, estado, edicion_id
+                FROM sesiones_curso
+                WHERE edicion_id = ?
+                ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
+                ''',
+                (id_limpio,),
+            ).fetchall()
 
-        jornadas_sesiones = {}
+        jornada_edicion = _normalizar_jornada(curso['jornada'])
         sesiones_curso_ordenadas = []
         total_sesiones_curso = 0
         for sesion in sesiones:
             id_sesion = int(sesion['id_sesion']) if sesion['id_sesion'] is not None else None
-            jornada = _normalizar_jornada(sesion['jornada'])
             hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
             hora_fin = (sesion['hora_fin'] or '').strip()[:5]
             fecha_iso = (sesion['fecha'] or '').strip()
             estado_sesion = int(sesion['estado'] or 0)
-            if not jornada:
-                jornada = 'UNICA'
-
-            if jornada not in jornadas_sesiones:
-                jornadas_sesiones[jornada] = {
-                    'codigo': jornada,
-                    'nombre': _nombre_jornada(jornada),
-                    'total_sesiones': 0,
-                    'rangos': set(),
-                }
 
             sesiones_curso_ordenadas.append(
                 {
                     'id_sesion': id_sesion,
-                    'jornada': jornada,
+                    'jornada': jornada_edicion,
                     'fecha': fecha_iso,
                     'hora_inicio': hora_inicio,
                     'hora_fin': hora_fin,
                     'estado': estado_sesion,
                 }
             )
-
-            jornadas_sesiones[jornada]['total_sesiones'] += 1
-            if hora_inicio and hora_fin:
-                jornadas_sesiones[jornada]['rangos'].add((hora_inicio, hora_fin))
             total_sesiones_curso += 1
 
-        matriculas_raw = conn.execute(
-            '''
-            SELECT
-                m.id,
-                m.numero_empleado,
-                m.horario_elegido,
-                m.aprobado,
-                d.nombre_completo
-            FROM matriculas m
-            LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
-            WHERE m.id_capacitacion = ?
-            ORDER BY m.id DESC
-            ''',
-            (id_curso_limpio,),
-        ).fetchall()
+        if es_catalogo:
+            matriculas_raw = conn.execute(
+                '''
+                SELECT
+                    m.id AS matricula_id,
+                    m.numero_empleado,
+                    m.aprobado,
+                    m.comentario_validacion,
+                    d.nombre_completo
+                FROM matriculas m
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                WHERE ef.catalogo_id = ?
+                ORDER BY m.id DESC
+                ''',
+                (id_limpio,),
+            ).fetchall()
+        else:
+            matriculas_raw = conn.execute(
+                '''
+                SELECT
+                    m.id AS matricula_id,
+                    m.numero_empleado,
+                    m.aprobado,
+                    m.comentario_validacion,
+                    d.nombre_completo
+                FROM matriculas m
+                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                WHERE m.edicion_id = ?
+                ORDER BY m.id DESC
+                ''',
+                (id_limpio,),
+            ).fetchall()
 
         matriculas_por_docente = {}
         for fila in matriculas_raw:
@@ -1537,31 +1936,55 @@ def obtener_reporte_asistencia_curso(id_curso):
                 continue
             matriculas_por_docente[numero_empleado] = fila
 
-        asistencia_por_docente_jornada = {}
-        asistencia_raw = conn.execute(
-            '''
-            SELECT ra.numero_empleado, s.jornada, COUNT(*) AS total_asistencias
-            FROM registro_asistencia ra
-            JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-            WHERE s.id_curso = ?
-            GROUP BY ra.numero_empleado, s.jornada
-            ''',
-            (id_curso_limpio,),
-        ).fetchall()
+        asistencia_por_docente = {}
+        if es_catalogo:
+            asistencia_raw = conn.execute(
+                '''
+                SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
+                FROM registro_asistencia ra
+                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                WHERE ef.catalogo_id = ?
+                GROUP BY ra.numero_empleado
+                ''',
+                (id_limpio,),
+            ).fetchall()
+        else:
+            asistencia_raw = conn.execute(
+                '''
+                SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
+                FROM registro_asistencia ra
+                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                WHERE s.edicion_id = ?
+                GROUP BY ra.numero_empleado
+                ''',
+                (id_limpio,),
+            ).fetchall()
         for fila in asistencia_raw:
             numero_empleado = (fila['numero_empleado'] or '').strip()
-            jornada = _normalizar_jornada(fila['jornada'])
-            asistencia_por_docente_jornada[(numero_empleado, jornada)] = int(fila['total_asistencias'] or 0)
+            asistencia_por_docente[numero_empleado] = int(fila['total_asistencias'] or 0)
 
-        asistencia_detalle_raw = conn.execute(
-            '''
-            SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
-            FROM registro_asistencia ra
-            JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-            WHERE s.id_curso = ?
-            ''',
-            (id_curso_limpio,),
-        ).fetchall()
+        if es_catalogo:
+            asistencia_detalle_raw = conn.execute(
+                '''
+                SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
+                FROM registro_asistencia ra
+                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                WHERE ef.catalogo_id = ?
+                ''',
+                (id_limpio,),
+            ).fetchall()
+        else:
+            asistencia_detalle_raw = conn.execute(
+                '''
+                SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
+                FROM registro_asistencia ra
+                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                WHERE s.edicion_id = ?
+                ''',
+                (id_limpio,),
+            ).fetchall()
 
         asistencias_por_docente_sesion = {}
         ultima_marcacion_por_docente = {}
@@ -1610,43 +2033,23 @@ def obtener_reporte_asistencia_curso(id_curso):
             mes_nombre = MESES_ES[marca_dt.month - 1].capitalize()
             return f"{marca_dt.day:02d}/{mes_nombre} - {marca_dt.strftime('%H:%M')}"
 
-        grupos = {}
-        for codigo in ORDEN_JORNADAS_REPORTE:
-            if codigo == 'POR_CONFIRMAR' or codigo in jornadas_sesiones:
-                total_sesiones = jornadas_sesiones[codigo]['total_sesiones'] if codigo in jornadas_sesiones else total_sesiones_curso
-                grupos[codigo] = {
-                    'codigo': codigo,
-                    'nombre': _nombre_jornada(codigo),
-                    'total_sesiones': total_sesiones,
-                    'docentes': [],
-                    'total_inscritos': 0,
-                    'total_asistencias': 0,
-                    'porcentaje_cobertura': 0.0,
-                }
+        grupos = {
+            jornada_edicion: {
+                'codigo': jornada_edicion,
+                'nombre': _nombre_jornada(jornada_edicion),
+                'total_sesiones': total_sesiones_curso,
+                'docentes': [],
+                'total_inscritos': 0,
+                'total_asistencias': 0,
+                'porcentaje_cobertura': 0.0,
+            }
+        }
+
+        hora_etiqueta = _etiqueta_horario_edicion(jornada_edicion, curso['hora'])
 
         for numero_empleado, fila in matriculas_por_docente.items():
-            horario_elegido = (fila['horario_elegido'] or '').strip()
-            jornada_resuelta = _resolver_jornada_desde_horario(horario_elegido, jornadas_sesiones)
-            if jornada_resuelta not in grupos:
-                grupos[jornada_resuelta] = {
-                    'codigo': jornada_resuelta,
-                    'nombre': _nombre_jornada(jornada_resuelta),
-                    'total_sesiones': total_sesiones_curso,
-                    'docentes': [],
-                    'total_inscritos': 0,
-                    'total_asistencias': 0,
-                    'porcentaje_cobertura': 0.0,
-                }
-
-            total_sesiones_jornada = grupos[jornada_resuelta]['total_sesiones']
-            if jornada_resuelta == 'POR_CONFIRMAR':
-                asistencias_docente = sum(
-                    asistencia_por_docente_jornada.get((numero_empleado, codigo_jornada), 0)
-                    for codigo_jornada in jornadas_sesiones.keys()
-                )
-            else:
-                asistencias_docente = asistencia_por_docente_jornada.get((numero_empleado, jornada_resuelta), 0)
-
+            total_sesiones_jornada = total_sesiones_curso
+            asistencias_docente = asistencia_por_docente.get(numero_empleado, 0)
             porcentaje_docente = 0.0
             if total_sesiones_jornada > 0:
                 porcentaje_docente = round((asistencias_docente / total_sesiones_jornada) * 100, 1)
@@ -1681,11 +2084,14 @@ def obtener_reporte_asistencia_curso(id_curso):
             else:
                 estado_texto = 'Pendiente'
 
-            grupos[jornada_resuelta]['docentes'].append(
+            grupos[jornada_edicion]['docentes'].append(
                 {
                     'numero_empleado': numero_empleado,
+                    'matricula_id': fila['matricula_id'],
+                    'aprobado': fila['aprobado'],
+                    'comentario_validacion': fila['comentario_validacion'],
                     'nombre_completo': (fila['nombre_completo'] or '').strip() or 'Docente sin nombre',
-                    'horario_elegido': horario_elegido or 'Sin horario definido',
+                    'horario_elegido': hora_etiqueta or 'Sin horario definido',
                     'asistencias': asistencias_docente,
                     'sesiones_programadas': total_sesiones_jornada,
                     'porcentaje': porcentaje_docente,
@@ -1712,8 +2118,7 @@ def obtener_reporte_asistencia_curso(id_curso):
             else:
                 grupo['porcentaje_cobertura'] = 0.0
 
-            if grupo['total_inscritos'] > 0 or grupo['total_sesiones'] > 0:
-                jornadas_ordenadas.append(grupo)
+            jornadas_ordenadas.append(grupo)
 
         total_inscritos = sum(grupo['total_inscritos'] for grupo in jornadas_ordenadas)
 
@@ -1740,12 +2145,12 @@ def obtener_reporte_asistencia_curso(id_curso):
             'curso': {
                 'id': curso['id'],
                 'nombre': curso['nombre'],
-                'anio': curso['anio'],
                 'trimestre': curso['trimestre'],
-                'mes': curso['mes'],
-                'dia': curso['dia'],
+                'fecha_inicio': curso['fecha_inicio'],
                 'modalidad': curso['modalidad'],
                 'tipo_accion': curso['tipo_accion'],
+                'jornada': curso['jornada'],
+                'hora': curso['hora'],
             },
             'jornadas': jornadas_ordenadas,
             'total_sesiones': total_sesiones_curso,
@@ -1841,18 +2246,18 @@ def cerrar_asistencia_sesion(id_sesion):
         return {'ok': False, 'error': 'No se pudo desactivar la asistencia'}
 
 
-def delete_matricula_record(numero_empleado, id_capacitacion, matricula_id=None):
+def delete_matricula_record(numero_empleado, edicion_id, matricula_id=None):
     try:
         conn = get_db_connection()
         if matricula_id:
             conn.execute(
-                'DELETE FROM matriculas WHERE id = ? AND numero_empleado = ? AND id_capacitacion = ?',
-                (matricula_id, numero_empleado, id_capacitacion),
+                'DELETE FROM matriculas WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
+                (matricula_id, numero_empleado, edicion_id),
             )
         else:
             conn.execute(
-                'DELETE FROM matriculas WHERE numero_empleado = ? AND id_capacitacion = ? AND aprobado IS NULL',
-                (numero_empleado, id_capacitacion),
+                'DELETE FROM matriculas WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL',
+                (numero_empleado, edicion_id),
             )
         conn.commit()
         conn.close()

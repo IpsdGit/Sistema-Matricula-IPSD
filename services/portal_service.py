@@ -3,7 +3,6 @@ from datetime import datetime
 
 from config import LIMITE_ABANDONO, LIMITE_REPROBADO, MESES_ES
 from database import get_db_connection
-from services.admin_service import _resolver_jornada_desde_horario
 from utils import (
     construir_contexto_dashboard,
     normalizar_nombre_curso,
@@ -20,22 +19,64 @@ def _normalizar_tipo_accion(valor):
     return tipo
 
 
-def _fecha_inicio_curso(anio, mes_nombre, dia):
-    try:
-        anio_int = int(str(anio).strip())
-        dia_int = int(str(dia).strip())
-    except (TypeError, ValueError):
+def _parse_fecha_limite(valor):
+    texto = (valor or '').strip()
+    if not texto:
         return None
-
-    meses_map = {nombre.lower(): idx + 1 for idx, nombre in enumerate(MESES_ES)}
-    mes_int = meses_map.get((mes_nombre or '').strip().lower())
-    if not mes_int:
-        return None
-
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(texto, fmt)
+        except ValueError:
+            continue
     try:
-        return datetime(anio_int, mes_int, dia_int).date()
+        return datetime.fromisoformat(texto)
     except ValueError:
         return None
+
+
+def _partes_fecha_iso(fecha_iso):
+    try:
+        fecha_dt = datetime.strptime((fecha_iso or '').strip()[:10], '%Y-%m-%d')
+    except ValueError:
+        return None, None, None
+    anio = str(fecha_dt.year)
+    mes = MESES_ES[fecha_dt.month - 1]
+    dia = str(fecha_dt.day)
+    return anio, mes, dia
+
+
+def _calcular_duracion_sesiones(sesiones):
+    if not sesiones:
+        return 0, 1
+
+    total_horas = 0.0
+    fechas = []
+    for fila in sesiones:
+        fecha_iso = (fila['fecha'] or '').strip()
+        try:
+            fecha_dt = datetime.strptime(fecha_iso[:10], '%Y-%m-%d')
+            fechas.append(fecha_dt)
+        except ValueError:
+            pass
+
+        hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
+        hora_fin = (fila['hora_fin'] or '').strip()[:5]
+        try:
+            hi = datetime.strptime(hora_inicio, '%H:%M')
+            hf = datetime.strptime(hora_fin, '%H:%M')
+            delta = (hf - hi).seconds / 3600
+            if delta > 0:
+                total_horas += delta
+        except Exception:
+            continue
+
+    if not fechas:
+        return int(round(total_horas)), 1
+
+    fecha_inicio = min(fechas)
+    fecha_fin = max(fechas)
+    semanas = (max(0, (fecha_fin.date() - fecha_inicio.date()).days) // 7) + 1
+    return int(round(total_horas)), semanas
 
 
 def load_dashboard_context(
@@ -61,39 +102,55 @@ def load_dashboard_context(
         return {'ok': False, 'error': 'Error de conexión. Intente nuevamente.'}
 
 
-def process_matricula(numero_empleado, id_capacitacion, horario_elegido):
+def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
     try:
         conn = get_db_connection()
-
-        curso = conn.execute(
-            'SELECT id, nombre, anio, mes, dia FROM capacitaciones WHERE id = ?',
-            (id_capacitacion,),
+        edicion = conn.execute(
+            '''
+            SELECT
+                ef.id,
+                ef.fecha_inicio,
+                ef.fecha_limite_matricula,
+                ef.cupos_maximos,
+                ef.jornada,
+                ef.hora,
+                ef.privacidad,
+                ef.estado,
+                ca.nombre,
+                ca.tipo_accion,
+                ca.modalidad
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            WHERE ef.id = ?
+            ''',
+            (edicion_id,),
         ).fetchone()
-        horarios_disponibles = obtener_horarios_disponibles_curso(conn, id_capacitacion)
-        horario_valido = horario_elegido in horarios_disponibles
 
-        if not curso or not horario_valido:
+        if not edicion:
             conn.close()
-            return {'ok': False, 'error': 'Curso o horario inválido.', 'error_view': 'index'}
+            return {'ok': False, 'error': 'Acción formativa inválida.', 'error_view': 'index'}
 
-        fecha_inicio = _fecha_inicio_curso(curso['anio'], curso['mes'], curso['dia'])
-        hoy = datetime.now().date()
-        if fecha_inicio and hoy > fecha_inicio:
+        if (edicion['privacidad'] or '').strip() != 'Abierta' or (edicion['estado'] or '').strip() != 'Programada':
+            conn.close()
+            return {'ok': False, 'error': 'Esta acción formativa no está disponible.', 'error_view': 'index'}
+
+        fecha_limite = _parse_fecha_limite(edicion['fecha_limite_matricula'])
+        if fecha_limite and datetime.now() > fecha_limite:
             contexto = construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
             conn.close()
             return {
                 'ok': False,
-                'error': f'La fecha máxima de matrícula para este curso fue el {fecha_inicio.strftime("%d/%m/%Y")}.',
+                'error': f'La fecha límite de matrícula fue el {fecha_limite.strftime("%d/%m/%Y")}.',
                 'error_view': 'dashboard',
                 'contexto': contexto,
             }
 
         resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
-        clave_curso = normalizar_nombre_curso(curso['nombre'])
+        clave_curso = normalizar_nombre_curso(edicion['nombre'])
         resumen_curso = resumen_intentos.get(
             clave_curso,
             {
-                'nombre': curso['nombre'],
+                'nombre': edicion['nombre'],
                 'aprobados': 0,
                 'reprobados': 0,
                 'abandonos': 0,
@@ -141,21 +198,36 @@ def process_matricula(numero_empleado, id_capacitacion, horario_elegido):
                 'contexto': contexto,
             }
 
+        if edicion['cupos_maximos']:
+            total_matriculas = conn.execute(
+                'SELECT COUNT(*) AS total FROM matriculas WHERE edicion_id = ?',
+                (edicion_id,),
+            ).fetchone()
+            if total_matriculas and total_matriculas['total'] >= int(edicion['cupos_maximos']):
+                contexto = construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
+                conn.close()
+                return {
+                    'ok': False,
+                    'error': 'No hay cupos disponibles para esta acción formativa.',
+                    'error_view': 'dashboard',
+                    'contexto': contexto,
+                }
+
         nueva_matricula = conn.execute(
-            'INSERT INTO matriculas (numero_empleado, id_capacitacion, horario_elegido) VALUES (?, ?, ?)',
-            (numero_empleado, id_capacitacion, horario_elegido),
+            'INSERT INTO matriculas (numero_empleado, edicion_id) VALUES (?, ?)',
+            (numero_empleado, edicion_id),
         )
 
         registrar_evento_matricula(
             conn,
             numero_empleado=numero_empleado,
-            id_capacitacion=id_capacitacion,
-            nombre_curso=curso['nombre'],
-            horario_elegido=horario_elegido,
+            edicion_id=edicion_id,
+            nombre_accion=edicion['nombre'],
             estado_codigo='PENDIENTE',
             matricula_id=nueva_matricula.lastrowid,
             detalle='Inscripción realizada por el docente',
         )
+        horario_resumen = (obtener_horarios_disponibles_curso(conn, edicion_id) or [None])[0]
         conn.commit()
         conn.close()
     except sqlite3.Error:
@@ -164,21 +236,22 @@ def process_matricula(numero_empleado, id_capacitacion, horario_elegido):
     return {
         'ok': True,
         'empleado': numero_empleado,
-        'nombre_curso': curso['nombre'],
-        'id_curso': id_capacitacion,
-        'horario': horario_elegido,
+        'nombre_accion': edicion['nombre'],
+        'edicion_id': edicion_id,
+        'horario': horario_resumen,
     }
 
 
-def process_cancelar_matricula(numero_empleado, id_capacitacion, matricula_id):
+def process_cancelar_matricula(numero_empleado, edicion_id, matricula_id):
     try:
         conn = get_db_connection()
         if matricula_id:
             matricula = conn.execute(
                 '''
-                SELECT m.id, m.id_capacitacion, c.nombre, m.horario_elegido
+                SELECT m.id, m.edicion_id, ca.nombre
                 FROM matriculas m
-                JOIN capacitaciones c ON c.id = m.id_capacitacion
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
                 WHERE m.id = ? AND m.numero_empleado = ?
                 ''',
                 (matricula_id, numero_empleado),
@@ -187,14 +260,13 @@ def process_cancelar_matricula(numero_empleado, id_capacitacion, matricula_id):
                 conn.close()
                 return {'ok': False, 'http_status': 404}
 
-            id_capacitacion = matricula['id_capacitacion']
-            nombre_curso = matricula['nombre']
+            edicion_id = matricula['edicion_id']
+            nombre_accion = matricula['nombre']
             registrar_evento_matricula(
                 conn,
                 numero_empleado=numero_empleado,
-                id_capacitacion=id_capacitacion,
-                nombre_curso=nombre_curso,
-                horario_elegido=matricula['horario_elegido'],
+                edicion_id=edicion_id,
+                nombre_accion=nombre_accion,
                 estado_codigo='CANCELADA',
                 matricula_id=matricula['id'],
                 detalle='Matrícula cancelada por el docente',
@@ -204,36 +276,40 @@ def process_cancelar_matricula(numero_empleado, id_capacitacion, matricula_id):
                 (matricula_id, numero_empleado),
             )
         else:
-            curso = conn.execute(
-                'SELECT nombre FROM capacitaciones WHERE id = ?',
-                (id_capacitacion,),
+            accion = conn.execute(
+                '''
+                SELECT ca.nombre
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ef.id = ?
+                ''',
+                (edicion_id,),
             ).fetchone()
-            nombre_curso = curso['nombre'] if curso else id_capacitacion
+            nombre_accion = accion['nombre'] if accion else edicion_id
 
             pendientes = conn.execute(
                 '''
-                SELECT id, horario_elegido
+                SELECT id
                 FROM matriculas
-                WHERE numero_empleado = ? AND id_capacitacion = ? AND aprobado IS NULL
+                WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL
                 ''',
-                (numero_empleado, id_capacitacion),
+                (numero_empleado, edicion_id),
             ).fetchall()
 
             for fila in pendientes:
                 registrar_evento_matricula(
                     conn,
                     numero_empleado=numero_empleado,
-                    id_capacitacion=id_capacitacion,
-                    nombre_curso=nombre_curso,
-                    horario_elegido=fila['horario_elegido'],
+                    edicion_id=edicion_id,
+                    nombre_accion=nombre_accion,
                     estado_codigo='CANCELADA',
                     matricula_id=fila['id'],
                     detalle='Matrícula cancelada por el docente',
                 )
 
             conn.execute(
-                'DELETE FROM matriculas WHERE numero_empleado = ? AND id_capacitacion = ? AND aprobado IS NULL',
-                (numero_empleado, id_capacitacion),
+                'DELETE FROM matriculas WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL',
+                (numero_empleado, edicion_id),
             )
 
         conn.commit()
@@ -244,8 +320,8 @@ def process_cancelar_matricula(numero_empleado, id_capacitacion, matricula_id):
     return {
         'ok': True,
         'empleado': numero_empleado,
-        'nombre_curso': nombre_curso,
-        'id_curso': id_capacitacion,
+        'nombre_accion': nombre_accion,
+        'edicion_id': edicion_id,
     }
 
 
@@ -257,9 +333,9 @@ def _estado_sesion_texto(estado):
     return 'Cerrada'
 
 
-def fetch_curso_detalle_docente(numero_empleado, id_curso):
-    id_curso = (id_curso or '').strip().upper()
-    if not numero_empleado or not id_curso:
+def fetch_curso_detalle_docente(numero_empleado, edicion_id):
+    edicion_id = (edicion_id or '').strip().upper()
+    if not numero_empleado or not edicion_id:
         return {'ok': False, 'error': 'Datos inválidos', 'status_code': 400}
 
     try:
@@ -269,20 +345,20 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             '''
             SELECT 1
             FROM matriculas
-            WHERE numero_empleado = ? AND id_capacitacion = ?
+            WHERE numero_empleado = ? AND edicion_id = ?
             LIMIT 1
             ''',
-            (numero_empleado, id_curso),
+            (numero_empleado, edicion_id),
         ).fetchone()
 
         historial_docente = conn.execute(
             '''
             SELECT 1
             FROM matricula_historial
-            WHERE numero_empleado = ? AND id_capacitacion = ?
+            WHERE numero_empleado = ? AND edicion_id = ?
             LIMIT 1
             ''',
-            (numero_empleado, id_curso),
+            (numero_empleado, edicion_id),
         ).fetchone()
 
         if not matricula_docente and not historial_docente:
@@ -292,59 +368,62 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
         curso = conn.execute(
             '''
             SELECT
-                c.id,
-                c.nombre,
-                c.anio,
-                c.trimestre,
-                c.mes,
-                c.dia,
-                c.modalidad,
-                c.enlace_virtual,
-                c.duracion_tipo,
-                c.tipo_accion,
-                c.horas_totales,
-                c.semanas_duracion,
-                c.id_plantilla_certificado,
+                ef.id,
+                ef.trimestre,
+                ef.fecha_inicio,
+                ef.jornada,
+                ef.hora,
+                ef.enlace_acceso,
+                ef.docente_responsable,
+                ef.privacidad,
+                ef.estado,
+                ef.requisitos,
+                ca.nombre,
+                ca.modalidad,
+                ca.tipo_accion,
+                ca.id_plantilla_certificado,
                 p.activo AS plantilla_activa,
                 ddir.ruta_firma_img,
                 p.texto_certificado
-            FROM capacitaciones c
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca
+                ON ca.id = ef.catalogo_id
             LEFT JOIN plantillas_certificados p
-                ON p.id = c.id_plantilla_certificado
+                ON p.id = ca.id_plantilla_certificado
             LEFT JOIN direcciones ddir
                 ON ddir.codigo = p.direccion_codigo
-            WHERE c.id = ?
+            WHERE ef.id = ?
             LIMIT 1
             ''',
-            (id_curso,),
+            (edicion_id,),
         ).fetchone()
         if not curso:
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado', 'status_code': 404}
 
-        horarios = obtener_horarios_disponibles_curso(conn, id_curso)
+        horarios = obtener_horarios_disponibles_curso(conn, edicion_id)
 
         matricula_activa = conn.execute(
             '''
-            SELECT id, horario_elegido, aprobado, fecha_matricula
+            SELECT id, aprobado, fecha_matricula
             FROM matriculas
-            WHERE numero_empleado = ? AND id_capacitacion = ?
+            WHERE numero_empleado = ? AND edicion_id = ?
             ORDER BY id DESC
             LIMIT 1
             ''',
-            (numero_empleado, id_curso),
+            (numero_empleado, edicion_id),
         ).fetchone()
 
         historial_ultimo = conn.execute(
             '''
-            SELECT h.estado_codigo, c.nombre AS estado_nombre, h.horario_elegido, h.fecha_evento
+            SELECT h.estado_codigo, c.nombre AS estado_nombre, h.fecha_evento
             FROM matricula_historial h
             LEFT JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
-            WHERE h.numero_empleado = ? AND h.id_capacitacion = ?
+            WHERE h.numero_empleado = ? AND h.edicion_id = ?
             ORDER BY h.id DESC
             LIMIT 1
             ''',
-            (numero_empleado, id_curso),
+            (numero_empleado, edicion_id),
         ).fetchone()
 
         estados_finales = {'APROBADA', 'NO_APROBADA', 'ABANDONO', 'CANCELADA'}
@@ -352,31 +431,7 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
         resultado_final_matricula = bool(matricula_activa and matricula_activa['aprobado'] is not None)
         puede_marcar_asistencia = bool(matricula_activa) and not resultado_final_matricula and estado_historial not in estados_finales
 
-        jornadas_sesiones_raw = conn.execute(
-            '''
-            SELECT jornada, hora_inicio, hora_fin
-            FROM sesiones_curso
-            WHERE id_curso = ?
-            ''',
-            (id_curso,),
-        ).fetchall()
-
-        jornadas_sesiones = {}
-        for fila in jornadas_sesiones_raw:
-            jornada = (fila['jornada'] or '').strip().upper() or 'UNICA'
-            hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
-            hora_fin = (fila['hora_fin'] or '').strip()[:5]
-            if jornada not in jornadas_sesiones:
-                jornadas_sesiones[jornada] = {'rangos': set()}
-            if hora_inicio and hora_fin:
-                jornadas_sesiones[jornada]['rangos'].add((hora_inicio, hora_fin))
-
-        horario_referencia = (
-            matricula_activa['horario_elegido']
-            if matricula_activa and matricula_activa['horario_elegido']
-            else (historial_ultimo['horario_elegido'] if historial_ultimo else '')
-        )
-        jornada_docente_codigo = _resolver_jornada_desde_horario(horario_referencia, jornadas_sesiones)
+        jornada_docente_codigo = (curso['jornada'] or '').strip().upper() or 'UNICA'
         nombres_jornada = {
             'UNICA': 'Unica',
             'MATUTINA': 'Matutina',
@@ -390,13 +445,10 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             '''
             SELECT
                 s.id_sesion,
-                s.id_curso,
+                s.edicion_id,
                 s.fecha,
                 s.hora_inicio,
                 s.hora_fin,
-                s.jornada,
-                s.docente_sesion,
-                s.edicion,
                 s.estado,
                 s.token_asistencia,
                 ra.id_registro AS asistencia_id,
@@ -405,17 +457,19 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             FROM sesiones_curso s
             LEFT JOIN registro_asistencia ra
                 ON ra.id_sesion = s.id_sesion AND ra.numero_empleado = ?
-            WHERE s.id_curso = ?
-              AND (s.jornada = ? OR s.jornada = 'UNICA')
+            WHERE s.edicion_id = ?
             ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
             ''',
-            (numero_empleado, id_curso, jornada_docente_codigo),
+            (numero_empleado, edicion_id),
         ).fetchall()
         conn.close()
 
         ahora = datetime.now()
         sesiones_pasadas = []
         sesiones_futuras = []
+
+        horas_totales, semanas_duracion = _calcular_duracion_sesiones(sesiones)
+        anio, mes, dia = _partes_fecha_iso(curso['fecha_inicio'])
 
         for fila in sesiones:
             fecha_iso = fila['fecha']
@@ -428,14 +482,14 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
 
             registro = {
                 'id_sesion': fila['id_sesion'],
-                'id_curso': fila['id_curso'],
+                'edicion_id': fila['edicion_id'],
                 'fecha': fila['fecha'],
                 'hora_inicio': fila['hora_inicio'],
                 'hora_fin': fila['hora_fin'],
-                'jornada': fila['jornada'],
-                'docente_sesion': fila['docente_sesion'],
-                'edicion': fila['edicion'],
-                'bloque_codigo': fila['edicion'],
+                'jornada': jornada_docente,
+                'docente_sesion': None,
+                'edicion': None,
+                'bloque_codigo': None,
                 'estado': fila['estado'],
                 'estado_texto': _estado_sesion_texto(fila['estado']),
                 'token_asistencia': fila['token_asistencia'] if fila['estado'] == 1 and puede_marcar_asistencia else None,
@@ -461,22 +515,23 @@ def fetch_curso_detalle_docente(numero_empleado, id_curso):
             'curso': {
                 'id': curso['id'],
                 'nombre': curso['nombre'],
-                'anio': curso['anio'],
+                'anio': anio,
                 'trimestre': curso['trimestre'],
-                'mes': curso['mes'],
-                'dia': curso['dia'],
+                'mes': mes,
+                'dia': dia,
+                'fecha_inicio': curso['fecha_inicio'],
                 'modalidad': curso['modalidad'],
-                'duracion_tipo': curso['duracion_tipo'] if curso['duracion_tipo'] in {'un_dia', 'varios_dias'} else 'un_dia',
+                'duracion_tipo': 'un_dia',
                 'tipo_accion': _normalizar_tipo_accion(curso['tipo_accion']),
-                'horas_totales': curso['horas_totales'] if curso['horas_totales'] else 0,
-                'semanas_duracion': curso['semanas_duracion'] if curso['semanas_duracion'] else 1,
-                'enlace_virtual': curso['enlace_virtual'],
+                'requisitos': curso['requisitos'] or '',
+                'horas_totales': horas_totales,
+                'semanas_duracion': semanas_duracion,
+                'enlace_virtual': curso['enlace_acceso'],
                 'horarios': horarios,
                 'matricula_activa': bool(matricula_activa),
                 'puede_marcar_asistencia': puede_marcar_asistencia,
                 'horario_matriculado': (
-                    matricula_activa['horario_elegido'] if matricula_activa and matricula_activa['horario_elegido']
-                    else (historial_ultimo['horario_elegido'] if historial_ultimo else None)
+                    horarios[0] if horarios else None
                 ),
                 'matricula_id': matricula_activa['id'] if matricula_activa else None,
                 'plantilla_disponible': plantilla_disponible,
@@ -506,7 +561,7 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
         conn = get_db_connection()
         sesion = conn.execute(
             '''
-            SELECT id_sesion, id_curso, estado, token_asistencia
+            SELECT id_sesion, edicion_id, estado, token_asistencia
             FROM sesiones_curso
             WHERE id_sesion = ?
             LIMIT 1
@@ -529,11 +584,11 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
             '''
             SELECT aprobado
             FROM matriculas
-            WHERE numero_empleado = ? AND id_capacitacion = ?
+            WHERE numero_empleado = ? AND edicion_id = ?
             ORDER BY id DESC
             LIMIT 1
             ''',
-            (numero_empleado, sesion['id_curso']),
+            (numero_empleado, sesion['edicion_id']),
         ).fetchone()
         if not matricula_docente:
             conn.close()
@@ -551,11 +606,11 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
             '''
             SELECT estado_codigo
             FROM matricula_historial
-            WHERE numero_empleado = ? AND id_capacitacion = ?
+            WHERE numero_empleado = ? AND edicion_id = ?
             ORDER BY id DESC
             LIMIT 1
             ''',
-            (numero_empleado, sesion['id_curso']),
+            (numero_empleado, sesion['edicion_id']),
         ).fetchone()
 
         estado_historial = (historial_ultimo['estado_codigo'] or '').strip().upper() if historial_ultimo else ''

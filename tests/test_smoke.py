@@ -65,7 +65,7 @@ class SmokeRoutesTest(unittest.TestCase):
         self._set_admin_session(superadmin=False)
         response = self.client.post('/admin/eliminar_matricula', data={
             'numero_empleado': '1234',
-            'id_capacitacion': 'AF-IPSD-V-001',
+            'edicion_id': 'IPSD-V-001-E001',
         })
         self.assertEqual(response.status_code, 403)
 

@@ -139,34 +139,39 @@
     background: #fee2e2;
   }
 
-  .select-resultado-matricula.estado-pendiente {
+  .select-resultado-matricula.estado-pendiente,
+  .select-evaluacion.estado-pendiente {
     border-color: #cbd5e1;
     background: #f8fafc;
     color: #475569;
   }
 
-  .select-resultado-matricula.estado-aprobado {
+  .select-resultado-matricula.estado-aprobado,
+  .select-evaluacion.estado-aprobado {
     border-color: #86efac;
     background: #ecfdf5;
     color: #166534;
     font-weight: 600;
   }
 
-  .select-resultado-matricula.estado-reprobado {
+  .select-resultado-matricula.estado-reprobado,
+  .select-evaluacion.estado-reprobado {
     border-color: #fca5a5;
     background: #fef2f2;
     color: #b91c1c;
     font-weight: 600;
   }
 
-  .select-resultado-matricula.estado-abandono {
+  .select-resultado-matricula.estado-abandono,
+  .select-evaluacion.estado-abandono {
     border-color: #fdba74;
     background: #fff7ed;
     color: #c2410c;
     font-weight: 600;
   }
 
-  .resultado-sync-status {
+  .resultado-sync-status,
+  .evaluacion-sync-status {
     font-size: .72rem;
     color: var(--text-muted);
     min-width: 62px;
@@ -684,6 +689,34 @@
       grid-auto-rows: 84px;
     }
   }
+
+  /* ── Chips de requisitos ── */
+  .chip-requisito {
+    background: rgba(217, 255, 154, 0.12);
+    border: 1px solid rgba(134, 198, 36, 0.35);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3a5c00;
+    display: inline-block;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+    transition: background .15s ease;
+  }
+
+  .chip-requisito:hover {
+    background: rgba(217, 255, 154, 0.22);
+  }
+
+  html[data-theme="dark"] .chip-requisito {
+    background: rgba(217, 255, 154, 0.08);
+    border-color: rgba(134, 198, 36, 0.25);
+    color: #b8e04a;
+  }
 </style>
 {% endblock %}
 
@@ -705,15 +738,15 @@
       </a>
       <a href="/admin?view=cursos" class="sidebar-link" data-view="cursos">
         <span class="link-icon"><span class="material-symbols-outlined"
-            style="vertical-align: middle; font-size: inherit;">library_books</span></span> Gestión de Cursos
+        style="vertical-align: middle; font-size: inherit;">layers</span></span> Catálogos
       </a>
-      <a href="/admin?view=calendario" class="sidebar-link" data-view="calendario">
+      <a href="/admin?view=ediciones" class="sidebar-link" data-view="ediciones">
         <span class="link-icon"><span class="material-symbols-outlined"
-            style="vertical-align: middle; font-size: inherit;">calendar_month</span></span> Calendario
+        style="vertical-align: middle; font-size: inherit;">calendar_month</span></span> Ediciones
       </a>
       <a href="/admin?view=matriculas" class="sidebar-link" data-view="matriculas">
         <span class="link-icon"><span class="material-symbols-outlined"
-            style="vertical-align: middle; font-size: inherit;">list_alt</span></span> Matrículas
+        style="vertical-align: middle; font-size: inherit;">list_alt</span></span> Reportes / Historial
       </a>
       <a href="/admin?view=certificados" class="sidebar-link" data-view="certificados">
         <span class="link-icon"><span class="material-symbols-outlined"
@@ -833,6 +866,16 @@
               <div>
                 <div class="stat-value" style="color:var(--success);">{{ stats.total_profesores }}</div>
                 <div class="stat-label">Profesores Inscritos</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                <span class="material-symbols-outlined"
+                  style="vertical-align: middle; font-size: inherit;">event_available</span>
+              </div>
+              <div>
+                <div class="stat-value" style="color:#667eea;">{{ stats.ediciones_trimestre_actual }}</div>
+                <div class="stat-label">Ediciones Activas (Trim. {{ stats.trimestre_actual }})</div>
               </div>
             </div>
           </div>
@@ -1044,7 +1087,7 @@
         </div>
       </section>
 
-      <!-- GESTIÓN DE CURSOS -->
+      <!-- GESTIÓN DE CATÁLOGOS -->
       <section id="section-cursos" class="admin-screen" data-screen="cursos">
         <div class="grid-2 mb-4 animate-fade-up-2">
 
@@ -1053,7 +1096,7 @@
             <div class="card-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
               <span style="font-weight:700; font-size:.95rem; color:var(--primary);"><span
                   class="material-symbols-outlined"
-                  style="vertical-align: middle; font-size: inherit;">add_circle</span> Nueva Acción Formativa</span>
+                  style="vertical-align: middle; font-size: inherit;">add_circle</span> Nuevo Catálogo</span>
             </div>
             <div class="card-body">
               <form action="/admin/crear_curso" method="POST">
@@ -1065,7 +1108,7 @@
                   {% set codigo_preview = (direcciones[0]['codigo'] if direcciones else 'IPSD') if es_superadmin else
                   admin_direccion %}
                   <div class="form-input" style="background:#f8fafc; color:#334155;">
-                    Se generará automáticamente con formato <strong id="preview-codigo">AF-{{ codigo_preview
+                    Se generará automáticamente con formato <strong id="preview-codigo">{{ codigo_preview
                       }}-V-001</strong>
                   </div>
                 </div>
@@ -1077,32 +1120,9 @@
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Fecha de Inicio (Límite de Matrícula)</label>
-                    <input type="date" class="form-input" name="fecha_curso" id="fecha_curso" value="{{ fecha_hoy }}"
-                      required>
-                  </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Trimestre</label>
-                    <select class="form-select" name="trimestre" required>
-                      <option value="I" selected>I</option>
-                      <option value="II">II</option>
-                      <option value="III">III</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="alert-ipsd info" style="margin:.2rem 0 .9rem 0;">
-                  <span><span class="material-symbols-outlined"
-                      style="vertical-align: middle; font-size: inherit;">info</span></span>
-                  <span>Días y horarios se gestionan después desde <strong>Gestión de Calendario</strong> del
-                    curso.</span>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
                   {% if es_superadmin %}
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Dirección del Curso</label>
+                    <label class="form-label">Dirección del Catálogo</label>
                     <select class="form-select" name="direccion_curso" id="direccion_curso" required>
                       {% for d in direcciones %}
                       <option value="{{ d['codigo'] }}" {% if d['codigo']==codigo_preview %}selected{% endif %}>
@@ -1113,8 +1133,8 @@
                   </div>
                   {% else %}
                   <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Dirección Responsable de Curso</label>
-                    <input type="text" class="form-input" value="{{ admin_direccion }}" readonly>
+                    <label class="form-label">Dirección Responsable del Catálogo</label>
+                    <input type="text" class="form-input" name="direccion_curso" value="{{ admin_direccion }}" readonly>
                   </div>
                   {% endif %}
                   <div class="form-group" style="margin-bottom:0;">
@@ -1126,7 +1146,7 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;" class="mb-2">
+                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
                   <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Tipo de Acción</label>
                     <select class="form-select" name="tipo_accion" id="tipo_accion" required>
@@ -1134,27 +1154,6 @@
                       <option value="SEMINARIO">Seminario</option>
                       <option value="CURSO" selected>Curso</option>
                     </select>
-                  </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Cupos Máximos</label>
-                    <input type="number" class="form-input" name="cupos_maximos" min="0" step="1" value="0" required>
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Horas Totales</label>
-                    <input type="number" class="form-input" id="horas_totales" name="horas_totales" min="1" step="1"
-                      value="20" required>
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr; gap:.75rem;" class="mb-2"
-                  id="enlace_virtual_group">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Enlace de Acceso (solo Virtual)</label>
-                    <input type="url" class="form-input" name="enlace_virtual" id="enlace_virtual"
-                      placeholder="https://..." pattern="https?://.*" required>
                   </div>
                 </div>
 
@@ -1172,7 +1171,7 @@
                 </div>
 
                 <button type="submit" class="btn-primary-ipsd w-full" style="justify-content:center; width:100%;">
-                  Crear Acción Formativa
+                  Crear Catálogo
                 </button>
               </form>
             </div>
@@ -1182,83 +1181,74 @@
           <div class="card-ipsd">
             <div class="card-header">
               <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
-                  style="vertical-align: middle; font-size: inherit;">list_alt</span>Acciones Formativas
-                Registradas</span>
-              <span class="badge-pill secondary text-xs">{{ cursos|length }}</span>
+                  style="vertical-align: middle; font-size: inherit;">list_alt</span>Catálogos Registrados</span>
+              <span class="badge-pill secondary text-xs">{{ catalogos|length }}</span>
             </div>
             <div style="overflow-x:auto; max-height:490px; overflow-y:auto;">
               <table class="table-ipsd">
                 <thead>
                   <tr>
                     <th>Código</th>
-                    <th>Nombre / Período</th>
-                    <th style="text-align:center;">Inscritos</th>
+                    <th>Nombre / Tipo</th>
+                    <th>Modalidad</th>
+                    <th style="text-align:center;">Ediciones</th>
                     <th style="text-align:right;">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for curso in cursos %}
+                  {% for catalogo in catalogos %}
                   <tr>
-                    <td><span class="badge-pill primary text-xs">{{ curso['id'] }}</span></td>
+                    <td><span class="badge-pill primary text-xs">{{ catalogo['id'] }}</span></td>
                     <td>
-                      <strong style="font-size:.88rem;">{{ curso['nombre'] }}</strong><br>
-                      <span style="font-size:.75rem; color:var(--text-muted);">
-                        {{ curso['dia'] }}/{{ curso['mes'] }}/{{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}
-                      </span><br>
+                      <strong style="font-size:.88rem;">{{ catalogo['nombre'] }}</strong><br>
                       <span style="font-size:.73rem; color:var(--text-muted);">
-                        {{ curso['modalidad'] }} · {{ (curso['tipo_accion'] or 'CURSO')|title }} · {{
-                        curso['horas_totales'] or 0 }}h · {{ curso['semanas_duracion'] or 1 }} semana(s) · Cupos: {{
-                        curso['cupos_maximos'] }}
+                        {{ (catalogo['tipo_accion'] or 'CURSO')|title }} · Inscritos: {{ catalogo['total_inscritos'] }}
                       </span>
-                      {% if curso['modalidad'] == 'Virtual' and curso['enlace_virtual'] %}
-                      <br>
-                      <a href="{{ curso['enlace_virtual'] }}" target="_blank" rel="noopener noreferrer"
-                        style="font-size:.73rem; color:var(--primary); font-weight:600;">
-                        Abrir enlace de la sesión
-                      </a>
-                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge-pill secondary text-xs">{{ catalogo['modalidad'] }}</span>
                     </td>
                     <td style="text-align:center;">
-                      <span
-                        class="badge-pill {% if curso['total_inscritos'] > 0 %}success{% else %}secondary{% endif %} text-xs">
-                        {{ curso['total_inscritos'] }}
-                      </span>
+                      {% if catalogo['total_ediciones'] == 0 %}
+                        <span class="badge-pill danger text-xs" style="background:#fee2e2; color:#991b1b; border-color:#fecaca;">Sin Ediciones</span>
+                      {% else %}
+                        <span class="badge-pill secondary text-xs">{{ catalogo['total_ediciones'] }}</span>
+                      {% endif %}
                     </td>
                     <td style="text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:.35rem;">
-                        <a href="{{ url_for('admin_gestion_sesiones', id_curso=curso['id']) }}"
-                          class="btn-ghost btn-icon-action" title="Gestionar sesiones" aria-label="Gestionar sesiones"
-                          style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; text-decoration:none;">
-                          <span class="material-symbols-outlined"
-                            style="vertical-align: middle; font-size: inherit;">calendar_month</span>
-                        </a>
-                        <a href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id']) }}"
-                          class="btn-ghost btn-icon-action" title="Ver asistencias" aria-label="Ver asistencias"
-                          style="color:#065f46; border-color:#99f6e4; background:#ecfeff; text-decoration:none;">
-                          <span class="material-symbols-outlined"
-                            style="vertical-align: middle; font-size: inherit;">group</span>
-                        </a>
-                        <button type="button" class="btn-primary-ipsd btn-icon-action btn-edit-curso"
-                          title="Editar curso" aria-label="Editar curso" data-id="{{ curso['id'] }}"
-                          data-nombre="{{ curso['nombre'] }}" data-anio="{{ curso['anio'] }}"
-                          data-mes="{{ curso['mes'] }}" data-dia="{{ curso['dia'] }}"
-                          data-trimestre="{{ curso['trimestre'] }}" data-modalidad="{{ curso['modalidad'] }}"
-                          data-tipo="{{ curso['tipo_accion'] or 'CURSO' }}"
-                          data-horas="{{ curso['horas_totales'] or 20 }}"
-                          data-semanas="{{ curso['semanas_duracion'] or 1 }}"
-                          data-enlace="{{ curso['enlace_virtual'] or '' }}" data-cupos="{{ curso['cupos_maximos'] }}"
-                          data-plantilla="{{ curso['id_plantilla_certificado'] or '' }}">
+                        <button type="button" class="btn-ghost btn-icon-action" title="Editar Catálogo"
+                          data-id="{{ catalogo['id'] }}"
+                          data-nombre="{{ catalogo['nombre']|escape }}"
+                          data-modalidad="{{ catalogo['modalidad'] }}"
+                          data-tipo="{{ catalogo['tipo_accion'] }}"
+                          data-plantilla="{{ catalogo['id_plantilla_certificado'] or '' }}"
+                          data-requisitos="{{ (catalogo.get('requisitos') or '')|escape }}"
+                          onclick="prepararEdicionCatalogo(this)"
+                          style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff;">
                           <span class="material-symbols-outlined"
                             style="vertical-align: middle; font-size: inherit;">edit</span>
                         </button>
-                        <form action="/admin/eliminar_curso" method="POST" style="display:inline; margin:0;"
-                          id="del-curso-{{ loop.index }}">
+
+                        <button type="button" class="btn-ghost btn-icon-action btn-catalogo-calendario"
+                          title="Ediciones / Calendario" aria-label="Ediciones / Calendario"
+                          data-catalogo-id="{{ catalogo['id'] }}"
+                          data-catalogo-nombre="{{ catalogo['nombre']|escape }}"
+                          data-catalogo-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}"
+                          data-catalogo-modalidad="{{ catalogo['modalidad'] }}"
+                          onclick="abrirModalCalendarioCatalogo(this)"
+                          style="color:#065f46; border-color:#99f6e4; background:#ecfeff;">
+                          <span class="material-symbols-outlined"
+                            style="vertical-align: middle; font-size: inherit;">calendar_month</span>
+                        </button>
+
+                        <form action="/admin/catalogo/eliminar" method="POST" style="display:inline; margin:0;"
+                          id="del-catalogo-{{ loop.index }}">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="view" value="cursos">
-                          <input type="hidden" name="id_curso" value="{{ curso['id'] }}">
+                          <input type="hidden" name="catalogo_id" value="{{ catalogo['id'] }}">
                           <button type="button" class="btn-danger-ipsd btn-icon-action btn-del-curso"
-                            title="Eliminar curso" aria-label="Eliminar curso" data-form-id="del-curso-{{ loop.index }}"
-                            data-nombre="{{ curso['nombre'] }}">
+                            title="Eliminar Catálogo" aria-label="Eliminar Catálogo"
+                            data-form-id="del-catalogo-{{ loop.index }}" data-nombre="{{ catalogo['nombre'] }}">
                             <span class="material-symbols-outlined"
                               style="vertical-align: middle; font-size: inherit;">delete</span>
                           </button>
@@ -1268,8 +1258,8 @@
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">
-                      No hay capacitaciones creadas.
+                    <td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                      No hay catálogos creados.
                     </td>
                   </tr>
                   {% endfor %}
@@ -1279,194 +1269,855 @@
           </div>
         </div>
 
-        {% if curso_sesiones_id %}
-        {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle else 'CURSO') %}
-        {% set curso_sesion_semanas = (curso_sesion_detalle['semanas_duracion'] if curso_sesion_detalle else 1) %}
-        {% set curso_sesion_horas = (curso_sesion_detalle['horas_totales'] if curso_sesion_detalle else 0) %}
-        <div class="modal-overlay active" id="modal-gestion-calendario" aria-hidden="false"
-          data-close-url="{{ url_for('admin') }}?view=cursos">
-          <div class="modal-box"
-            style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
-            <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario"
-              data-curso-sesiones-id="{{ curso_sesiones_id }}" style="box-shadow:none; border-radius:0; border:none;">
-              <div class="card-header"
-                style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
-                <div>
-                  <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
-                      style="vertical-align: middle; font-size: inherit;">calendar_month</span> Gestión de
-                    Calendario</span>
-                  <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
-                    Curso seleccionado: <strong>{{ curso_sesiones_id }}</strong>
+      </section>
+
+      <!-- MODAL EDITAR CATÁLOGO -->
+      <div class="modal-overlay" id="modal-editar-catalogo" aria-hidden="true" onclick="cerrarModalEditarCatalogo(event)">
+        <div class="modal-box" style="max-width:500px;">
+          <div class="card-ipsd">
+            <div class="card-header">
+              <span style="font-weight:700;"><span class="material-symbols-outlined" style="vertical-align:middle;">edit</span> Editar Catálogo</span>
+            </div>
+            <div class="card-body">
+              <form action="/admin/catalogo/editar" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="catalogo_id" id="edit-cat-id">
+                
+                <div class="form-group">
+                  <label class="form-label">Nombre de la Acción Formativa</label>
+                  <input type="text" class="form-input" name="nombre_curso" id="edit-cat-nombre" required>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                  <div class="form-group">
+                    <label class="form-label">Modalidad</label>
+                    <select class="form-select" name="modalidad" id="edit-cat-modalidad" required>
+                      <option value="Virtual">Virtual</option>
+                      <option value="Presencial">Presencial</option>
+                    </select>
                   </div>
-                  <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
-                    Tipo: <strong>{{ curso_sesion_tipo|title }}</strong> · {{ curso_sesion_horas }}h · {{
-                    curso_sesion_semanas }} semana(s)
+                  <div class="form-group">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select" name="tipo_accion" id="edit-cat-tipo" required>
+                      <option value="CONFERENCIA">Conferencia</option>
+                      <option value="SEMINARIO">Seminario</option>
+                      <option value="CURSO">Curso</option>
+                    </select>
                   </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:.5rem;">
-                  <a href="{{ url_for('admin') }}?view=cursos" class="btn-danger-ipsd"
-                    style="text-decoration:none;">Cerrar</a>
+
+                <div class="form-group">
+                  <label class="form-label">Plantilla de Certificado</label>
+                  <select class="form-select" name="id_plantilla_certificado" id="edit-cat-plantilla">
+                    <option value="">-- Ninguna --</option>
+                    {% for p in plantillas %}
+                    <option value="{{ p.id }}">{{ p.nombre_plantilla }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Requisitos del Curso <span style="color:var(--text-muted); font-size:.78rem;">(separados por comas)</span></label>
+                  <textarea class="form-input" name="requisitos" id="edit-cat-requisitos" rows="2"
+                    placeholder="Ej: Docente activo, Mínimo 2 años de experiencia"
+                    style="resize:vertical; min-height:52px;"></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem;">
+                  <button type="button" class="btn-ghost" onclick="cerrarModal('modal-editar-catalogo')">Cancelar</button>
+                  <button type="submit" class="btn-primary-ipsd">Guardar Cambios</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        function prepararEdicionCatalogo(btn) {
+          const id = btn.getAttribute('data-id');
+          const nombre = btn.getAttribute('data-nombre');
+          const modalidad = btn.getAttribute('data-modalidad');
+          const tipo = btn.getAttribute('data-tipo');
+          const plantilla = btn.getAttribute('data-plantilla');
+          const requisitos = btn.getAttribute('data-requisitos') || '';
+          abrirModalEditarCatalogo(id, nombre, modalidad, tipo, plantilla, requisitos);
+        }
+        function abrirModalEditarCatalogo(id, nombre, modalidad, tipo, plantilla, requisitos) {
+          document.getElementById('edit-cat-id').value = id;
+          document.getElementById('edit-cat-nombre').value = nombre;
+          document.getElementById('edit-cat-modalidad').value = modalidad;
+          document.getElementById('edit-cat-tipo').value = tipo;
+          document.getElementById('edit-cat-plantilla').value = plantilla;
+          document.getElementById('edit-cat-requisitos').value = requisitos || '';
+          abrirModal('modal-editar-catalogo');
+        }
+        function cerrarModalEditarCatalogo(e) {
+          if (e.target.id === 'modal-editar-catalogo') {
+            cerrarModal('modal-editar-catalogo');
+          }
+        }
+
+        function formatearTipoCatalogo(valor) {
+          const texto = String(valor || 'Curso').toLowerCase();
+          return texto.charAt(0).toUpperCase() + texto.slice(1);
+        }
+
+        function abrirModalCalendarioCatalogo(btn) {
+          const modal = document.getElementById('modal-gestion-calendario');
+          if (!modal || !btn) return;
+
+          const catalogoId = btn.getAttribute('data-catalogo-id') || '';
+          const catalogoNombre = btn.getAttribute('data-catalogo-nombre') || '';
+          const catalogoTipo = btn.getAttribute('data-catalogo-tipo') || 'CURSO';
+
+          const idCursoInput = document.getElementById('modal-calendario-id-curso');
+          const catalogoInput = document.getElementById('modal-calendario-catalogo-id');
+          if (idCursoInput) idCursoInput.value = '';
+          if (catalogoInput) catalogoInput.value = catalogoId;
+
+          const contexto = document.getElementById('modal-calendario-context');
+          if (contexto) {
+            const nombre = catalogoNombre ? ` · ${catalogoNombre}` : '';
+            contexto.innerHTML = `Catálogo seleccionado: <strong>${catalogoId}</strong>${nombre}`;
+          }
+
+          const tipoEl = document.getElementById('modal-calendario-tipo');
+          if (tipoEl) {
+            tipoEl.textContent = formatearTipoCatalogo(catalogoTipo);
+          }
+
+          const fechaInicio = document.getElementById('fecha_inicio_cal');
+          const fechaFin = document.getElementById('fecha_fin_cal');
+          const enlaceVirtual = document.getElementById('enlace_virtual_cal');
+          const hoy = new Date();
+          const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+          if (fechaInicio) fechaInicio.value = hoyIso;
+          if (fechaFin) fechaFin.value = hoyIso;
+          if (enlaceVirtual) enlaceVirtual.value = '';
+
+          const jornadasContainer = document.getElementById('jornadas-container');
+          const jornadaTemplate = document.getElementById('jornada-template');
+          if (jornadasContainer) {
+            if (!jornadasContainer.querySelector('.jornada-block') && jornadaTemplate) {
+              const contenido = jornadaTemplate.content.cloneNode(true);
+              jornadasContainer.appendChild(contenido);
+            }
+
+            const bloques = Array.from(jornadasContainer.querySelectorAll('.jornada-block'));
+            bloques.forEach((bloque, idx) => {
+              if (idx > 0) {
+                bloque.remove();
+                return;
+              }
+              bloque.dataset.edicionId = '';
+              const inputEdicion = bloque.querySelector('.jornada-edicion-id');
+              if (inputEdicion) inputEdicion.value = '';
+              const etiqueta = bloque.querySelector('.jornada-etiqueta');
+              if (etiqueta) etiqueta.value = '';
+              const docente = bloque.querySelector('.jornada-docente');
+              if (docente) docente.value = '';
+              const jornadaSelect = bloque.querySelector('.jornada-jornada');
+              if (jornadaSelect) jornadaSelect.value = 'UNICA';
+              const horaInicio = bloque.querySelector('.jornada-hora-inicio');
+              if (horaInicio) horaInicio.value = '';
+              const horaFin = bloque.querySelector('.jornada-hora-fin');
+              if (horaFin) horaFin.value = '';
+              bloque.querySelectorAll('.jornada-dia').forEach(cb => cb.checked = false);
+              const trimestre = bloque.querySelector('.jornada-trimestre');
+              if (trimestre) trimestre.value = 'I';
+              const cupos = bloque.querySelector('.jornada-cupos');
+              if (cupos) cupos.value = 0;
+              const privacidad = bloque.querySelector('.jornada-privacidad');
+              if (privacidad) privacidad.value = 'Abierta';
+              const fechaLimite = bloque.querySelector('.jornada-fecha-limite');
+              if (fechaLimite) fechaLimite.value = '';
+              const btnRemove = bloque.querySelector('.btn-remove-jornada');
+              if (btnRemove) btnRemove.style.display = 'none';
+              const titulo = bloque.querySelector('strong');
+              if (titulo) titulo.textContent = 'Jornada 1';
+            });
+          }
+
+          if (modal.dataset.closeUrl) {
+            modal.dataset.closeUrl = '';
+          }
+
+          // Conditional enlace visibility based on catalog modalidad
+          const catalogoModalidad = btn.getAttribute('data-catalogo-modalidad') || '';
+          if (typeof _actualizarVisibilidadEnlaceCal === 'function') {
+            _actualizarVisibilidadEnlaceCal(catalogoModalidad);
+          }
+
+          if (typeof window.recalcularDiasClaseGlobal === 'function') {
+            window.recalcularDiasClaseGlobal();
+          }
+
+          abrirModal('modal-gestion-calendario');
+        }
+      </script>
+
+      <!-- ── MODAL: Seleccionar Catálogo para Nueva Edición ── -->
+      <div class="modal-overlay" id="modal-seleccion-catalogo" aria-hidden="true">
+        <div class="modal-box" style="max-width:480px;">
+          <div class="modal-icon">
+            <span class="material-symbols-outlined" style="vertical-align:middle; font-size:inherit;">add_circle</span>
+          </div>
+          <div class="modal-title">Nueva Edición</div>
+          <div class="modal-desc" style="margin-bottom:1rem;">
+            Selecciona el Catálogo (molde) para el que deseas programar una nueva edición.
+          </div>
+          <div class="form-group" style="margin-bottom:1.1rem;">
+            <label class="form-label">Catálogo</label>
+            <select class="form-select" id="select-catalogo-nueva-edicion">
+              <option value="">-- Selecciona un catálogo --</option>
+              {% for catalogo in catalogos %}
+              <option value="{{ catalogo['id'] }}"
+                data-nombre="{{ catalogo['nombre']|escape }}"
+                data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}"
+                data-modalidad="{{ catalogo['modalidad'] }}">
+                {{ catalogo['id'] }} · {{ catalogo['nombre'] }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-ghost"
+              style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
+              onclick="cerrarModal('modal-seleccion-catalogo')">Cancelar</button>
+            <button class="btn-primary-ipsd" style="justify-content:center;"
+              onclick="confirmarSeleccionCatalogo()">
+              <span class="material-symbols-outlined" style="vertical-align:middle; font-size:inherit;">arrow_forward</span>
+              Continuar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        function abrirModalSeleccionCatalogo() {
+          const sel = document.getElementById('select-catalogo-nueva-edicion');
+          if (sel) sel.value = '';
+          abrirModal('modal-seleccion-catalogo');
+        }
+
+        function confirmarSeleccionCatalogo() {
+          const sel = document.getElementById('select-catalogo-nueva-edicion');
+          if (!sel || !sel.value) {
+            sel && sel.focus();
+            return;
+          }
+          const opt = sel.options[sel.selectedIndex];
+          // Build a synthetic element so we can reuse abrirModalCalendarioCatalogo
+          const fake = document.createElement('button');
+          fake.setAttribute('data-catalogo-id', opt.value);
+          fake.setAttribute('data-catalogo-nombre', opt.getAttribute('data-nombre') || '');
+          fake.setAttribute('data-catalogo-tipo', opt.getAttribute('data-tipo') || 'CURSO');
+          fake.setAttribute('data-catalogo-modalidad', opt.getAttribute('data-modalidad') || '');
+          cerrarModal('modal-seleccion-catalogo');
+          // Small delay so close animation finishes
+          setTimeout(() => abrirModalCalendarioCatalogo(fake), 120);
+        }
+      </script>
+
+      <!-- GESTIÓN DE EDICIONES -->
+      <section id="section-ediciones" class="admin-screen" data-screen="ediciones">
+        <div class="card-ipsd animate-fade-up-2">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:.5rem;">
+              <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
+                  style="vertical-align: middle; font-size: inherit;">calendar_month</span> Ediciones Activas</span>
+              <span class="badge-pill secondary text-xs">{{ cursos|length }}</span>
+            </div>
+            <button type="button" class="btn-primary-ipsd btn-icon-action" id="btn-programar-edicion"
+              title="Programar Nueva Edición" aria-label="Programar Nueva Edición"
+              onclick="abrirModalSeleccionCatalogo()"
+              style="width:auto; min-width:auto; padding:.35rem .7rem; font-size:.8rem; gap:.3rem; display:inline-flex; align-items:center;">
+              <span class="material-symbols-outlined" style="font-size:1rem; vertical-align:middle;">add</span>
+              Nueva Edición
+            </button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="table-ipsd">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Curso</th>
+                  <th>Requisitos para aprobar</th>
+                  <th>Etiqueta</th>
+                  <th>Jornada</th>
+                  <th>Horario</th>
+                  <th>Trimestre</th>
+                  <th style="text-align:center;">Año</th>
+                  <th style="text-align:center;">Inscritos</th>
+                  <th>Estado</th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for curso in cursos %}
+                <tr>
+                  <td><span class="badge-pill primary text-xs">{{ curso['id'] }}</span></td>
+                  <td>
+                    <strong style="font-size:.86rem;">{{ curso['nombre'] }}</strong><br>
+                    <span style="font-size:.72rem; color:var(--text-muted);">
+                      {{ curso['modalidad'] }} · {{ (curso['tipo_accion'] or 'CURSO')|title }}
+                    </span>
+                  </td>
+                  <td style="font-size:.78rem; color:var(--text-muted); max-width:220px;">
+                    {% if curso.get('requisitos') %}
+                      {{ curso.get('requisitos') }}
+                    {% else %}
+                      Sin requisitos
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge-pill secondary text-xs">
+                      {{ curso.get('etiqueta_edicion') or '—' }}
+                    </span>
+                  </td>
+                  <td style="font-size:.8rem;">
+                    {{ curso['jornada'] or '—' }}
+                  </td>
+                  <td style="font-size:.8rem; white-space:nowrap;">
+                    {{ curso['hora'] or '—' }}
+                  </td>
+                  <td><strong>{{ curso['trimestre'] or '—' }}</strong></td>
+                  <td style="text-align:center; font-size:.82rem;">
+                    {{ (curso['fecha_inicio'] or '')[:4] or '—' }}
+                  </td>
+                  <td style="text-align:center;">
+                    <span
+                      class="badge-pill {% if curso['total_inscritos'] > 0 %}success{% else %}secondary{% endif %} text-xs">
+                      {{ curso['total_inscritos'] }}{% if curso['cupos_maximos'] %} / {{ curso['cupos_maximos'] }}{% endif %}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge-pill secondary text-xs">{{ curso['estado'] or 'Programada' }}</span>
+                  </td>
+                  <td style="text-align:right;">
+                    <div style="display:flex; justify-content:flex-end; gap:.3rem;">
+                      <a href="{{ url_for('admin_gestion_sesiones', id_curso=curso['id']) }}"
+                        class="btn-ghost btn-icon-action" title="Calendario" aria-label="Calendario"
+                        style="color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; text-decoration:none;">
+                        <span class="material-symbols-outlined"
+                          style="vertical-align: middle; font-size: inherit;">calendar_month</span>
+                      </a>
+                      <button type="button" class="btn-ghost btn-icon-action btn-editar-edicion"
+                        title="Editar edición" aria-label="Editar edición"
+                        style="color:#0f766e; border-color:#99f6e4; background:#f0fdfa;"
+                        data-edicion-id="{{ curso['id'] }}"
+                        data-etiqueta="{{ (curso.get('etiqueta_edicion') or '')|escape }}"
+                        data-docente="{{ (curso.get('docente_responsable') or '')|escape }}"
+                        data-trimestre="{{ curso['trimestre'] or '' }}"
+                        data-jornada="{{ curso['jornada'] or '' }}"
+                        data-hora="{{ curso['hora'] or '' }}"
+                        data-cupos="{{ curso['cupos_maximos'] or '' }}"
+                        data-privacidad="{{ curso['privacidad'] or 'Abierta' }}"
+                        data-requisitos="{{ (curso.get('requisitos') or '')|escape }}"
+                        data-duracion="{{ curso.get('duracion_horas') or '' }}"
+                        data-enlace="{{ (curso.get('enlace_acceso') or '')|escape }}"
+                        data-modalidad="{{ curso['modalidad'] or '' }}"
+                        onclick="abrirModalEditarEdicion(this)">
+                        <span class="material-symbols-outlined"
+                          style="vertical-align: middle; font-size: inherit;">edit</span>
+                      </button>
+                      <a href="{{ url_for('admin_gestion_asistencias', id_curso=curso['id'], view='ediciones') }}"
+                        class="btn-primary-ipsd btn-icon-action"
+                        title="Participantes y Evaluación" aria-label="Participantes y Evaluación"
+                        style="text-decoration:none;">
+                        <span class="material-symbols-outlined"
+                          style="vertical-align: middle; font-size: inherit;">group</span>
+                      </a>
+                      <button type="button" class="btn-danger-ipsd btn-icon-action btn-del-edicion"
+                        title="Eliminar edición" aria-label="Eliminar edición"
+                        data-edicion-id="{{ curso['id'] }}"
+                        data-nombre="{{ curso['nombre']|escape }}">
+                        <span class="material-symbols-outlined"
+                          style="vertical-align: middle; font-size: inherit;">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="11" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                    No hay ediciones activas en este momento.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── MODAL: Editar Edición ── -->
+      <div class="modal-overlay" id="modal-editar-edicion" aria-hidden="true">
+        <div class="modal-box" style="max-width:580px;">
+          <div class="card-ipsd" style="box-shadow:none; border:none; border-radius:0;">
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+              <span style="font-weight:700;">
+                <span class="material-symbols-outlined" style="vertical-align:middle;">edit</span>
+                Editar Edición
+                <span id="edit-edicion-id-label" class="badge-pill primary text-xs" style="margin-left:.4rem;"></span>
+              </span>
+              <button type="button" class="btn-ghost" style="min-width:auto; padding:.25rem;"
+                onclick="cerrarModal('modal-editar-edicion')">
+                <span class="material-symbols-outlined" style="vertical-align:middle; font-size:1.2rem;">close</span>
+              </button>
+            </div>
+            <div class="card-body" style="display:grid; gap:.75rem;">
+              <input type="hidden" id="edit-edicion-hidden-id">
+              <input type="hidden" id="edit-edicion-modalidad">
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Etiqueta de Edición</label>
+                  <input type="text" class="form-input" id="edit-edicion-etiqueta" maxlength="20" placeholder="Ej: Grupo A">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Docente Responsable</label>
+                  <input type="text" class="form-input" id="edit-edicion-docente" maxlength="120">
                 </div>
               </div>
 
-              <div class="card-body" style="display:grid; gap:1rem;">
-                <div id="panel-generacion-calendario" class="calendar-panel">
-                  <form action="/admin/sesion/generar_calendario" method="POST" style="display:grid; gap:.75rem;">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Trimestre</label>
+                  <select class="form-select" id="edit-edicion-trimestre">
+                    <option value="I">I</option>
+                    <option value="II">II</option>
+                    <option value="III">III</option>
+                    <option value="IV">IV</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Jornada</label>
+                  <select class="form-select" id="edit-edicion-jornada">
+                    <option value="UNICA">Única</option>
+                    <option value="MATUTINA">Matutina</option>
+                    <option value="VESPERTINA">Vespertina</option>
+                    <option value="NOCTURNA">Nocturna</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Privacidad</label>
+                  <select class="form-select" id="edit-edicion-privacidad">
+                    <option value="Abierta">Abierta</option>
+                    <option value="Cerrada">Cerrada</option>
+                  </select>
+                </div>
+              </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Fecha inicio</label>
-                        <input type="date" class="form-input" name="fecha_inicio"
-                          value="{{ curso_sesion_config['fecha_inicio'] }}" required>
-                      </div>
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Fecha fin</label>
-                        <input type="date" class="form-input" name="fecha_fin"
-                          value="{{ curso_sesion_config['fecha_fin'] }}" required>
-                      </div>
-                    </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Horario (inicio-fin)</label>
+                  <input type="text" class="form-input" id="edit-edicion-hora" placeholder="07:00-10:00">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Cupos Máximos</label>
+                  <input type="number" class="form-input" id="edit-edicion-cupos" min="0" max="9999">
+                </div>
+              </div>
 
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Duración en Horas</label>
+                  <input type="number" class="form-input" id="edit-edicion-duracion" min="1" max="999" placeholder="40">
+                </div>
+                <div class="form-group" style="margin-bottom:0;" id="edit-bloque-enlace">
+                  <label class="form-label">Enlace de Acceso</label>
+                  <input type="url" class="form-input" id="edit-edicion-enlace" placeholder="https://...">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">
+                  Requisitos
+                  <span style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(separados por comas)</span>
+                </label>
+                <textarea class="form-input" id="edit-edicion-requisitos" rows="2"
+                  placeholder="Ej: Docente activo, asistencia mínima del 80%" 
+                  style="resize:vertical; min-height:48px;"></textarea>
+              </div>
+
+              <div id="edit-edicion-error"
+                style="display:none; color:#b91c1c; font-size:.82rem; background:#fef2f2;
+                       border:1px solid #fecaca; border-radius:8px; padding:.5rem .75rem;"></div>
+
+              <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                <button type="button" class="btn-ghost" onclick="cerrarModal('modal-editar-edicion')">Cancelar</button>
+                <button type="button" class="btn-primary-ipsd" id="btn-guardar-edicion" onclick="guardarEdicionEditada()">
+                  <span class="material-symbols-outlined" style="vertical-align:middle; font-size:1rem;">save</span>
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        /* ─── Editar Edición ─── */
+        function abrirModalEditarEdicion(btn) {
+          const id  = btn.getAttribute('data-edicion-id');
+          const mod = btn.getAttribute('data-modalidad') || '';
+          document.getElementById('edit-edicion-hidden-id').value = id;
+          document.getElementById('edit-edicion-id-label').textContent = id;
+          document.getElementById('edit-edicion-modalidad').value = mod;
+          document.getElementById('edit-edicion-etiqueta').value  = btn.getAttribute('data-etiqueta')  || '';
+          document.getElementById('edit-edicion-docente').value   = btn.getAttribute('data-docente')   || '';
+          document.getElementById('edit-edicion-trimestre').value = btn.getAttribute('data-trimestre') || 'I';
+          document.getElementById('edit-edicion-jornada').value   = btn.getAttribute('data-jornada')   || 'UNICA';
+          document.getElementById('edit-edicion-hora').value      = btn.getAttribute('data-hora')      || '';
+          document.getElementById('edit-edicion-cupos').value     = btn.getAttribute('data-cupos')     || '';
+          document.getElementById('edit-edicion-privacidad').value= btn.getAttribute('data-privacidad')|| 'Abierta';
+          document.getElementById('edit-edicion-requisitos').value= btn.getAttribute('data-requisitos')|| '';
+          document.getElementById('edit-edicion-duracion').value  = btn.getAttribute('data-duracion')  || '';
+          document.getElementById('edit-edicion-enlace').value    = btn.getAttribute('data-enlace')    || '';
+          document.getElementById('edit-edicion-error').style.display = 'none';
+          const esVirtual = mod.toLowerCase().includes('virtual') || mod.toLowerCase().includes('híbrida');
+          document.getElementById('edit-bloque-enlace').style.display = esVirtual ? '' : 'none';
+          abrirModal('modal-editar-edicion');
+        }
+
+        async function guardarEdicionEditada() {
+          const id  = document.getElementById('edit-edicion-hidden-id').value;
+          const btn = document.getElementById('btn-guardar-edicion');
+          const err = document.getElementById('edit-edicion-error');
+          err.style.display = 'none';
+          btn.disabled = true;
+          const csrfEl = document.querySelector('input[name="_csrf_token"]');
+          const payload = {
+            _csrf_token:       csrfEl ? csrfEl.value : '',
+            etiqueta_edicion:  document.getElementById('edit-edicion-etiqueta').value,
+            docente_responsable: document.getElementById('edit-edicion-docente').value,
+            trimestre:         document.getElementById('edit-edicion-trimestre').value,
+            jornada:           document.getElementById('edit-edicion-jornada').value,
+            hora:              document.getElementById('edit-edicion-hora').value,
+            cupos_maximos:     document.getElementById('edit-edicion-cupos').value,
+            privacidad:        document.getElementById('edit-edicion-privacidad').value,
+            requisitos:        document.getElementById('edit-edicion-requisitos').value,
+            duracion_horas:    document.getElementById('edit-edicion-duracion').value,
+            enlace_acceso:     document.getElementById('edit-edicion-enlace').value,
+          };
+          try {
+            const res  = await fetch(`/admin/ediciones/${id}/editar`, {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.ok) { cerrarModal('modal-editar-edicion'); window.location.reload(); }
+            else { err.textContent = data.error || 'No se pudo guardar.'; err.style.display = ''; }
+          } catch { err.textContent = 'Error de red. Inténtalo de nuevo.'; err.style.display = ''; }
+          finally { btn.disabled = false; }
+        }
+
+        /* ─── Eliminar Edición ─── */
+        document.addEventListener('click', function(e) {
+          const btn = e.target.closest('.btn-del-edicion');
+          if (!btn) return;
+          const id = btn.getAttribute('data-edicion-id');
+          if (!confirm(`¿Eliminar la edición "${id}"?\n\nSe eliminarán TODAS sus sesiones y matrículas. Esta acción NO se puede deshacer.`)) return;
+          const csrfEl = document.querySelector('input[name="_csrf_token"]');
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = `/admin/ediciones/${id}/eliminar`;
+          const t = document.createElement('input');
+          t.type = 'hidden'; t.name = '_csrf_token'; t.value = csrfEl ? csrfEl.value : '';
+          form.appendChild(t);
+          document.body.appendChild(form);
+          form.submit();
+        });
+
+        /* ─── Enlace de Acceso condicional (modal Calendario) ─── */
+        function _actualizarVisibilidadEnlaceCal(modalidad) {
+          const esVirtual = (modalidad || '').toLowerCase().includes('virtual') ||
+                            (modalidad || '').toLowerCase().includes('híbrida');
+          const bloque = document.getElementById('bloque-enlace-acceso');
+          if (bloque) bloque.style.display = esVirtual ? '' : 'none';
+        }
+      </script>
+
+      {% set modal_activo = (curso_sesiones_id or modo_nueva_edicion) %}
+      {% set curso_sesion_tipo = (curso_sesion_detalle['tipo_accion'] if curso_sesion_detalle is defined and curso_sesion_detalle else 'CURSO') %}
+      {% set modal_close_view = vista_inicial if vista_inicial in ['cursos', 'ediciones'] else 'ediciones' %}
+      {% set modal_close_url = url_for('admin') ~ '?view=' ~ modal_close_view %}
+      {% set curso_sesion_config = curso_sesion_config if curso_sesion_config is defined and curso_sesion_config else {'fecha_inicio': fecha_hoy, 'fecha_fin': fecha_hoy} %}
+      {% set jornadas_config = jornadas_config if jornadas_config is defined and jornadas_config else [] %}
+      <div class="modal-overlay{% if modal_activo %} active{% endif %}" id="modal-gestion-calendario"
+        aria-hidden="{{ 'false' if modal_activo else 'true' }}"{% if modal_activo %} data-close-url="{{ modal_close_url }}"{% endif %}>
+        <div class="modal-box"
+          style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
+          <div class="card-ipsd animate-fade-up-3" id="card-gestion-calendario"
+            data-curso-sesiones-id="{{ curso_sesiones_id }}" style="box-shadow:none; border-radius:0; border:none;">
+            <div class="card-header"
+              style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+              <div>
+                <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
+                    style="vertical-align: middle; font-size: inherit;">calendar_month</span> Gestión de
+                  Calendario</span>
+                <div id="modal-calendario-context" style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
+                  {% if modal_activo and modo_nueva_edicion and catalogo_seleccionado is defined and catalogo_seleccionado %}
+                  Catálogo seleccionado: <strong>{{ catalogo_seleccionado['id'] }}</strong>
+                  {% if catalogo_seleccionado['nombre'] %} · {{ catalogo_seleccionado['nombre'] }}{% endif %}
+                  {% elif modal_activo and curso_sesiones_id %}
+                  Edición seleccionada: <strong>{{ curso_sesiones_id }}</strong>
+                  {% else %}
+                  Selecciona un catálogo para abrir una nueva edición.
+                  {% endif %}
+                </div>
+                <div style="font-size:.76rem; color:var(--text-muted); margin-top:.15rem;">
+                  Tipo: <strong id="modal-calendario-tipo">{{ curso_sesion_tipo|title if modal_activo else 'Curso' }}</strong>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:.5rem;">
+                {% if modal_activo %}
+                <a href="{{ modal_close_url }}" class="btn-danger-ipsd" style="text-decoration:none;">Cerrar</a>
+                {% else %}
+                <button type="button" class="btn-danger-ipsd" onclick="cerrarModal('modal-gestion-calendario')">Cerrar</button>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="card-body" style="display:grid; gap:1rem;">
+              <div id="panel-generacion-calendario" class="calendar-panel">
+                <form id="form-generar-calendario" action="/admin/sesion/generar_calendario" method="POST"
+                  style="display:grid; gap:.75rem;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="id_curso" id="modal-calendario-id-curso" value="{{ curso_sesiones_id or '' }}">
+                    <input type="hidden" name="catalogo_id" id="modal-calendario-catalogo-id" value="{{ catalogo_id or '' }}">
+
+                  <div id="bloque-enlace-acceso" class="form-group" style="margin-bottom:0; display:none;">
+                    <label class="form-label">Enlace de Acceso</label>
+                    <input type="url" class="form-input" name="enlace_virtual" id="enlace_virtual_cal"
+                      placeholder="https://..." pattern="https?://.*"
+                      value="{{ (curso_sesion_detalle['enlace_acceso'] if curso_sesion_detalle else '') or '' }}">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">
+                      Requisitos de la Edición
+                      <span style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(separados por comas)</span>
+                    </label>
+                    <textarea class="form-input" name="requisitos" id="cal-requisitos" rows="2"
+                      placeholder="Ej: Docente activo, asistencia mínima del 80%"
+                      style="resize:vertical; min-height:50px;">{{ (curso_sesion_detalle.get('requisitos') if curso_sesion_detalle and curso_sesion_detalle.get('requisitos') else '') }}</textarea>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Duración en Horas</label>
+                    <input type="number" class="form-input" name="duracion_horas" id="cal-duracion-horas"
+                      min="1" max="999" placeholder="Ej: 40"
+                      value="{{ curso_sesion_detalle.get('duracion_horas') if curso_sesion_detalle and curso_sesion_detalle.get('duracion_horas') else '' }}">
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
                     <div class="form-group" style="margin-bottom:0;">
-                      <label class="form-label">Días de clase</label>
-                      <div class="calendar-days-grid">
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="0" {% if 0 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> L</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="1" {% if 1 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> M</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="2" {% if 2 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> X</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="3" {% if 3 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> J</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="4" {% if 4 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> V</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="5" {% if 5 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> S</label>
-                        <label class="calendar-day-pill"><input type="checkbox" name="dias_semana" value="6" {% if 6 in
-                            curso_sesion_config['dias_semana'] %}checked{% endif %}> D</label>
-                      </div>
+                      <label class="form-label">Fecha inicio</label>
+                      <input type="date" class="form-input" name="fecha_inicio" id="fecha_inicio_cal"
+                        value="{{ curso_sesion_config['fecha_inicio'] }}" required>
                     </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.65rem; align-items:end;">
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Hora inicio</label>
-                        <input type="time" class="form-input" name="hora_inicio"
-                          value="{{ curso_sesion_config['hora_inicio'] }}" required>
-                      </div>
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Hora fin</label>
-                        <input type="time" class="form-input" name="hora_fin"
-                          value="{{ curso_sesion_config['hora_fin'] }}" required>
-                      </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label">Fecha fin</label>
+                      <input type="date" class="form-input" name="fecha_fin" id="fecha_fin_cal"
+                        value="{{ curso_sesion_config['fecha_fin'] }}" required>
                     </div>
+                  </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem;">
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Jornada principal</label>
-                        <select class="form-select" name="jornada">
-                          <option value="UNICA" {% if curso_sesion_config['jornada']=='UNICA' %}selected{% endif %}>
-                            Única</option>
-                          <option value="MATUTINA" {% if curso_sesion_config['jornada']=='MATUTINA' %}selected{% endif
-                            %}>Matutina</option>
-                          <option value="VESPERTINA" {% if curso_sesion_config['jornada']=='VESPERTINA' %}selected{%
-                            endif %}>Vespertina</option>
-                          <option value="NOCTURNA" {% if curso_sesion_config['jornada']=='NOCTURNA' %}selected{% endif
-                            %}>Nocturna</option>
-                        </select>
-                      </div>
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Docente Responsable</label>
-                        <input type="text" class="form-input" name="docente_sesion"
-                          value="{{ curso_sesion_config['docente_sesion'] }}" maxlength="120"
-                          placeholder="Ej. Mgtr. Ana López">
-                      </div>
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Edición</label>
-                        <input type="text" class="form-input" name="edicion"
-                          value="{{ curso_sesion_config['edicion'] }}" maxlength="20" placeholder="Ej. G1">
-                      </div>
+                    <div id="jornadas-container" style="display:grid; gap:.75rem;">
+                      {% if jornadas_config and jornadas_config|length > 0 %}
+                        {% for jornada in jornadas_config %}
+                        <div class="jornada-block" data-edicion-id="{{ jornada['edicion_id'] }}"
+                          style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
+                          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                            <strong style="font-size:.85rem; color:#1e3a8a;">Jornada {{ loop.index }}</strong>
+                            <button type="button" class="btn-ghost btn-remove-jornada"{% if jornada['edicion_id'] %} style="display:none;"{% endif %}>
+                              Quitar
+                            </button>
+                          </div>
+
+                          <input type="hidden" class="jornada-edicion-id" value="{{ jornada['edicion_id'] }}">
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Etiqueta de Edicion</label>
+                              <input type="text" class="form-input jornada-etiqueta" maxlength="20"
+                                value="{{ jornada['etiqueta_edicion'] }}" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Docente Responsable</label>
+                              <input type="text" class="form-input jornada-docente" maxlength="120"
+                                value="{{ jornada['docente_responsable'] }}" required>
+                            </div>
+                          </div>
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Jornada</label>
+                              <select class="form-select jornada-jornada" required>
+                                <option value="UNICA" {% if jornada['jornada']=='UNICA' %}selected{% endif %}>Unica</option>
+                                <option value="MATUTINA" {% if jornada['jornada']=='MATUTINA' %}selected{% endif %}>Matutina</option>
+                                <option value="VESPERTINA" {% if jornada['jornada']=='VESPERTINA' %}selected{% endif %}>Vespertina</option>
+                                <option value="NOCTURNA" {% if jornada['jornada']=='NOCTURNA' %}selected{% endif %}>Nocturna</option>
+                              </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Hora inicio</label>
+                              <input type="time" class="form-input jornada-hora-inicio"
+                                value="{{ jornada['hora_inicio'] }}" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Hora fin</label>
+                              <input type="time" class="form-input jornada-hora-fin"
+                                value="{{ jornada['hora_fin'] }}" required>
+                            </div>
+                          </div>
+
+                          <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Dias de clase</label>
+                            <div class="calendar-days-grid">
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0" {% if 0 in
+                                  jornada['dias_semana'] %}checked{% endif %}> L</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1" {% if 1 in
+                                  jornada['dias_semana'] %}checked{% endif %}> M</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2" {% if 2 in
+                                  jornada['dias_semana'] %}checked{% endif %}> X</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3" {% if 3 in
+                                  jornada['dias_semana'] %}checked{% endif %}> J</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4" {% if 4 in
+                                  jornada['dias_semana'] %}checked{% endif %}> V</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5" {% if 5 in
+                                  jornada['dias_semana'] %}checked{% endif %}> S</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6" {% if 6 in
+                                  jornada['dias_semana'] %}checked{% endif %}> D</label>
+                            </div>
+                          </div>
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Trimestre</label>
+                              <select class="form-select jornada-trimestre" required>
+                                <option value="I" {% if jornada['trimestre']=='I' %}selected{% endif %}>I</option>
+                                <option value="II" {% if jornada['trimestre']=='II' %}selected{% endif %}>II</option>
+                                <option value="III" {% if jornada['trimestre']=='III' %}selected{% endif %}>III</option>
+                                <option value="IV" {% if jornada['trimestre']=='IV' %}selected{% endif %}>IV</option>
+                              </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Cupos Maximos</label>
+                              <input type="number" class="form-input jornada-cupos" min="0" step="1"
+                                value="{{ jornada['cupos_maximos'] }}" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Privacidad</label>
+                              <select class="form-select jornada-privacidad" required>
+                                <option value="Abierta" {% if jornada['privacidad']=='Abierta' %}selected{% endif %}>Abierta</option>
+                                <option value="Cerrada" {% if jornada['privacidad']=='Cerrada' %}selected{% endif %}>Cerrada</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Fecha Limite de Matricula</label>
+                            <input type="datetime-local" class="form-input jornada-fecha-limite"
+                              value="{{ jornada['fecha_limite_input'] }}">
+                          </div>
+                        </div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="jornada-block" data-edicion-id=""
+                          style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
+                          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                            <strong style="font-size:.85rem; color:#1e3a8a;">Jornada 1</strong>
+                            <button type="button" class="btn-ghost btn-remove-jornada" style="display:none;">Quitar</button>
+                          </div>
+
+                          <input type="hidden" class="jornada-edicion-id" value="">
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Etiqueta de Edicion</label>
+                              <input type="text" class="form-input jornada-etiqueta" maxlength="20" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Docente Responsable</label>
+                              <input type="text" class="form-input jornada-docente" maxlength="120" required>
+                            </div>
+                          </div>
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Jornada</label>
+                              <select class="form-select jornada-jornada" required>
+                                <option value="UNICA">Unica</option>
+                                <option value="MATUTINA">Matutina</option>
+                                <option value="VESPERTINA">Vespertina</option>
+                                <option value="NOCTURNA">Nocturna</option>
+                              </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Hora inicio</label>
+                              <input type="time" class="form-input jornada-hora-inicio" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Hora fin</label>
+                              <input type="time" class="form-input jornada-hora-fin" required>
+                            </div>
+                          </div>
+
+                          <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Dias de clase</label>
+                            <div class="calendar-days-grid">
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0"> L</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1"> M</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2"> X</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3"> J</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4"> V</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5"> S</label>
+                              <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6"> D</label>
+                            </div>
+                          </div>
+
+                          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Trimestre</label>
+                              <select class="form-select jornada-trimestre" required>
+                                <option value="I" selected>I</option>
+                                <option value="II">II</option>
+                                <option value="III">III</option>
+                                <option value="IV">IV</option>
+                              </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Cupos Maximos</label>
+                              <input type="number" class="form-input jornada-cupos" min="0" step="1" value="0" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                              <label class="form-label">Privacidad</label>
+                              <select class="form-select jornada-privacidad" required>
+                                <option value="Abierta" selected>Abierta</option>
+                                <option value="Cerrada">Cerrada</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Fecha Limite de Matricula</label>
+                            <input type="datetime-local" class="form-input jornada-fecha-limite">
+                          </div>
+                        </div>
+                      {% endif %}
                     </div>
 
                     <div style="display:flex; justify-content:flex-start;">
-                      <button type="button" id="btn-mostrar-segunda-jornada" class="btn-primary-ipsd"
+                      <button type="button" id="btn-agregar-jornada" class="btn-primary-ipsd"
                         style="height:34px; padding:.35rem .8rem;">
                         + Agregar jornada
                       </button>
-                    </div>
-
-                    <div id="panel-segunda-jornada"
-                      style="border:1px dashed #bfdbfe; border-radius:12px; padding:.8rem; background:#f8fbff; display:none; gap:.65rem;">
-                      <div
-                        style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
-                        <strong style="font-size:.84rem; color:#1e3a8a;">Segunda jornada (opcional)</strong>
-                        <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
-                          <span style="font-size:.75rem; color:var(--text-muted);">Completa este bloque solo si
-                            necesitas otra jornada.</span>
-                          <button type="button" id="btn-eliminar-segunda-jornada" class="btn-ghost"
-                            style="height:30px; padding:.25rem .6rem;">Eliminar jornada</button>
-                        </div>
-                      </div>
-
-                      <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Días de clase (Segunda jornada)</label>
-                        <div class="calendar-days-grid">
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="0" {% if 0
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> L</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="1" {% if 1
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> M</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="2" {% if 2
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> X</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="3" {% if 3
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> J</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="4" {% if 4
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> V</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="5" {% if 5
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> S</label>
-                          <label class="calendar-day-pill"><input type="checkbox" name="dias_semana_2" value="6" {% if 6
-                              in curso_sesion_config['dias_semana_2'] %}checked{% endif %}> D</label>
-                        </div>
-                      </div>
-
-                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.65rem; align-items:end;">
-                        <div class="form-group" style="margin-bottom:0;">
-                          <label class="form-label">Hora inicio (Segunda jornada)</label>
-                          <input type="time" class="form-input" name="hora_inicio_2"
-                            value="{{ curso_sesion_config['hora_inicio_2'] }}">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                          <label class="form-label">Hora fin (Segunda jornada)</label>
-                          <input type="time" class="form-input" name="hora_fin_2"
-                            value="{{ curso_sesion_config['hora_fin_2'] }}">
-                        </div>
-                      </div>
-
-                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem;">
-                        <div class="form-group" style="margin-bottom:0;">
-                          <label class="form-label">Jornada secundaria</label>
-                          <select class="form-select" name="jornada_2">
-                            <option value="UNICA" {% if curso_sesion_config['jornada_2']=='UNICA' %}selected{% endif %}>
-                              Única</option>
-                            <option value="MATUTINA" {% if curso_sesion_config['jornada_2']=='MATUTINA' %}selected{%
-                              endif %}>Matutina</option>
-                            <option value="VESPERTINA" {% if curso_sesion_config['jornada_2']=='VESPERTINA' %}selected{%
-                              endif %}>Vespertina</option>
-                            <option value="NOCTURNA" {% if curso_sesion_config['jornada_2']=='NOCTURNA' %}selected{%
-                              endif %}>Nocturna</option>
-                          </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                          <label class="form-label">Docente Responsable (2)</label>
-                          <input type="text" class="form-input" name="docente_sesion_2"
-                            value="{{ curso_sesion_config['docente_sesion_2'] }}" maxlength="120"
-                            placeholder="Ej. Lic. Carlos Flores">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                          <label class="form-label">Edición</label>
-                          <input type="text" class="form-input" name="edicion_2"
-                            value="{{ curso_sesion_config['edicion_2'] }}" maxlength="20" placeholder="Ej. G2">
-                        </div>
-                      </div>
                     </div>
 
                     <div style="display:flex; justify-content:flex-end;">
@@ -1474,6 +2125,90 @@
                         style="height:42px; min-width:150px;">Generar</button>
                     </div>
                   </form>
+
+                  <template id="jornada-template">
+                    <div class="jornada-block" data-edicion-id=""
+                      style="border:1px solid var(--border); border-radius:12px; padding:.85rem; background:#fff;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                        <strong style="font-size:.85rem; color:#1e3a8a;">Jornada</strong>
+                        <button type="button" class="btn-ghost btn-remove-jornada">Quitar</button>
+                      </div>
+
+                      <input type="hidden" class="jornada-edicion-id" value="">
+
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Etiqueta de Edicion</label>
+                          <input type="text" class="form-input jornada-etiqueta" maxlength="20" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Docente Responsable</label>
+                          <input type="text" class="form-input jornada-docente" maxlength="120" required>
+                        </div>
+                      </div>
+
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Jornada</label>
+                          <select class="form-select jornada-jornada" required>
+                            <option value="UNICA">Unica</option>
+                            <option value="MATUTINA">Matutina</option>
+                            <option value="VESPERTINA">Vespertina</option>
+                            <option value="NOCTURNA">Nocturna</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Hora inicio</label>
+                          <input type="time" class="form-input jornada-hora-inicio" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Hora fin</label>
+                          <input type="time" class="form-input jornada-hora-fin" required>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Dias de clase</label>
+                        <div class="calendar-days-grid">
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="0"> L</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="1"> M</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="2"> X</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="3"> J</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="4"> V</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="5"> S</label>
+                          <label class="calendar-day-pill"><input type="checkbox" class="jornada-dia" value="6"> D</label>
+                        </div>
+                      </div>
+
+                      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Trimestre</label>
+                          <select class="form-select jornada-trimestre" required>
+                            <option value="I" selected>I</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Cupos Maximos</label>
+                          <input type="number" class="form-input jornada-cupos" min="0" step="1" value="0" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                          <label class="form-label">Privacidad</label>
+                          <select class="form-select jornada-privacidad" required>
+                            <option value="Abierta" selected>Abierta</option>
+                            <option value="Cerrada">Cerrada</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Fecha Limite de Matricula</label>
+                        <input type="datetime-local" class="form-input jornada-fecha-limite">
+                      </div>
+                    </div>
+                  </template>
                 </div>
 
                 <div style="overflow-x:auto;">
@@ -1498,11 +2233,11 @@
                         <td>{{ sesion['hora_inicio'] }} - {{ sesion['hora_fin'] }}</td>
                         <td>
                           {{ sesion['jornada'] or 'UNICA' }}
-                          {% if sesion['edicion'] %}
-                          <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['edicion'] }}</span>
+                          {% if sesion['etiqueta_edicion'] %}
+                          <br><span style="font-size:.72rem; color:var(--text-muted);">{{ sesion['etiqueta_edicion'] }}</span>
                           {% endif %}
                         </td>
-                        <td>{{ sesion['docente_sesion'] or '—' }}</td>
+                        <td>{{ sesion['docente_responsable'] or '—' }}</td>
                         <td>
                           {% if sesion['estado'] == 1 %}
                           <span class="badge-pill success text-xs">Abierta</span>
@@ -1557,8 +2292,8 @@
                               data-id-sesion="{{ sesion['id_sesion'] }}" data-id-curso="{{ curso_sesiones_id }}"
                               data-fecha="{{ sesion['fecha'] }}" data-hora-inicio="{{ sesion['hora_inicio'] }}"
                               data-hora-fin="{{ sesion['hora_fin'] }}" data-jornada="{{ sesion['jornada'] or 'UNICA' }}"
-                              data-docente-sesion="{{ sesion['docente_sesion'] or '' }}"
-                              data-edicion="{{ sesion['edicion'] or '' }}" data-estado="{{ sesion['estado'] }}">
+                              data-docente-sesion="{{ sesion['docente_responsable'] or '' }}"
+                              data-edicion="{{ sesion['etiqueta_edicion'] or '' }}" data-estado="{{ sesion['estado'] }}">
                               <span class="material-symbols-outlined"
                                 style="vertical-align: middle; font-size: inherit;">edit</span>
                             </button>
@@ -1590,9 +2325,6 @@
             </div>
           </div>
         </div>
-        {% endif %}
-      </section>
-
       <!-- CALENDARIO GENERAL -->
       <section id="section-calendario" class="admin-screen" data-screen="calendario">
         <div class="card-ipsd animate-fade-up-2">
@@ -1873,11 +2605,11 @@
       </section>
       {% endif %}
 
-      <!-- MATRÍCULAS -->
+      <!-- REPORTES / HISTORIAL -->
       <section id="section-matriculas" class="admin-screen" data-screen="matriculas">
         <!-- Barra de filtros -->
         <div class="filter-bar animate-fade-up-3">
-          <div class="filter-title">🔍 Filtrar Matrículas</div>
+          <div class="filter-title">🔍 Filtrar Reportes / Historial</div>
           <form action="/admin" method="GET"
             style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:.75rem; align-items:end;">
             <input type="hidden" name="view" value="matriculas">
@@ -1934,12 +2666,12 @@
           </form>
         </div>
 
-        <!-- Tabla de matrículas -->
+        <!-- Tabla de reportes -->
         <div class="card-ipsd animate-fade-up-4">
           <div class="card-header">
             <div class="flex gap-2" style="align-items:center;">
               <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
-                  style="vertical-align: middle; font-size: inherit;">list_alt</span> Listado de Matrículas</span>
+                  style="vertical-align: middle; font-size: inherit;">list_alt</span> Reportes / Historial</span>
               <span class="badge-pill secondary text-xs">{{ registros|length }} registro(s)</span>
             </div>
             {% if registros and es_superadmin %}
@@ -1959,69 +2691,47 @@
             <table class="table-ipsd">
               <thead>
                 <tr>
-                  <th>Nº Empleado</th>
-                  <th>Código</th>
-                  <th>Capacitación</th>
-                  <th>Periodo</th>
-                  <th>Jornada</th>
+                  <th>Nombre</th>
+                  <th>Edición</th>
+                  <th>Período</th>
                   <th>Resultado</th>
-                  <th>Fecha Matrícula</th>
-                  <th style="text-align:center;">Acción</th>
+                  <th>Fecha</th>
                 </tr>
               </thead>
               <tbody>
                 {% for fila in registros %}
+                {% set resultado_texto = 'Pendiente' %}
+                {% set resultado_clase = 'secondary' %}
+                {% if fila['aprobado'] == 1 %}
+                  {% set resultado_texto = 'Aprobado' %}
+                  {% set resultado_clase = 'success' %}
+                {% elif fila['aprobado'] == 0 %}
+                  {% set resultado_texto = 'No aprobado' %}
+                  {% set resultado_clase = 'danger' %}
+                {% elif fila['aprobado'] == 2 %}
+                  {% set resultado_texto = 'Abandonó' %}
+                  {% set resultado_clase = 'warning' %}
+                {% endif %}
                 <tr>
-                  <td><strong>{{ fila['numero_empleado'] }}</strong></td>
-                  <td><span class="badge-pill primary text-xs">{{ fila['id'] }}</span></td>
-                  <td style="font-size:.88rem;">{{ fila['nombre'] }}</td>
-                  <td style="font-size:.82rem; color:var(--text-muted);">{{ fila['mes'] }} {{ fila['anio'] }}</td>
-                  <td style="font-size:.82rem; color:var(--primary); font-weight:600;">{{ fila['horario_elegido'] }}
+                  <td>
+                    <strong style="font-size:.9rem;">{{ fila['nombre'] }}</strong><br>
+                    <span style="font-size:.75rem; color:var(--text-muted);">Empleado #{{ fila['numero_empleado'] }}</span>
+                  </td>
+                  <td><span class="badge-pill primary text-xs">{{ fila['edicion_id'] }}</span></td>
+                  <td style="font-size:.82rem; color:var(--text-muted);">
+                    {{ fila['mes'] }} {{ fila['anio'] }} · Trim. {{ fila['trimestre'] or '—' }}
                   </td>
                   <td>
-                    <form action="/admin/actualizar_resultado_matricula" method="POST" class="form-resultado-matricula"
-                      style="display:flex; align-items:center; gap:.35rem; margin:0;">
-                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="view" value="matriculas">
-                      <input type="hidden" name="ajax" value="1">
-                      <input type="hidden" name="matricula_id" value="{{ fila['matricula_id'] }}">
-                      <input type="hidden" name="numero_empleado" value="{{ fila['numero_empleado'] }}">
-                      <input type="hidden" name="id_capacitacion" value="{{ fila['id'] }}">
-                      <select class="form-select select-resultado-matricula" name="aprobado"
-                        style="font-size:.75rem; padding:.3rem .45rem; min-width:120px;">
-                        <option value="" {% if fila['aprobado'] is none %}selected{% endif %}>Pendiente</option>
-                        <option value="1" {% if fila['aprobado']==1 %}selected{% endif %}>Aprobado</option>
-                        <option value="0" {% if fila['aprobado']==0 %}selected{% endif %}>No aprobado</option>
-                        <option value="2" {% if fila['aprobado']==2 %}selected{% endif %}>Abandonó</option>
-                      </select>
-                      <span class="resultado-sync-status">Listo</span>
-                    </form>
+                    <span class="badge-pill {{ resultado_clase }} text-xs">{{ resultado_texto }}</span>
                   </td>
                   <td style="font-size:.78rem; color:var(--text-muted);">
                     {{ fila['fecha_matricula'][:16] if fila['fecha_matricula'] else '—' }}
                   </td>
-                  <td style="text-align:center;">
-                    <form action="/admin/eliminar_matricula" method="POST" style="display:inline;"
-                      id="del-m-{{ loop.index }}">
-                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="view" value="matriculas">
-                      <input type="hidden" name="matricula_id" value="{{ fila['matricula_id'] }}">
-                      <input type="hidden" name="numero_empleado" value="{{ fila['numero_empleado'] }}">
-                      <input type="hidden" name="id_capacitacion" value="{{ fila['id'] }}">
-                      <button type="button" class="btn-del-matricula"
-                        style="background:none; border:none; cursor:pointer; color:var(--danger); font-size:1.1rem; padding:.2rem .4rem; border-radius:6px; transition:background .15s;"
-                        title="Eliminar matricula" data-form-id="del-m-{{ loop.index }}"
-                        data-empleado="{{ fila['numero_empleado'] }}" data-nombre="{{ fila['nombre'] }}"
-                        onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">
-                        &#x2715;
-                      </button>
-                    </form>
-                  </td>
                 </tr>
                 {% else %}
                 <tr>
-                  <td colspan="8" style="text-align:center; color:var(--text-muted); padding:3rem;">
-                    No se encontraron matrículas con los filtros aplicados.
+                  <td colspan="5" style="text-align:center; color:var(--text-muted); padding:3rem;">
+                    No se encontraron registros con los filtros aplicados.
                   </td>
                 </tr>
                 {% endfor %}
@@ -2138,16 +2848,15 @@
       {% if curso_asistencias_id and curso_asistencia_reporte and curso_asistencia_reporte['ok'] %}
       {% set curso_reporte = curso_asistencia_reporte['curso'] %}
       <div class="modal-overlay active" id="modal-asistencia-curso" aria-hidden="false"
-        data-close-url="{{ url_for('admin') }}?view=cursos">
+        data-close-url="{{ url_for('admin') }}?view={{ vista_inicial }}">
         <div class="modal-box"
-          style="max-width:min(1220px, 95vw); width:min(1220px, 95vw); max-height:88vh; overflow:auto; padding:0;">
+          style="max-width:min(1400px, 92vw); width:min(1400px, 92vw); max-height:92vh; overflow:auto; padding:0;">
           <div class="card-ipsd animate-fade-up-3" style="box-shadow:none; border-radius:0; border:none;">
             <div class="card-header"
               style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
               <div>
                 <span style="font-weight:700; font-size:.95rem;"><span class="material-symbols-outlined"
-                    style="vertical-align: middle; font-size: inherit;">bar_chart</span> Asistencias por Acción
-                  Formativa</span>
+                  style="vertical-align: middle; font-size: inherit;">school</span> Libro de Calificaciones</span>
                 <div style="font-size:.78rem; color:var(--text-muted); margin-top:.2rem;">
                   Curso: <strong>{{ curso_reporte['id'] }}</strong> · {{ curso_reporte['nombre'] }}
                 </div>
@@ -2161,30 +2870,24 @@
                   inscrito(s)</span>
                 <span class="badge-pill secondary text-xs">{{ curso_asistencia_reporte['total_sesiones'] }}
                   sesión(es)</span>
-                <a href="{{ url_for('admin') }}?view=cursos" class="btn-danger-ipsd"
+                <a href="{{ url_for('admin') }}?view={{ vista_inicial }}" class="btn-danger-ipsd"
                   style="text-decoration:none;">Cerrar</a>
               </div>
             </div>
 
             <div class="card-body" style="display:grid; gap:1rem;">
-              {% set resumen = namespace(con=0, pen=0) %}
-              {% for jornada in curso_asistencia_reporte['jornadas'] %}
-              {% for docente in jornada['docentes'] %}
-              {% if (docente['asistencias'] or 0) > 0 %}
-              {% set resumen.con = resumen.con + 1 %}
-              {% else %}
-              {% set resumen.pen = resumen.pen + 1 %}
-              {% endif %}
-              {% endfor %}
-              {% endfor %}
+              <input type="hidden" id="csrf-token-admin" value="{{ csrf_token() }}">
 
               <div class="calendar-panel"
                 style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
                 <div
                   style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
                   <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
-                    <strong style="font-size:.87rem; color:#0f172a;">Con asistencia registrada</strong>
-                    <span class="badge-pill primary text-xs">{{ resumen.con }} docente(s)</span>
+                    <strong style="font-size:.87rem; color:#0f172a;">Participantes y evaluación</strong>
+                    <span class="badge-pill primary text-xs">{{ curso_asistencia_reporte['total_inscritos'] }}
+                      inscrito(s)</span>
+                    <span class="badge-pill secondary text-xs">{{ curso_asistencia_reporte['total_sesiones'] }}
+                      sesión(es)</span>
                   </div>
                 </div>
 
@@ -2192,122 +2895,114 @@
                   <table class="table-ipsd">
                     <thead>
                       <tr>
-                        <th>Empleado</th>
-                        <th>Docente</th>
+                        <th>Empleado / Docente</th>
                         <th>Jornada</th>
-                        <th>Detalle Asistencia</th>
-                        <th>Mapa Visual</th>
-                        <th style="text-align:center;">Días marcados / programados</th>
-                        <th style="text-align:center;">Progreso</th>
+                        <th>Asistencia</th>
+                        <th>Mapa</th>
+                        <th>Progreso</th>
+                        <th>Evaluación</th>
+                        <th style="text-align:center;">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {% set filas_con = namespace(total=0) %}
+                      {% set total_filas = namespace(total=0) %}
                       {% for jornada in curso_asistencia_reporte['jornadas'] %}
                       {% for docente in jornada['docentes'] %}
-                      {% if (docente['asistencias'] or 0) > 0 %}
-                      {% set filas_con.total = filas_con.total + 1 %}
+                      {% set total_filas.total = total_filas.total + 1 %}
+                      {% set progreso_clase = 'danger' %}
+                      {% set progreso_color = '#dc2626' %}
+                      {% if docente['porcentaje'] >= 80 %}
+                        {% set progreso_clase = 'success' %}
+                        {% set progreso_color = '#16a34a' %}
+                      {% elif docente['porcentaje'] >= 50 %}
+                        {% set progreso_clase = 'warning' %}
+                        {% set progreso_color = '#f59e0b' %}
+                      {% endif %}
                       <tr>
-                        <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
-                        <td>{{ docente['nombre_completo'] }}</td>
+                        <td>
+                          <span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span><br>
+                          <span style="font-size:.9rem;">{{ docente['nombre_completo'] }}</span>
+                        </td>
                         <td><span class="badge-pill secondary text-xs">{{ jornada['nombre'] }}</span></td>
-                        <td style="font-size:.8rem;">{{ docente['ultima_marcacion'] or 'Sin marcación registrada' }}
+                        <td>
+                          <div style="font-size:.85rem; font-weight:600;">
+                            {{ docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}
+                          </div>
+                          <div style="font-size:.78rem; color:var(--text-muted);">
+                            {% if docente['ultima_marcacion'] %}
+                            Última: {{ docente['ultima_marcacion'] }}
+                            {% elif docente['fechas_ausentes'] and docente['fechas_ausentes']|length > 0 %}
+                            Ausencias: {{ docente['fechas_ausentes']|join(', ') }}
+                            {% else %}
+                            Sin marcación registrada
+                            {% endif %}
+                          </div>
                         </td>
                         <td>
                           <div style="display:flex; gap:4px; flex-wrap:wrap;">
                             {% for punto in docente['mapa_asistencia']|default([]) %}
-                            <span title="{{ punto['estado'] }}" class="mapa-dot {{ punto['estado'] }}">
-                            </span>
+                            <span title="{{ punto['estado'] }}" class="mapa-dot {{ punto['estado'] }}"></span>
                             {% endfor %}
                           </div>
                         </td>
-                        <td style="text-align:center;">{{ docente['asistencias'] }} / {{ docente['sesiones_programadas']
-                          }}</td>
-                        <td style="text-align:center;">
-                          <span
-                            class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 50 %}warning{% else %}danger{% endif %} text-xs">
-                            {{ docente['porcentaje'] }}%
-                          </span>
-                        </td>
-                      </tr>
-                      {% endif %}
-                      {% endfor %}
-                      {% endfor %}
-                      {% if filas_con.total == 0 %}
-                      <tr>
-                        <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.2rem;">Aún no hay
-                          docentes con asistencia marcada.</td>
-                      </tr>
-                      {% endif %}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div class="calendar-panel"
-                style="border-style:solid; background:#fff; margin-bottom:0; display:grid; gap:.65rem;">
-                <div
-                  style="display:flex; align-items:center; justify-content:space-between; gap:.65rem; flex-wrap:wrap;">
-                  <div style="display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;">
-                    <strong style="font-size:.87rem; color:#0f172a;">Pendientes sin asistencia</strong>
-                    <span class="badge-pill secondary text-xs">{{ resumen.pen }} docente(s)</span>
-                  </div>
-                </div>
-
-                <div style="overflow-x:auto;">
-                  <table class="table-ipsd">
-                    <thead>
-                      <tr>
-                        <th>Empleado</th>
-                        <th>Docente</th>
-                        <th>Jornada</th>
-                        <th>Detalle Asistencia</th>
-                        <th>Mapa Visual</th>
-                        <th style="text-align:center;">Días marcados / programados</th>
-                        <th style="text-align:center;">Progreso</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% set filas_pen = namespace(total=0) %}
-                      {% for jornada in curso_asistencia_reporte['jornadas'] %}
-                      {% for docente in jornada['docentes'] %}
-                      {% if (docente['asistencias'] or 0) == 0 %}
-                      {% set filas_pen.total = filas_pen.total + 1 %}
-                      <tr>
-                        <td><span class="badge-pill secondary text-xs">#{{ docente['numero_empleado'] }}</span></td>
-                        <td>{{ docente['nombre_completo'] }}</td>
-                        <td><span class="badge-pill secondary text-xs">{{ jornada['nombre'] }}</span></td>
-                        <td style="font-size:.8rem;">
-                          {% if docente['fechas_ausentes'] and docente['fechas_ausentes']|length > 0 %}
-                          {{ docente['fechas_ausentes']|join(', ') }}
-                          {% else %}
-                          Sin ausencias registradas aún
-                          {% endif %}
+                        <td style="min-width:140px;">
+                          <div style="display:flex; align-items:center; gap:.45rem;">
+                            <div
+                              style="height:6px; width:95px; background:#e5e7eb; border-radius:999px; overflow:hidden; --p: {{ docente['porcentaje'] or 0 }}%; --bg: {{ progreso_color or '#ccc' }};">
+                              <div style="height: 100%; width: var(--p); background: var(--bg);"></div>
+                            </div>
+                            <span class="badge-pill {{ progreso_clase }} text-xs">{{ docente['porcentaje'] }}%</span>
+                          </div>
                         </td>
                         <td>
-                          <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                            {% for punto in docente['mapa_asistencia']|default([]) %}
-                            <span title="{{ punto['estado'] }}" class="mapa-dot {{ punto['estado'] }}">
-                            </span>
-                            {% endfor %}
+                          <div style="display:grid; gap:.35rem; min-width:200px;">
+                            <select class="form-select select-evaluacion" name="aprobado"
+                              style="font-size:.78rem; padding:.3rem .45rem;">
+                              <option value="" {% if docente['aprobado'] is none %}selected{% endif %}>Pendiente</option>
+                              <option value="1" {% if docente['aprobado']==1 %}selected{% endif %}>Aprobado</option>
+                              <option value="0" {% if docente['aprobado']==0 %}selected{% endif %}>No aprobado</option>
+                              <option value="2" {% if docente['aprobado']==2 %}selected{% endif %}>Abandonó</option>
+                            </select>
+                            <input type="text" class="form-input input-comentario" name="comentario_validacion"
+                              value="{{ docente['comentario_validacion'] or '' }}" placeholder="Comentario de evaluación"
+                              style="font-size:.78rem; padding:.35rem .45rem;">
+                            <span class="evaluacion-sync-status">Listo</span>
                           </div>
                         </td>
-                        <td style="text-align:center;">{{ docente['asistencias'] }} / {{ docente['sesiones_programadas']
-                          }}</td>
                         <td style="text-align:center;">
-                          <span
-                            class="badge-pill {% if docente['porcentaje'] >= 80 %}success{% elif docente['porcentaje'] >= 50 %}warning{% else %}danger{% endif %} text-xs">
-                            {{ docente['porcentaje'] }}%
-                          </span>
+                          <div style="display:grid; gap:.35rem; justify-items:center;">
+                            <button type="button" class="btn-primary-ipsd btn-guardar-evaluacion"
+                              data-matricula-id="{{ docente['matricula_id'] }}"
+                              data-numero-empleado="{{ docente['numero_empleado'] }}"
+                              data-edicion-id="{{ curso_reporte['id'] }}"
+                              style="padding:.35rem .6rem; font-size:.78rem;">
+                              Guardar Nota
+                            </button>
+                            <form action="/admin/eliminar_matricula" method="POST" style="display:inline;"
+                              id="del-m-{{ docente['matricula_id'] }}">
+                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                              <input type="hidden" name="view" value="ediciones">
+                              <input type="hidden" name="matricula_id" value="{{ docente['matricula_id'] }}">
+                              <input type="hidden" name="numero_empleado" value="{{ docente['numero_empleado'] }}">
+                              <input type="hidden" name="edicion_id" value="{{ curso_reporte['id'] }}">
+                              <button type="button" class="btn-del-matricula btn-danger-ipsd"
+                                style="padding:.35rem .6rem; font-size:.78rem;"
+                                data-form-id="del-m-{{ docente['matricula_id'] }}"
+                                data-empleado="{{ docente['numero_empleado'] }}"
+                                data-nombre="{{ docente['nombre_completo'] }}">
+                                Dar de baja
+                              </button>
+                            </form>
+                          </div>
                         </td>
                       </tr>
-                      {% endif %}
                       {% endfor %}
                       {% endfor %}
-                      {% if filas_pen.total == 0 %}
+                      {% if total_filas.total == 0 %}
                       <tr>
-                        <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.2rem;">No hay
-                          docentes pendientes de asistencia.</td>
+                        <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.2rem;">
+                          Aún no hay participantes en esta edición.
+                        </td>
                       </tr>
                       {% endif %}
                     </tbody>
@@ -2325,12 +3020,12 @@
 
 </div><!-- /admin-layout -->
 
-<!-- Modal eliminar curso -->
+<!-- Modal eliminar catalogo -->
 <div class="modal-overlay" id="modal-curso">
   <div class="modal-box">
     <div class="modal-icon"><span class="material-symbols-outlined"
         style="vertical-align: middle; font-size: inherit;">delete</span></div>
-    <div class="modal-title">¿Eliminar curso?</div>
+    <div class="modal-title">¿Eliminar catálogo?</div>
     <div class="modal-desc" id="modal-curso-desc"></div>
     <div class="modal-actions">
       <button class="btn-ghost"
@@ -2888,10 +3583,14 @@
   const adminLayout = document.querySelector('.admin-layout');
   const esSuperadmin = adminLayout?.dataset.esSuperadmin === '1';
   const vistaInicialServidor = adminLayout?.dataset.vistaInicial || 'dashboard';
-  const vistasPermitidas = ['dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios', 'certificados'];
+  const vistasPermitidas = ['dashboard', 'cursos', 'ediciones', 'calendario', 'matriculas', 'usuarios', 'certificados'];
 
   function normalizarVista(view) {
     let vistaFinal = vistasPermitidas.includes(view) ? view : 'dashboard';
+
+    if (vistaFinal === 'calendario') {
+      vistaFinal = 'ediciones';
+    }
 
     if (vistaFinal === 'usuarios' && !esSuperadmin) {
       vistaFinal = 'dashboard';
@@ -2943,7 +3642,7 @@
   function confirmarEliminarCurso(formId, nombre) {
     currentFormId = formId;
     document.getElementById('modal-curso-desc').innerHTML =
-      `Se eliminará el curso <strong>"${nombre}"</strong> y todas sus matrículas. Esta acción no se puede deshacer.`;
+      `Se eliminará el catálogo <strong>"${nombre}"</strong> y todas sus ediciones y matrículas. Esta acción no se puede deshacer.`;
     abrirModal('modal-curso');
   }
 
@@ -3302,6 +4001,90 @@
     }
   }
 
+  function obtenerTokenCsrfAdmin() {
+    const tokenEl = document.getElementById('csrf-token-admin');
+    return tokenEl ? tokenEl.value : '';
+  }
+
+  async function guardarEvaluacionMatricula(btn) {
+    if (!btn) return;
+
+    const fila = btn.closest('tr');
+    const selectEl = fila ? fila.querySelector('.select-evaluacion') : null;
+    const comentarioEl = fila ? fila.querySelector('.input-comentario') : null;
+    const statusEl = fila ? fila.querySelector('.evaluacion-sync-status') : null;
+
+    const matriculaId = (btn.dataset.matriculaId || '').trim();
+    const numeroEmpleado = (btn.dataset.numeroEmpleado || '').trim();
+    const edicionId = (btn.dataset.edicionId || '').trim();
+    const aprobado = selectEl ? selectEl.value : '';
+    const comentario = comentarioEl ? comentarioEl.value : '';
+
+    if (!matriculaId || !numeroEmpleado || !edicionId) {
+      if (statusEl) {
+        statusEl.textContent = 'Datos incompletos';
+        statusEl.style.color = '#dc2626';
+      }
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.textContent = 'Guardando...';
+      statusEl.style.color = '#64748b';
+    }
+
+    btn.disabled = true;
+    try {
+      const response = await fetch(`/admin/matriculas/${encodeURIComponent(matriculaId)}/evaluar`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': obtenerTokenCsrfAdmin()
+        },
+        body: JSON.stringify({
+          numero_empleado: numeroEmpleado,
+          edicion_id: edicionId,
+          aprobado: aprobado,
+          comentario_validacion: comentario
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      const respuestaJsonValida = typeof payload === 'object' && payload !== null;
+      const okExplicito = respuestaJsonValida && payload.ok === true;
+      const okPorFallback = response.ok && !respuestaJsonValida;
+
+      if ((!response.ok || (!okExplicito && !okPorFallback)) && !(response.ok && payload.ok !== false)) {
+        const detalle = payload.error || `HTTP ${response.status}`;
+        throw new Error(detalle);
+      }
+
+      if (selectEl) {
+        aplicarColorResultadoSelect(selectEl);
+      }
+
+      if (statusEl) {
+        statusEl.textContent = 'Guardado';
+        statusEl.style.color = '#16a34a';
+        setTimeout(() => {
+          statusEl.textContent = 'Listo';
+          statusEl.style.color = '#64748b';
+        }, 1200);
+      }
+    } catch (err) {
+      if (statusEl) {
+        const msg = (err && err.message ? err.message : 'Error').toString();
+        statusEl.textContent = msg.length > 26 ? `${msg.slice(0, 26)}...` : msg;
+        statusEl.style.color = '#dc2626';
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function aplicarColorResultadoSelect(selectEl) {
     if (!selectEl) return;
 
@@ -3343,10 +4126,13 @@
     const vistaInicial = vistaUrl || vistaInicialServidor || vistaGuardada;
     setActiveScreen(vistaInicial, { syncUrl: true });
 
-    const cardGestionCalendario = document.getElementById('card-gestion-calendario');
+    const modalGestionCalendario = document.getElementById('modal-gestion-calendario');
     const modalAsistenciaCurso = document.getElementById('modal-asistencia-curso');
-    if (cardGestionCalendario || modalAsistenciaCurso) {
-      setActiveScreen('cursos', { syncUrl: true });
+    const modalCalendarioActivo = modalGestionCalendario && modalGestionCalendario.classList.contains('active');
+    const modalAsistenciaActivo = modalAsistenciaCurso && modalAsistenciaCurso.classList.contains('active');
+    if (modalCalendarioActivo || modalAsistenciaActivo) {
+      const vistaModal = normalizarVista(vistaInicial || 'dashboard');
+      setActiveScreen(vistaModal, { syncUrl: true });
       document.body.style.overflow = 'hidden';
     }
 
@@ -3389,6 +4175,19 @@
           guardarResultadoMatricula(form);
         });
       }
+    });
+
+    document.querySelectorAll('.select-evaluacion').forEach(selectEl => {
+      aplicarColorResultadoSelect(selectEl);
+      selectEl.addEventListener('change', function () {
+        aplicarColorResultadoSelect(selectEl);
+      });
+    });
+
+    document.querySelectorAll('.btn-guardar-evaluacion').forEach(btn => {
+      btn.addEventListener('click', function () {
+        guardarEvaluacionMatricula(this);
+      });
     });
 
     document.querySelectorAll('.btn-del-curso').forEach(btn => {
@@ -3495,17 +4294,18 @@
     });
 
     const direccionCurso = document.getElementById('direccion_curso');
-    const fechaCurso = document.getElementById('fecha_curso');
     const modalidad = document.getElementById('modalidad');
-    const tipoAccion = document.getElementById('tipo_accion');
-    const horasTotalesInput = document.getElementById('horas_totales');
-    const enlaceVirtual = document.getElementById('enlace_virtual');
-    const enlaceVirtualGroup = document.getElementById('enlace_virtual_group');
     const modalidadEditCurso = document.getElementById('edit-curso-modalidad');
     const previewCodigo = document.getElementById('preview-codigo');
-    const mostrarSegundaJornadaBtn = document.getElementById('btn-mostrar-segunda-jornada');
-    const eliminarSegundaJornadaBtn = document.getElementById('btn-eliminar-segunda-jornada');
-    const panelSegundaJornada = document.getElementById('panel-segunda-jornada');
+    const formGenerarCalendario = document.getElementById('form-generar-calendario');
+    const jornadasContainer = document.getElementById('jornadas-container');
+    const btnAgregarJornada = document.getElementById('btn-agregar-jornada');
+    const jornadaTemplate = document.getElementById('jornada-template');
+    const fechaInicioCal = document.getElementById('fecha_inicio_cal');
+    const fechaFinCal = document.getElementById('fecha_fin_cal');
+    const enlaceVirtualCal = document.getElementById('enlace_virtual_cal');
+    const calRequisitos = document.getElementById('cal-requisitos');
+    const calDuracionHoras = document.getElementById('cal-duracion-horas');
     const calendarEventosDataEl = document.getElementById('calendar-eventos-data');
     const calendarMonthLabel = document.getElementById('calendar-month-label');
     const calendarMonthGrid = document.getElementById('calendar-month-grid');
@@ -3514,6 +4314,182 @@
     const calendarTodayBtn = document.getElementById('calendar-today-btn');
     const calendarViewButtons = document.querySelectorAll('.calendar-view-btn[data-calendar-view]');
     const calendarioTotalVisible = document.getElementById('calendario-total-visible');
+    const diasSemanaEtiquetas = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+    function parseFechaInput(valor) {
+      if (!valor) return null;
+      const partes = valor.split('-');
+      if (partes.length !== 3) return null;
+      const year = Number(partes[0]);
+      const month = Number(partes[1]);
+      const day = Number(partes[2]);
+      if (!year || !month || !day) return null;
+      const fecha = new Date(year, month - 1, day);
+      if (Number.isNaN(fecha.getTime())) return null;
+      fecha.setHours(0, 0, 0, 0);
+      return fecha;
+    }
+
+    function obtenerRangoFechas() {
+      if (!fechaInicioCal || !fechaFinCal) return null;
+      const inicio = parseFechaInput(fechaInicioCal.value);
+      const fin = parseFechaInput(fechaFinCal.value);
+      if (!inicio || !fin) return null;
+      if (fin < inicio) return null;
+      return { inicio, fin };
+    }
+
+    function formatearDiaMes(fecha) {
+      const d = String(fecha.getDate()).padStart(2, '0');
+      const m = String(fecha.getMonth() + 1).padStart(2, '0');
+      return `${d}/${m}`;
+    }
+
+    function construirResumenDias(inicio, fin) {
+      const conteos = Array(7).fill(0);
+      const fechas = Array.from({ length: 7 }, () => []);
+      for (let cursor = new Date(inicio); cursor <= fin; cursor.setDate(cursor.getDate() + 1)) {
+        const idx = (cursor.getDay() + 6) % 7;
+        conteos[idx] += 1;
+        fechas[idx].push(formatearDiaMes(cursor));
+      }
+      return { conteos, fechas };
+    }
+
+    function prepararEtiquetaDia(label, idx) {
+      const input = label.querySelector('input');
+      if (!input) return null;
+
+      if (!label.dataset.prepared) {
+        const texto = document.createElement('span');
+        texto.className = 'day-pill-text';
+        const br = document.createElement('br');
+        br.className = 'day-pill-break';
+        const meta = document.createElement('small');
+        meta.className = 'day-pill-meta';
+        meta.style.display = 'none';
+        meta.style.fontSize = '.7rem';
+        meta.style.lineHeight = '1.1';
+        meta.style.color = 'var(--text-muted)';
+
+        label.innerHTML = '';
+        label.appendChild(input);
+        label.appendChild(texto);
+        label.appendChild(br);
+        label.appendChild(meta);
+        label.dataset.prepared = '1';
+      }
+
+      const texto = label.querySelector('.day-pill-text');
+      const meta = label.querySelector('.day-pill-meta');
+      const br = label.querySelector('.day-pill-break');
+      if (texto) texto.textContent = diasSemanaEtiquetas[idx] || '';
+      if (meta) {
+        meta.textContent = '';
+        meta.style.display = 'none';
+      }
+      if (br) br.style.display = 'none';
+      return { input, texto, meta, br };
+    }
+
+    function restablecerDiasClase(bloque) {
+      if (!bloque) return;
+      bloque.querySelectorAll('.calendar-day-pill').forEach(label => {
+        const checkbox = label.querySelector('.jornada-dia');
+        const idx = checkbox ? parseInt(checkbox.value, 10) : -1;
+        const partes = prepararEtiquetaDia(label, idx);
+        if (!partes || !partes.input) return;
+        partes.input.disabled = false;
+        label.style.opacity = '';
+        label.style.cursor = '';
+        label.style.pointerEvents = '';
+        label.style.color = '';
+        label.removeAttribute('aria-disabled');
+        label.title = '';
+      });
+    }
+
+    function aplicarResumenDias(bloque, resumen) {
+      if (!bloque || !resumen) return;
+      bloque.querySelectorAll('.calendar-day-pill').forEach(label => {
+        const checkbox = label.querySelector('.jornada-dia');
+        if (!checkbox) return;
+        const idx = parseInt(checkbox.value, 10);
+        if (Number.isNaN(idx)) return;
+
+        const partes = prepararEtiquetaDia(label, idx);
+        if (!partes || !partes.input) return;
+
+        const count = resumen.conteos[idx] || 0;
+        if (count === 0) {
+          partes.input.checked = false;
+          partes.input.disabled = true;
+          label.style.opacity = '0.45';
+          label.style.cursor = 'not-allowed';
+          label.style.pointerEvents = 'none';
+          label.setAttribute('aria-disabled', 'true');
+          if (partes.meta) {
+            partes.meta.textContent = '';
+            partes.meta.style.display = 'none';
+          }
+          if (partes.br) partes.br.style.display = 'none';
+          label.title = '';
+          return;
+        }
+
+        partes.input.disabled = false;
+        label.style.opacity = '';
+        label.style.cursor = '';
+        label.style.pointerEvents = '';
+        label.style.color = '';
+        label.removeAttribute('aria-disabled');
+
+        if (count === 1) {
+          if (partes.meta) {
+            partes.meta.textContent = (resumen.fechas[idx] || [])[0] || '';
+            partes.meta.style.display = 'block';
+          }
+          if (partes.br) partes.br.style.display = 'block';
+          label.title = '';
+          return;
+        }
+
+        if (partes.meta) {
+          partes.meta.textContent = `${count} clases`;
+          partes.meta.style.display = 'block';
+        }
+        if (partes.br) partes.br.style.display = 'block';
+        label.title = (resumen.fechas[idx] || []).join(', ');
+      });
+    }
+
+    function calcularDiasClase(bloqueJornada, resumen) {
+      if (!bloqueJornada) return;
+      if (!resumen) {
+        const rango = obtenerRangoFechas();
+        if (!rango) {
+          restablecerDiasClase(bloqueJornada);
+          return;
+        }
+        resumen = construirResumenDias(rango.inicio, rango.fin);
+      }
+      aplicarResumenDias(bloqueJornada, resumen);
+    }
+
+    function recalcularDiasClaseGlobal() {
+      if (!jornadasContainer) return;
+      const rango = obtenerRangoFechas();
+      if (!rango) {
+        jornadasContainer.querySelectorAll('.jornada-block').forEach(restablecerDiasClase);
+        return;
+      }
+      const resumen = construirResumenDias(rango.inicio, rango.fin);
+      jornadasContainer.querySelectorAll('.jornada-block').forEach(bloque => {
+        calcularDiasClase(bloque, resumen);
+      });
+    }
+
+    window.recalcularDiasClaseGlobal = recalcularDiasClaseGlobal;
 
     const calendarEventosData = (() => {
       if (!calendarEventosDataEl) return [];
@@ -3891,42 +4867,139 @@
 
     activarVistaCalendario('mes');
 
-    function actualizarReglasTipoAccion() {
-      if (!tipoAccion || !horasTotalesInput) return;
+    function actualizarIndicesJornadas() {
+      if (!jornadasContainer) return;
+      const bloques = jornadasContainer.querySelectorAll('.jornada-block');
+      bloques.forEach((bloque, idx) => {
+        const titulo = bloque.querySelector('strong');
+        if (titulo) {
+          titulo.textContent = `Jornada ${idx + 1}`;
+        }
+      });
+    }
 
-      let horasMin = 20;
-
-      if (tipoAccion.value === 'CONFERENCIA') {
-        horasMin = 1;
-      } else if (tipoAccion.value === 'SEMINARIO') {
-        horasMin = 16;
+    function registrarEventosJornada(bloque) {
+      const btnRemove = bloque.querySelector('.btn-remove-jornada');
+      const inputEdicion = bloque.querySelector('.jornada-edicion-id');
+      const tieneEdicion = inputEdicion && String(inputEdicion.value || '').trim();
+      if (btnRemove) {
+        if (tieneEdicion) {
+          btnRemove.style.display = 'none';
+        } else {
+          btnRemove.style.display = 'inline-flex';
+          btnRemove.addEventListener('click', function () {
+            bloque.remove();
+            actualizarIndicesJornadas();
+          });
+        }
       }
+    }
 
-      horasTotalesInput.min = String(horasMin);
+    function crearJornadaDesdeTemplate() {
+      if (!jornadaTemplate || !jornadasContainer) return;
+      const contenido = jornadaTemplate.content.cloneNode(true);
+      const bloque = contenido.querySelector('.jornada-block');
+      if (!bloque) return;
+      jornadasContainer.appendChild(bloque);
+      registrarEventosJornada(bloque);
+      actualizarIndicesJornadas();
+      recalcularDiasClaseGlobal();
+    }
 
-      if (Number(horasTotalesInput.value || 0) < horasMin) {
-        horasTotalesInput.value = String(horasMin);
-      }
+    if (jornadasContainer) {
+      jornadasContainer.querySelectorAll('.jornada-block').forEach(registrarEventosJornada);
+      actualizarIndicesJornadas();
+      recalcularDiasClaseGlobal();
+    }
+
+    if (btnAgregarJornada) {
+      btnAgregarJornada.addEventListener('click', function () {
+        crearJornadaDesdeTemplate();
+      });
+    }
+
+    const onFechaChange = function () {
+      recalcularDiasClaseGlobal();
+    };
+    if (fechaInicioCal) {
+      fechaInicioCal.addEventListener('change', onFechaChange);
+      fechaInicioCal.addEventListener('input', onFechaChange);
+    }
+    if (fechaFinCal) {
+      fechaFinCal.addEventListener('change', onFechaChange);
+      fechaFinCal.addEventListener('input', onFechaChange);
+    }
+
+    if (formGenerarCalendario) {
+      formGenerarCalendario.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const tokenInput = formGenerarCalendario.querySelector('input[name="_csrf_token"]');
+        const idCursoInput = formGenerarCalendario.querySelector('input[name="id_curso"]');
+        const catalogoInput = formGenerarCalendario.querySelector('input[name="catalogo_id"]');
+
+        const bloques = Array.from(jornadasContainer?.querySelectorAll('.jornada-block') || []).map(bloque => {
+          const dias = Array.from(bloque.querySelectorAll('.jornada-dia:checked')).map(cb => cb.value);
+          return {
+            edicion_id: bloque.querySelector('.jornada-edicion-id')?.value || '',
+            etiqueta_edicion: bloque.querySelector('.jornada-etiqueta')?.value || '',
+            docente_responsable: bloque.querySelector('.jornada-docente')?.value || '',
+            jornada: bloque.querySelector('.jornada-jornada')?.value || 'UNICA',
+            hora_inicio: bloque.querySelector('.jornada-hora-inicio')?.value || '',
+            hora_fin: bloque.querySelector('.jornada-hora-fin')?.value || '',
+            dias_semana: dias,
+            trimestre: bloque.querySelector('.jornada-trimestre')?.value || '',
+            cupos_maximos: bloque.querySelector('.jornada-cupos')?.value || '',
+            privacidad: bloque.querySelector('.jornada-privacidad')?.value || 'Abierta',
+            fecha_limite_matricula: bloque.querySelector('.jornada-fecha-limite')?.value || ''
+          };
+        });
+
+        if (!bloques.length) {
+          alert('Debes agregar al menos una jornada.');
+          return;
+        }
+
+        const payload = {
+          _csrf_token: tokenInput ? tokenInput.value : '',
+          id_curso: idCursoInput ? idCursoInput.value : '',
+          catalogo_id: catalogoInput ? catalogoInput.value : '',
+          fecha_inicio: fechaInicioCal ? fechaInicioCal.value : '',
+          fecha_fin: fechaFinCal ? fechaFinCal.value : '',
+          enlace_virtual: enlaceVirtualCal ? enlaceVirtualCal.value : '',
+          requisitos: calRequisitos ? calRequisitos.value : '',
+          duracion_horas: calDuracionHoras ? calDuracionHoras.value : '',
+          bloques: bloques
+        };
+
+        try {
+          const res = await fetch('/admin/sesion/generar_calendario', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok) {
+            window.location.href = data.redirect_url || window.location.href;
+            return;
+          }
+          alert(data.error || 'No se pudo generar el calendario.');
+        } catch (err) {
+          console.error('Error al generar calendario:', err);
+          alert('No se pudo generar el calendario.');
+        }
+      });
     }
 
     function actualizarPreviewCodigo() {
       if (!previewCodigo || !modalidad) return;
       const direccion = direccionCurso ? direccionCurso.value : '{{ admin_direccion }}';
       const mod = modalidad.value === 'Presencial' ? 'P' : 'V';
-      previewCodigo.textContent = `AF-${direccion}-${mod}-001`;
-    }
-
-    function actualizarEstadoEnlaceVirtual() {
-      if (!modalidad || !enlaceVirtual) return;
-      const habilitado = modalidad.value === 'Virtual';
-      if (enlaceVirtualGroup) {
-        enlaceVirtualGroup.style.display = habilitado ? 'grid' : 'none';
-      }
-      enlaceVirtual.disabled = !habilitado;
-      enlaceVirtual.required = habilitado;
-      if (!habilitado) {
-        enlaceVirtual.value = '';
-      }
+      previewCodigo.textContent = `${direccion}-${mod}-001`;
     }
 
     if (direccionCurso) {
@@ -3935,71 +5008,12 @@
     if (modalidad) {
       modalidad.addEventListener('change', function () {
         actualizarPreviewCodigo();
-        actualizarEstadoEnlaceVirtual();
-      });
-    }
-    if (tipoAccion) {
-      tipoAccion.addEventListener('change', function () {
-        actualizarReglasTipoAccion();
       });
     }
     if (modalidadEditCurso) {
       modalidadEditCurso.addEventListener('change', actualizarEstadoEnlaceVirtualEdicion);
     }
-    if (mostrarSegundaJornadaBtn && panelSegundaJornada) {
-      const camposSegundaJornada = panelSegundaJornada.querySelectorAll('input, select, textarea');
-
-      const actualizarEstadoSegundaJornada = function (visible) {
-        panelSegundaJornada.style.display = visible ? 'grid' : 'none';
-        camposSegundaJornada.forEach(function (campo) {
-          campo.disabled = !visible;
-        });
-      };
-
-      actualizarEstadoSegundaJornada(false);
-
-      mostrarSegundaJornadaBtn.addEventListener('click', function () {
-        actualizarEstadoSegundaJornada(true);
-        mostrarSegundaJornadaBtn.hidden = true;
-      });
-
-      if (eliminarSegundaJornadaBtn) {
-        eliminarSegundaJornadaBtn.addEventListener('click', function () {
-          camposSegundaJornada.forEach(function (campo) {
-            if (campo.tagName === 'INPUT') {
-              const tipo = (campo.type || '').toLowerCase();
-              if (tipo === 'checkbox' || tipo === 'radio') {
-                campo.checked = false;
-              } else {
-                campo.value = '';
-              }
-              return;
-            }
-
-            if (campo.tagName === 'SELECT') {
-              if (campo.name === 'jornada_2') {
-                if (campo.querySelector('option[value="VESPERTINA"]')) {
-                  campo.value = 'VESPERTINA';
-                } else {
-                  campo.selectedIndex = 0;
-                }
-              } else {
-                campo.selectedIndex = 0;
-              }
-              return;
-            }
-
-            campo.value = '';
-          });
-
-          actualizarEstadoSegundaJornada(false);
-          mostrarSegundaJornadaBtn.hidden = false;
-        });
-      }
-    }
     actualizarPreviewCodigo();
-    actualizarEstadoEnlaceVirtual();
-    actualizarReglasTipoAccion();
     actualizarEstadoEnlaceVirtualEdicion();
   });
 

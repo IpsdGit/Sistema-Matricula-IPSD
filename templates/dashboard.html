@@ -96,7 +96,7 @@
         <p>Visualiza tus eventos académicos por mes, semana o día.</p>
         {% else %}
         <h2>Bienvenido, {{ (nombre_docente or 'Docente').split(' ')[0] }}.</h2>
-        <p>Gestiona tus capacitaciones, monitorea tu progreso y descubre oportunidades de formación.</p>
+        <p>Gestiona tus acciones formativas, monitorea tu progreso y descubre oportunidades de formación.</p>
         {% endif %}
       </section>
       {% endif %}
@@ -197,7 +197,7 @@
         <div class="historial-header-bento">
           <div>
             <h1 class="historial-bento-title">Historial de Actividades</h1>
-            <p class="historial-bento-subtitle">Visualiza tu progreso académico y cada capacitación completada en tu
+            <p class="historial-bento-subtitle">Visualiza tu progreso académico y cada acción formativa completada en tu
               trayectoria formativa.</p>
           </div>
           <div class="historial-filter-pills-wrap">
@@ -221,17 +221,17 @@
           {% set ec0 = 'aprobada' if item0['estado_categoria'] == 'aprobadas' else ('abandono' if item0['estado_codigo']
           == 'ABANDONO' else ('no-aprobada' if item0['estado_categoria'] == 'no_aprobadas' else ('cancelada' if
           item0['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-          <div class="historial-bento-featured curso-modal-trigger" data-curso-modal-id="{{ item0['id_capacitacion'] }}"
-            tabindex="0" role="button" aria-label="Ver detalle de {{ item0['nombre_curso'] }}">
+          <div class="historial-bento-featured curso-modal-trigger" data-curso-modal-id="{{ item0['edicion_id'] }}"
+            tabindex="0" role="button" aria-label="Ver detalle de {{ item0['nombre_accion'] }}">
             <div class="historial-glass-card historial-glass-card--featured">
               <div class="historial-card-top">
                 <span class="historial-status-pill historial-status-pill--{{ ec0 }}">
                   <span class="historial-status-dot"></span>
                   {{ item0['estado_nombre'] }}
                 </span>
-                <span class="historial-course-id-small">ID: {{ item0['id_capacitacion'] }}</span>
+                <span class="historial-course-id-small">ID: {{ item0['edicion_id'] }}</span>
               </div>
-              <h3 class="historial-glass-title">{{ item0['nombre_curso'] }}</h3>
+              <h3 class="historial-glass-title">{{ item0['nombre_accion'] }}</h3>
               <p class="historial-glass-desc">{{ item0['horario_elegido'] or 'Jornada por confirmar' }}</p>
               <div class="historial-glass-footer">
                 <div class="historial-glass-date">
@@ -302,16 +302,16 @@
           {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if
           accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas' else
           ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-          <div class="historial-bento-small curso-modal-trigger" data-curso-modal-id="{{ accion['id_capacitacion'] }}"
-            tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_curso'] }}">
+          <div class="historial-bento-small curso-modal-trigger" data-curso-modal-id="{{ accion['edicion_id'] }}"
+            tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_accion'] }}">
             <div class="historial-glass-card">
               <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm"
                 style="margin-bottom:.75rem;">
                 <span class="historial-status-dot"></span>{{ accion['estado_nombre'] }}
               </span>
-              <h4 class="historial-glass-title historial-glass-title--sm">{{ accion['nombre_curso'] }}</h4>
+              <h4 class="historial-glass-title historial-glass-title--sm">{{ accion['nombre_accion'] }}</h4>
               <p class="historial-glass-meta">
-                {{ accion['id_capacitacion'] }}<br>
+                {{ accion['edicion_id'] }}<br>
                 {{ accion['fecha_evento'][:10] if accion['fecha_evento'] else 'Sin fecha' }}
               </p>
               <span class="historial-arrow-icon" style="margin-top:auto; display:block;">→</span>
@@ -331,8 +331,8 @@
               {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if
               accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas'
               else ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-              <div class="historial-list-item curso-modal-trigger" data-curso-modal-id="{{ accion['id_capacitacion'] }}"
-                tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_curso'] }}">
+              <div class="historial-list-item curso-modal-trigger" data-curso-modal-id="{{ accion['edicion_id'] }}"
+                tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_accion'] }}">
                 <div class="historial-list-item-left">
                   <div class="historial-list-icon historial-list-icon--{{ ec }}">
                     <span
@@ -340,8 +340,8 @@
                       aria-hidden="true"></span>
                   </div>
                   <div>
-                    <p class="historial-list-name">{{ accion['nombre_curso'] }}</p>
-                    <p class="historial-list-meta">{{ accion['id_capacitacion'] }} · {{ accion['fecha_evento'][:10] if
+                    <p class="historial-list-name">{{ accion['nombre_accion'] }}</p>
+                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ accion['fecha_evento'][:10] if
                       accion['fecha_evento'] else 'Sin fecha' }}</p>
                   </div>
                 </div>
@@ -370,7 +370,7 @@
         <div class="card-ipsd">
           <div class="card-header doc-cal-header">
             <div>
-              <h5 style="margin:0; font-weight:700;">Calendario personal de cursos</h5>
+              <h5 style="margin:0; font-weight:700;">Calendario personal de acciones formativas</h5>
               <p class="doc-cal-subtitle" id="doc-cal-summary">Cargando eventos...</p>
             </div>
           </div>
@@ -437,7 +437,7 @@
             <div class="card-header">
               <div class="flex gap-2" style="align-items:center;">
                 <span class="ui-icon ui-icon-courses" aria-hidden="true"></span>
-                <h5 style="margin:0; font-weight:700;">Mis Capacitaciones Actuales</h5>
+                <h5 style="margin:0; font-weight:700;">Mis Acciones Formativas</h5>
               </div>
               <span style="font-size:.82rem; color:var(--text-muted);">{{ matriculados|length }} inscripción(es)</span>
             </div>
@@ -447,7 +447,7 @@
                 {% for curso in matriculados %}
                 {% set alt = loop.index is divisibleby 2 %}
                 <div class="enroll-card {% if alt %}enroll-card--alt{% endif %} curso-modal-trigger"
-                  data-curso-modal-id="{{ curso['id'] }}" tabindex="0" role="button"
+                  data-curso-modal-id="{{ curso['edicion_id'] or curso['id'] }}" tabindex="0" role="button"
                   aria-label="Ver detalle del curso {{ curso['nombre'] }}">
                   <div class="enroll-card-orb" aria-hidden="true"></div>
                   <div class="enroll-card-top">
@@ -460,7 +460,7 @@
                     {% else %}
                     <span class="enroll-status-badge enroll-status-badge--pending">En Curso</span>
                     {% endif %}
-                    <span class="enroll-card-num">#{{ curso['id'] }}</span>
+                    <span class="enroll-card-num">#{{ curso['edicion_id'] or curso['id'] }}</span>
                   </div>
                   <h3 class="enroll-card-title">{{ curso['nombre'] }}</h3>
                   <p class="enroll-card-meta">{{ curso['horario_elegido'] or 'Horario por confirmar' }}</p>
@@ -473,7 +473,7 @@
                       data-course-name="{{ curso['nombre'] }}">
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                      <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                      <input type="hidden" name="edicion_id" value="{{ curso['edicion_id'] or curso['id'] }}">
                       <input type="hidden" name="matricula_id" value="{{ curso['matricula_id'] }}">
                       <button type="submit" class="enroll-cancel-btn" title="Cancelar matrícula">×</button>
                     </form>
@@ -489,7 +489,7 @@
               {% else %}
               <div class="alert-ipsd info">
                 <span class="ui-icon ui-icon-info" aria-hidden="true"></span>
-                <span>Aún no estás inscrito en ninguna capacitación. Explora las disponibles abajo.</span>
+                <span>Aún no estás inscrito en ninguna acción formativa. Explora las disponibles abajo.</span>
               </div>
               {% endif %}
             </div>
@@ -537,7 +537,7 @@
         {% if cursos %}
         <div class="curso-grid portal-catalog-grid">
           {% for curso in cursos %}
-          <div class="curso-card" id="curso-{{ curso['id'] }}">
+          <div class="curso-card" id="curso-{{ curso['edicion_id'] or curso['id'] }}">
             <div class="curso-visual" aria-hidden="true">
               <span
                 class="curso-visual-badge curso-visual-badge--{{ 'virtual' if curso['modalidad_icono'] == 'V' else 'presencial' }}">
@@ -546,7 +546,7 @@
               </span>
             </div>
             <div class="curso-body">
-              <div class="curso-id">{{ curso['id'] }}</div>
+              <div class="curso-id">{{ curso['edicion_id'] or curso['id'] }}</div>
               <div class="curso-title">{{ curso['nombre'] }}</div>
               <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
               <div class="curso-date-block">
@@ -565,15 +565,12 @@
                 <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                  <input type="hidden" name="id_capacitacion" value="{{ curso['id'] }}">
+                  <input type="hidden" name="edicion_id" value="{{ curso['edicion_id'] or curso['id'] }}">
                   <div class="form-group" style="margin-bottom:.8rem;">
-                    <label class="curso-jornada-label">Jornada Preferida</label>
-                    <select class="form-select" name="horario_elegido" required>
-                      <option value="" disabled selected>Selecciona un horario...</option>
-                      {% for horario in curso['horarios'] %}
-                      <option value="{{ horario }}">{{ horario }}</option>
-                      {% endfor %}
-                    </select>
+                    <label class="curso-jornada-label">Horario</label>
+                    <p class="curso-jornada-preview">
+                      {{ curso['horarios'][0] if curso['horarios'] else 'Horario por confirmar' }}
+                    </p>
                   </div>
                   <button type="submit" class="btn-primary-ipsd w-full"
                     style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
@@ -596,7 +593,7 @@
         {% else %}
         <div class="alert-ipsd success" style="max-width:560px;">
           <span class="ui-icon ui-icon-success" aria-hidden="true"></span>
-          <span><strong>Sin cursos habilitados por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
+          <span><strong>Sin acciones formativas habilitadas por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
         </div>
         {% endif %}
 
@@ -674,6 +671,19 @@
             </div>
           </div>
           <div class="csd-cert-lock" style="color: #747780; padding-right: 0.5rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span></div>
+        </div>
+
+        <div class="csd-cert-block" id="csd-requisitos-container" style="align-items: flex-start; gap: .75rem;">
+          <div style="display: flex; align-items: center; gap: .85rem;">
+            <div class="csd-cert-icon" style="background: rgba(59, 130, 246, .15); color: #1d4ed8;">
+              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">fact_check</span>
+            </div>
+            <div>
+              <p class="csd-cert-title">Requisitos para aprobar</p>
+              <p class="csd-cert-sub" id="csd-requisitos-subtitle">Sin requisitos definidos</p>
+            </div>
+          </div>
+          <ul id="csd-requisitos-list" style="margin: 0; padding-left: 1.1rem; font-size: .82rem; color: #475569;"></ul>
         </div>
       </div>
 

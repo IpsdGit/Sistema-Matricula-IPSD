@@ -16,7 +16,7 @@ def registrar_o_obtener_certificado(
     conn,
     matricula_id: int,
     numero_empleado: str,
-    id_capacitacion: str,
+    edicion_id: str,
     tipo_documento: str,
     codigo_direccion: str,
 ) -> str:
@@ -30,11 +30,11 @@ def registrar_o_obtener_certificado(
         FROM certificados_emitidos
         WHERE matricula_id = ? 
           AND numero_empleado = ? 
-          AND id_capacitacion = ? 
+                    AND edicion_id = ? 
           AND activo = 1
         LIMIT 1
         ''',
-        (matricula_id, numero_empleado, id_capacitacion),
+                (matricula_id, numero_empleado, edicion_id),
     ).fetchone()
 
     if fila:
@@ -44,10 +44,10 @@ def registrar_o_obtener_certificado(
     conn.execute(
         '''
         INSERT INTO certificados_emitidos
-            (token_validacion, matricula_id, numero_empleado, id_capacitacion, tipo_documento)
+            (token_validacion, matricula_id, numero_empleado, edicion_id, tipo_documento)
         VALUES (?, ?, ?, ?, ?)
         ''',
-        (token, matricula_id, numero_empleado, id_capacitacion, tipo_documento),
+        (token, matricula_id, numero_empleado, edicion_id, tipo_documento),
     )
     conn.commit()
     return token
@@ -132,7 +132,7 @@ def validar_certificado(conn, token: str) -> dict | None:
             ce.token_validacion,
             ce.matricula_id,
             ce.numero_empleado,
-            ce.id_capacitacion,
+            ce.edicion_id,
             ce.fecha_emision,
             ce.tipo_documento,
             ce.veces_validado,
@@ -140,14 +140,12 @@ def validar_certificado(conn, token: str) -> dict | None:
             d.nombre_completo,
             d.correo_institucional,
             d.centro_universitario_regional,
-            c.nombre AS nombre_curso,
-            c.modalidad,
-            c.horas_totales,
-            c.mes,
-            c.anio
+            ca.nombre AS nombre_curso,
+            ca.modalidad
         FROM certificados_emitidos ce
         JOIN docentes d ON d.numero_empleado = ce.numero_empleado
-        JOIN capacitaciones c ON c.id = ce.id_capacitacion
+        JOIN ediciones_formativas ef ON ef.id = ce.edicion_id
+        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE ce.token_validacion = ? AND ce.activo = 1
         LIMIT 1
         ''',

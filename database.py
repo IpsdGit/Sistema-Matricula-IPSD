@@ -1,15 +1,15 @@
 import os
 import re
 import sqlite3
-from datetime import datetime
 
 from werkzeug.security import generate_password_hash
 
-from config import DB_PATH, MESES_ES
+from config import DB_PATH
 
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA foreign_keys = ON')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -18,6 +18,7 @@ def asegurar_migraciones_minimas():
     """Evita fallos en despliegues donde aún no se ha corrido parche.py."""
     try:
         conn = sqlite3.connect(DB_PATH)
+        conn.execute('PRAGMA foreign_keys = ON')
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -46,6 +47,7 @@ def asegurar_migraciones_minimas():
                 direccion_codigo TEXT NOT NULL,
                 nombre_plantilla TEXT NOT NULL,
                 tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
+                ruta_firma_img TEXT NOT NULL DEFAULT '',
                 texto_certificado TEXT NOT NULL,
                 firmante_nombre TEXT NOT NULL,
                 firmante_cargo TEXT NOT NULL,
@@ -70,6 +72,10 @@ def asegurar_migraciones_minimas():
         columnas_plantillas = {
             row[1] for row in cursor.execute('PRAGMA table_info(plantillas_certificados)').fetchall()
         }
+        if 'ruta_firma_img' not in columnas_plantillas:
+            cursor.execute(
+                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
+            )
         if 'texto_certificado' not in columnas_plantillas:
             cursor.execute(
                 "ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''"
@@ -120,19 +126,6 @@ def asegurar_migraciones_minimas():
                     (codigo_dir, codigo_dir)
                 )
 
-        cursos_ids = cursor.execute(
-            "SELECT id FROM capacitaciones WHERE id LIKE 'AF-%'"
-        ).fetchall()
-        for row in cursos_ids:
-            course_id = (row[0] or '').upper()
-            match = re.match(r'^AF-([A-Z0-9]{2,12})-[VP]-\d{3}$', course_id)
-            if match:
-                codigo_dir = match.group(1)
-                cursor.execute(
-                    'INSERT OR IGNORE INTO direcciones (codigo, nombre) VALUES (?, ?)',
-                    (codigo_dir, codigo_dir)
-                )
-
         columnas_admin = {
             row[1] for row in cursor.execute('PRAGMA table_info(admin_users)').fetchall()
         }
@@ -141,126 +134,70 @@ def asegurar_migraciones_minimas():
         if 'direccion' not in columnas_admin:
             cursor.execute("ALTER TABLE admin_users ADD COLUMN direccion TEXT NOT NULL DEFAULT 'IPSD'")
 
-        columnas_capacitaciones = {
-            row[1] for row in cursor.execute('PRAGMA table_info(capacitaciones)').fetchall()
-        }
-        if 'id_plantilla_certificado' not in columnas_capacitaciones:
-            cursor.execute(
-                'ALTER TABLE capacitaciones ADD COLUMN id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)'
-            )
-        if 'enlace_virtual' not in columnas_capacitaciones:
-            cursor.execute('ALTER TABLE capacitaciones ADD COLUMN enlace_virtual TEXT')
-        if 'duracion_tipo' not in columnas_capacitaciones:
-            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN duracion_tipo TEXT NOT NULL DEFAULT 'un_dia'")
-        if 'tipo_accion' not in columnas_capacitaciones:
-            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN tipo_accion TEXT NOT NULL DEFAULT 'CURSO'")
-        if 'horas_totales' not in columnas_capacitaciones:
-            cursor.execute('ALTER TABLE capacitaciones ADD COLUMN horas_totales INTEGER NOT NULL DEFAULT 20')
-        if 'semanas_duracion' not in columnas_capacitaciones:
-            cursor.execute('ALTER TABLE capacitaciones ADD COLUMN semanas_duracion INTEGER NOT NULL DEFAULT 1')
-
-        columnas_capacitaciones = {
-            row[1] for row in cursor.execute('PRAGMA table_info(capacitaciones)').fetchall()
-        }
-        if 'anio_fin' not in columnas_capacitaciones:
-            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN anio_fin TEXT NOT NULL DEFAULT ''")
-        if 'mes_fin' not in columnas_capacitaciones:
-            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN mes_fin TEXT NOT NULL DEFAULT ''")
-        if 'dia_fin' not in columnas_capacitaciones:
-            cursor.execute("ALTER TABLE capacitaciones ADD COLUMN dia_fin TEXT NOT NULL DEFAULT ''")
-
         cursor.execute(
             '''
-            UPDATE capacitaciones
-            SET
-                anio_fin = CASE WHEN TRIM(COALESCE(anio_fin, '')) = '' THEN COALESCE(anio, '') ELSE anio_fin END,
-                mes_fin = CASE WHEN TRIM(COALESCE(mes_fin, '')) = '' THEN COALESCE(mes, '') ELSE mes_fin END,
-                dia_fin = CASE WHEN TRIM(COALESCE(dia_fin, '')) = '' THEN COALESCE(dia, '') ELSE dia_fin END
+            CREATE TABLE IF NOT EXISTS catalogo_acciones (
+                id TEXT PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                modalidad TEXT,
+                tipo_accion TEXT,
+                id_plantilla_certificado INTEGER,
+                direccion_codigo TEXT,
+                requisitos TEXT DEFAULT '',
+                FOREIGN KEY (id_plantilla_certificado) REFERENCES plantillas_certificados (id),
+                FOREIGN KEY (direccion_codigo) REFERENCES direcciones (codigo),
+                FOREIGN KEY (tipo_accion) REFERENCES tipo_accion_formativa (codigo)
+            )
             '''
         )
 
-        # Backfill de fechas desde sesiones_curso cuando existan calendarios configurados.
-        try:
-            filas_fechas = cursor.execute(
-                '''
-                SELECT id_curso, MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin
-                FROM sesiones_curso
-                GROUP BY id_curso
-                '''
-            ).fetchall()
-        except sqlite3.Error:
-            filas_fechas = []
-
-        for fila in filas_fechas:
-            id_curso = (fila[0] or '').strip().upper()
-            fecha_inicio_iso = (fila[1] or '').strip()
-            fecha_fin_iso = (fila[2] or '').strip()
-            if not id_curso or not fecha_inicio_iso or not fecha_fin_iso:
-                continue
-            try:
-                inicio_dt = datetime.strptime(fecha_inicio_iso, '%Y-%m-%d').date()
-                fin_dt = datetime.strptime(fecha_fin_iso, '%Y-%m-%d').date()
-            except ValueError:
-                continue
-
-            anio_inicio = str(inicio_dt.year)
-            mes_inicio = MESES_ES[inicio_dt.month - 1]
-            dia_inicio = str(inicio_dt.day)
-            anio_fin = str(fin_dt.year)
-            mes_fin = MESES_ES[fin_dt.month - 1]
-            dia_fin = str(fin_dt.day)
-
+        columnas_catalogo = {
+            row[1] for row in cursor.execute('PRAGMA table_info(catalogo_acciones)').fetchall()
+        }
+        if 'requisitos' not in columnas_catalogo:
             cursor.execute(
-                '''
-                UPDATE capacitaciones
-                SET anio = ?, mes = ?, dia = ?, anio_fin = ?, mes_fin = ?, dia_fin = ?
-                WHERE id = ?
-                ''',
-                (anio_inicio, mes_inicio, dia_inicio, anio_fin, mes_fin, dia_fin, id_curso)
+                "ALTER TABLE catalogo_acciones ADD COLUMN requisitos TEXT DEFAULT ''"
             )
 
         cursor.execute(
             '''
-            UPDATE capacitaciones
-            SET tipo_accion = CASE
-                WHEN UPPER(TRIM(COALESCE(tipo_accion, ''))) IN ('CONFERENCIA', 'SEMINARIO', 'CURSO')
-                    THEN UPPER(TRIM(tipo_accion))
-                WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'un_dia'
-                    THEN 'CONFERENCIA'
-                WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'varios_dias'
-                    THEN 'SEMINARIO'
-                ELSE 'CURSO'
-            END
+            CREATE TABLE IF NOT EXISTS ediciones_formativas (
+                id TEXT PRIMARY KEY,
+                catalogo_id TEXT,
+                etiqueta_edicion TEXT DEFAULT '',
+                trimestre TEXT,
+                fecha_inicio DATE,
+                fecha_limite_matricula DATETIME,
+                jornada TEXT,
+                hora TEXT,
+                cupos_maximos INTEGER,
+                enlace_acceso TEXT,
+                docente_responsable TEXT,
+                privacidad TEXT DEFAULT 'Abierta',
+                estado TEXT DEFAULT 'Programada',
+                FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
+            )
             '''
         )
         cursor.execute(
-            '''
-            UPDATE capacitaciones
-            SET horas_totales = CASE
-                WHEN COALESCE(horas_totales, 0) < 1 THEN
-                    CASE
-                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'CONFERENCIA' THEN 4
-                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'SEMINARIO' THEN 16
-                        ELSE 20
-                    END
-                ELSE horas_totales
-            END
-            '''
+            'CREATE INDEX IF NOT EXISTS idx_ediciones_catalogo ON ediciones_formativas (catalogo_id)'
         )
-        cursor.execute(
-            '''
-            UPDATE capacitaciones
-            SET semanas_duracion = CASE
-                WHEN COALESCE(semanas_duracion, 0) < 1 THEN
-                    CASE
-                        WHEN UPPER(TRIM(COALESCE(tipo_accion, 'CURSO'))) = 'CONFERENCIA' THEN 1
-                        WHEN TRIM(COALESCE(duracion_tipo, 'un_dia')) = 'varios_dias' THEN 2
-                        ELSE 1
-                    END
-                ELSE semanas_duracion
-            END
-            '''
-        )
+
+        columnas_ediciones = {
+            row[1] for row in cursor.execute('PRAGMA table_info(ediciones_formativas)').fetchall()
+        }
+        if 'etiqueta_edicion' not in columnas_ediciones:
+            cursor.execute(
+                "ALTER TABLE ediciones_formativas ADD COLUMN etiqueta_edicion TEXT DEFAULT ''"
+            )
+        if 'requisitos' not in columnas_ediciones:
+            cursor.execute(
+                "ALTER TABLE ediciones_formativas ADD COLUMN requisitos TEXT DEFAULT ''"
+            )
+        if 'duracion_horas' not in columnas_ediciones:
+            cursor.execute(
+                'ALTER TABLE ediciones_formativas ADD COLUMN duracion_horas INTEGER'
+            )
 
         cursor.execute(
             '''
@@ -287,28 +224,34 @@ def asegurar_migraciones_minimas():
             ],
         )
 
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS matriculas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero_empleado TEXT NOT NULL,
+                edicion_id TEXT NOT NULL,
+                fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
+                aprobado INTEGER,
+                fecha_aprobacion TEXT,
+                comentario_validacion TEXT,
+                FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
+            )
+            '''
+        )
+
         columnas_matriculas = {
             row[1] for row in cursor.execute('PRAGMA table_info(matriculas)').fetchall()
         }
+        if 'edicion_id' not in columnas_matriculas:
+            cursor.execute('ALTER TABLE matriculas ADD COLUMN edicion_id TEXT')
         if 'fecha_matricula' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP')
         if 'aprobado' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN aprobado INTEGER')
         if 'fecha_aprobacion' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_aprobacion TEXT')
-            # Intentar backfill desde el historial si existe algún registro de 'APROBADO'
-            cursor.execute('''
-                UPDATE matriculas 
-                SET fecha_aprobacion = (
-                    SELECT SUBSTR(fecha_evento, 1, 10)
-                    FROM matricula_historial 
-                    WHERE matricula_id = matriculas.numero_empleado || '_' || matriculas.id_capacitacion
-                    AND estado_codigo = 'APROBADO'
-                    ORDER BY fecha_evento DESC 
-                    LIMIT 1
-                )
-                WHERE aprobado = 1 AND fecha_aprobacion IS NULL
-            ''')
+        if 'comentario_validacion' not in columnas_matriculas:
+            cursor.execute('ALTER TABLE matriculas ADD COLUMN comentario_validacion TEXT')
 
         cursor.execute(
             '''
@@ -327,13 +270,13 @@ def asegurar_migraciones_minimas():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 matricula_id INTEGER,
                 numero_empleado TEXT NOT NULL,
-                id_capacitacion TEXT NOT NULL,
-                nombre_curso TEXT NOT NULL,
-                horario_elegido TEXT,
+                edicion_id TEXT NOT NULL,
+                nombre_accion TEXT NOT NULL,
                 estado_codigo TEXT NOT NULL,
                 detalle TEXT,
                 fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo)
+                FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo),
+                FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id)
             )
             '''
         )
@@ -362,86 +305,18 @@ def asegurar_migraciones_minimas():
             '''
             CREATE TABLE IF NOT EXISTS sesiones_curso (
                 id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_curso TEXT NOT NULL,
+                edicion_id TEXT NOT NULL,
                 fecha TEXT NOT NULL,
                 hora_inicio TEXT NOT NULL,
                 hora_fin TEXT NOT NULL,
-                jornada TEXT NOT NULL DEFAULT 'UNICA',
-                docente_sesion TEXT,
-                edicion TEXT,
                 estado INTEGER NOT NULL DEFAULT 0,
                 token_asistencia TEXT,
-                FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
+                FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
             )
             '''
         )
-        columnas_sesiones = {
-            row[1] for row in cursor.execute('PRAGMA table_info(sesiones_curso)').fetchall()
-        }
-        if 'jornada' not in columnas_sesiones:
-            cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN jornada TEXT NOT NULL DEFAULT 'UNICA'")
-        if 'docente_sesion' not in columnas_sesiones:
-            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN docente_sesion TEXT')
-        if 'edicion' not in columnas_sesiones:
-            cursor.execute('ALTER TABLE sesiones_curso ADD COLUMN edicion TEXT')
-        if 'bloque_codigo' in columnas_sesiones:
-            cursor.execute(
-                '''
-                UPDATE sesiones_curso
-                SET edicion = UPPER(TRIM(bloque_codigo))
-                WHERE (edicion IS NULL OR TRIM(edicion) = '')
-                  AND bloque_codigo IS NOT NULL
-                  AND TRIM(bloque_codigo) <> ''
-                '''
-            )
-
-            cursor.execute('ALTER TABLE sesiones_curso RENAME TO sesiones_curso_legacy')
-            cursor.execute(
-                '''
-                CREATE TABLE sesiones_curso (
-                    id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
-                    id_curso TEXT NOT NULL,
-                    fecha TEXT NOT NULL,
-                    hora_inicio TEXT NOT NULL,
-                    hora_fin TEXT NOT NULL,
-                    jornada TEXT NOT NULL DEFAULT 'UNICA',
-                    docente_sesion TEXT,
-                    edicion TEXT,
-                    estado INTEGER NOT NULL DEFAULT 0,
-                    token_asistencia TEXT,
-                    FOREIGN KEY (id_curso) REFERENCES capacitaciones (id) ON DELETE CASCADE
-                )
-                '''
-            )
-            cursor.execute(
-                '''
-                INSERT INTO sesiones_curso (
-                    id_sesion, id_curso, fecha, hora_inicio, hora_fin,
-                    jornada, docente_sesion, edicion, estado, token_asistencia
-                )
-                SELECT
-                    id_sesion, id_curso, fecha, hora_inicio, hora_fin,
-                    jornada, docente_sesion, edicion, estado, token_asistencia
-                FROM sesiones_curso_legacy
-                '''
-            )
-            cursor.execute('DROP TABLE sesiones_curso_legacy')
-
         cursor.execute(
-            '''
-            UPDATE sesiones_curso
-            SET jornada = CASE
-                WHEN UPPER(TRIM(COALESCE(jornada, ''))) IN ('MATUTINA', 'VESPERTINA', 'NOCTURNA')
-                    THEN UPPER(TRIM(jornada))
-                ELSE 'UNICA'
-            END
-            '''
-        )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (id_curso, fecha, hora_inicio)'
-        )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_edicion ON sesiones_curso (id_curso, edicion)'
+            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (edicion_id, fecha, hora_inicio)'
         )
 
         cursor.execute(
@@ -490,9 +365,10 @@ def asegurar_migraciones_minimas():
 
         matriculas_sin_historial = cursor.execute(
             '''
-            SELECT m.id, m.numero_empleado, m.id_capacitacion, m.horario_elegido, m.aprobado, c.nombre
+            SELECT m.id, m.numero_empleado, m.edicion_id, m.aprobado, ca.nombre
             FROM matriculas m
-            JOIN capacitaciones c ON c.id = m.id_capacitacion
+            JOIN ediciones_formativas e ON e.id = m.edicion_id
+            JOIN catalogo_acciones ca ON ca.id = e.catalogo_id
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM matricula_historial h
@@ -501,7 +377,7 @@ def asegurar_migraciones_minimas():
             '''
         ).fetchall()
         for fila in matriculas_sin_historial:
-            valor_aprobado = fila[4]
+            valor_aprobado = fila[3]
             if valor_aprobado == 1:
                 estado_codigo = 'APROBADA'
             elif valor_aprobado == 0:
@@ -514,13 +390,13 @@ def asegurar_migraciones_minimas():
             cursor.execute(
                 '''
                 INSERT INTO matricula_historial (
-                    matricula_id, numero_empleado, id_capacitacion, nombre_curso,
-                    horario_elegido, estado_codigo, detalle
+                    matricula_id, numero_empleado, edicion_id, nombre_accion,
+                    estado_codigo, detalle
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ''',
                 (
-                    fila[0], fila[1], fila[2], fila[5], fila[3], estado_codigo,
+                    fila[0], fila[1], fila[2], fila[4], estado_codigo,
                     'Sincronizado desde matrículas existentes'
                 )
             )
@@ -555,14 +431,14 @@ def asegurar_migraciones_minimas():
                 token_validacion TEXT UNIQUE NOT NULL,
                 matricula_id INTEGER NOT NULL,
                 numero_empleado TEXT NOT NULL,
-                id_capacitacion TEXT NOT NULL,
+                edicion_id TEXT NOT NULL,
                 fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
                 tipo_documento TEXT NOT NULL,
                 veces_validado INTEGER NOT NULL DEFAULT 0,
                 activo INTEGER NOT NULL DEFAULT 1,
                 FOREIGN KEY(matricula_id) REFERENCES matriculas(id),
                 FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado),
-                FOREIGN KEY(id_capacitacion) REFERENCES capacitaciones(id)
+                FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id)
             )
             '''
         )

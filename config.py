@@ -51,12 +51,21 @@ FILTROS_NOTIFICACION_PERMITIDOS = {
     'oportunidades',
     'certificados',
 }
-VISTAS_ADMIN_PERMITIDAS = {'dashboard', 'cursos', 'calendario', 'matriculas', 'usuarios'}
+VISTAS_ADMIN_PERMITIDAS = {
+    'dashboard',
+    'cursos',
+    'ediciones',
+    'calendario',
+    'matriculas',
+    'usuarios',
+    'certificados',
+}
 
 
 def configure_app(app):
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.jinja_env.auto_reload = True
-    app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+    # Llave secreta estable para evitar cierres de sesión en reinicios locales
+    app.secret_key = os.environ.get('SECRET_KEY', 'ipsd_secret_key_development_only_12345')
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     os.makedirs(os.path.join(UPLOAD_FOLDER, 'direcciones'), exist_ok=True)

@@ -133,40 +133,47 @@ def _etiqueta_horario_desde_sesion(jornada, hora_inicio, hora_fin):
     return f"{_nombre_jornada_horario(jornada)} {inicio}-{fin}"
 
 
-def obtener_horarios_disponibles_curso(conn, id_curso):
-    horarios_bd = conn.execute(
-        'SELECT horario FROM horarios_curso WHERE id_capacitacion = ? ORDER BY id ASC',
-        (id_curso,),
-    ).fetchall()
+def _etiqueta_horario_desde_edicion(jornada, hora):
+    etiqueta_jornada = _nombre_jornada_horario(jornada)
+    hora_texto = (hora or '').strip()
+    if not hora_texto:
+        return etiqueta_jornada
+    if etiqueta_jornada.lower() in hora_texto.lower():
+        return hora_texto
+    return f"{etiqueta_jornada} {hora_texto}".strip()
 
-    horarios_norm = []
-    vistos = set()
-    for fila in horarios_bd:
-        horario = (fila['horario'] or '').strip()
-        if not horario or horario in vistos:
-            continue
-        vistos.add(horario)
-        horarios_norm.append(horario)
 
-    horarios_validos = [h for h in horarios_norm if not _es_horario_por_definir(h)]
-    if horarios_validos:
-        return horarios_validos
+def obtener_horarios_disponibles_curso(conn, edicion_id):
+    edicion = conn.execute(
+        'SELECT jornada, hora FROM ediciones_formativas WHERE id = ? LIMIT 1',
+        (edicion_id,),
+    ).fetchone()
+
+    horarios = []
+    if edicion:
+        etiqueta = _etiqueta_horario_desde_edicion(edicion['jornada'], edicion['hora'])
+        if etiqueta and not _es_horario_por_definir(etiqueta):
+            horarios.append(etiqueta)
+
+    if horarios:
+        return horarios
 
     sesiones = conn.execute(
         '''
-        SELECT jornada, hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
+        SELECT hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
         FROM sesiones_curso
-        WHERE id_curso = ?
-        GROUP BY jornada, hora_inicio, hora_fin
+        WHERE edicion_id = ?
+        GROUP BY hora_inicio, hora_fin
         ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
         ''',
-        (id_curso,),
+        (edicion_id,),
     ).fetchall()
 
+    jornada = edicion['jornada'] if edicion else None
     horarios_sesiones = []
     vistos_sesiones = set()
     for fila in sesiones:
-        etiqueta = _etiqueta_horario_desde_sesion(fila['jornada'], fila['hora_inicio'], fila['hora_fin'])
+        etiqueta = _etiqueta_horario_desde_sesion(jornada, fila['hora_inicio'], fila['hora_fin'])
         if not etiqueta or etiqueta in vistos_sesiones:
             continue
         vistos_sesiones.add(etiqueta)
@@ -182,9 +189,10 @@ def normalizar_nombre_curso(nombre):
 def obtener_resumen_intentos_por_curso(conn, numero_empleado):
     filas = conn.execute(
         '''
-        SELECT c.nombre, m.aprobado
+        SELECT ca.nombre, m.aprobado
         FROM matriculas m
-        JOIN capacitaciones c ON c.id = m.id_capacitacion
+        JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE m.numero_empleado = ?
         ''',
         (numero_empleado,),
@@ -272,6 +280,8 @@ def normalizar_filtro_notificacion(filtro):
 
 def normalizar_vista_admin(vista, es_superadmin=False):
     vista_final = (vista or 'dashboard').strip().lower()
+    if vista_final == 'calendario':
+        vista_final = 'ediciones'
     if vista_final not in VISTAS_ADMIN_PERMITIDAS:
         vista_final = 'dashboard'
     if vista_final == 'usuarios' and not es_superadmin:
@@ -289,10 +299,10 @@ def redireccion_admin_vista(default_view='dashboard'):
 
 def generar_id_curso(conn, direccion, modalidad):
     codigo_modalidad = obtener_codigo_modalidad(modalidad)
-    prefijo = f'AF-{direccion}-{codigo_modalidad}-'
+    prefijo = f'{direccion}-{codigo_modalidad}-'
 
     existentes = conn.execute(
-        'SELECT id FROM capacitaciones WHERE id LIKE ?',
+        'SELECT id FROM catalogo_acciones WHERE id LIKE ?',
         (f'{prefijo}%',),
     ).fetchall()
 
@@ -308,10 +318,19 @@ def generar_id_curso(conn, direccion, modalidad):
 
 def cargar_contexto_dashboard_docente(conn, numero_empleado):
     query_matriculados = '''
-        SELECT c.id, c.nombre, c.mes, c.anio, m.horario_elegido, m.id as matricula_id, m.aprobado,
-               (SELECT COUNT(*) FROM sesiones_curso s WHERE s.id_curso = c.id AND s.estado = 1) as sesiones_habilitadas
+     SELECT ef.id AS edicion_id,
+         ca.nombre,
+         ca.modalidad,
+         ef.trimestre,
+         ef.fecha_inicio,
+         ef.jornada,
+         ef.hora,
+         m.id as matricula_id,
+         m.aprobado,
+         (SELECT COUNT(*) FROM sesiones_curso s WHERE s.edicion_id = ef.id AND s.estado = 1) as sesiones_habilitadas
         FROM matriculas m
-        JOIN capacitaciones c ON m.id_capacitacion = c.id
+     JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+     JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE m.numero_empleado = ?
         ORDER BY m.id DESC
     '''
@@ -320,13 +339,51 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     # Convertir a dict para poder mutarlo o acceder más fácil
     cursos_matriculados_list = []
     for fila in cursos_matriculados:
-        cursos_matriculados_list.append(dict(fila))
+        modalidad = (fila['modalidad'] or '').strip()
+        if modalidad not in {'Virtual', 'Presencial'}:
+            modalidad = 'Virtual'
+
+        fecha_dt = _fecha_desde_iso(fila['fecha_inicio'])
+        anio = str(fecha_dt.year) if fecha_dt else None
+        mes = MESES_ES[fecha_dt.month - 1] if fecha_dt else None
+        dia = str(fecha_dt.day) if fecha_dt else None
+
+        cursos_matriculados_list.append(
+            {
+                'id': fila['edicion_id'],
+                'edicion_id': fila['edicion_id'],
+                'nombre': fila['nombre'],
+                'trimestre': fila['trimestre'],
+                'fecha_inicio': fila['fecha_inicio'],
+                'anio': anio,
+                'mes': mes,
+                'dia': dia,
+                'horario_elegido': _etiqueta_horario_desde_edicion(fila['jornada'], fila['hora']),
+                'matricula_id': fila['matricula_id'],
+                'aprobado': fila['aprobado'],
+                'sesiones_habilitadas': fila['sesiones_habilitadas'],
+                'modalidad': modalidad,
+                'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
+            }
+        )
 
     resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
 
     query_disponibles = '''
-        SELECT id, nombre, mes, anio, trimestre, modalidad, dia FROM capacitaciones
-        ORDER BY anio DESC, mes
+        SELECT ef.id AS edicion_id,
+               ca.nombre,
+               ca.modalidad,
+               ef.trimestre,
+               ef.fecha_inicio,
+               ef.jornada,
+               ef.hora,
+               ef.fecha_limite_matricula
+        FROM ediciones_formativas ef
+        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+        WHERE ef.privacidad = 'Abierta'
+          AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= datetime('now'))
+          AND ef.estado = 'Programada'
+        ORDER BY ef.fecha_inicio DESC, ef.id DESC
     '''
     cursos_raw = conn.execute(query_disponibles).fetchall()
 
@@ -353,24 +410,31 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         if bloqueado:
             continue
 
-        horarios_disponibles = obtener_horarios_disponibles_curso(conn, c['id'])
+        horarios_disponibles = obtener_horarios_disponibles_curso(conn, c['edicion_id'])
 
         mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
         modalidad = (c['modalidad'] or '').strip()
         if modalidad not in {'Virtual', 'Presencial'}:
-            modalidad = 'Virtual' if '-V-' in (c['id'] or '').upper() else 'Presencial'
+            modalidad = 'Virtual'
+
+        fecha_dt = _fecha_desde_iso(c['fecha_inicio'])
+        anio = str(fecha_dt.year) if fecha_dt else None
+        mes = MESES_ES[fecha_dt.month - 1] if fecha_dt else None
+        dia = str(fecha_dt.day) if fecha_dt else None
 
         cursos_disponibles.append(
             {
-                'id': c['id'],
+                'id': c['edicion_id'],
+                'edicion_id': c['edicion_id'],
                 'nombre': c['nombre'],
-                'mes': c['mes'],
-                'anio': c['anio'],
-                'dia': c['dia'],
                 'trimestre': c['trimestre'],
+                'fecha_inicio': c['fecha_inicio'],
+            'anio': anio,
+            'mes': mes,
+            'dia': dia,
                 'modalidad': modalidad,
                 'modalidad_icono': 'V' if modalidad == 'Virtual' else 'P',
-                'fecha_inicio_texto': _fecha_inicio_legible_desde_partes(c['anio'], c['mes'], c['dia']),
+                'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(c['fecha_inicio']),
                 'horarios': horarios_disponibles,
                 'horarios_preview': horarios_disponibles[:2],
                 'mensaje_oportunidades': mensaje_oportunidades,
@@ -441,13 +505,30 @@ def _fecha_inicio_legible_desde_partes(anio, mes_nombre, dia):
     return f'{dia_semana}, {fecha.day} de {MESES_ES[fecha.month - 1]} de {fecha.year}'
 
 
+def _fecha_desde_iso(fecha_iso):
+    if not fecha_iso:
+        return None
+    try:
+        return datetime.fromisoformat((fecha_iso or '').strip())
+    except ValueError:
+        return None
+
+
+def _fecha_inicio_legible_desde_iso(fecha_iso):
+    fecha = _fecha_desde_iso(fecha_iso)
+    if not fecha:
+        return None
+    dia_semana = DIAS_SEMANA[fecha.weekday()]
+    return f'{dia_semana}, {fecha.day} de {MESES_ES[fecha.month - 1]} de {fecha.year}'
+
+
 def construir_eventos_calendario_docente(conn, numero_empleado):
     cursos_vinculados_query = '''
-        SELECT DISTINCT id_capacitacion AS id_curso
+        SELECT DISTINCT edicion_id
         FROM matriculas
         WHERE numero_empleado = ?
         UNION
-        SELECT DISTINCT id_capacitacion AS id_curso
+        SELECT DISTINCT edicion_id
         FROM matricula_historial
         WHERE numero_empleado = ?
     '''
@@ -457,15 +538,14 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
     cursos_vinculados = conn.execute(
         f'''
         SELECT
-            c.id,
-            c.nombre,
-            c.modalidad,
-            c.anio,
-            c.mes,
-            c.dia
-        FROM capacitaciones c
-        JOIN ({cursos_vinculados_query}) cv ON cv.id_curso = c.id
-        ORDER BY c.anio ASC, c.id ASC
+            ef.id,
+            ca.nombre,
+            ca.modalidad,
+            ef.fecha_inicio
+        FROM ediciones_formativas ef
+        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+        JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = ef.id
+        ORDER BY ef.fecha_inicio ASC, ef.id ASC
         ''',
         params_vinculados,
     ).fetchall()
@@ -474,16 +554,17 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
         f'''
         SELECT
             s.id_sesion,
-            s.id_curso,
+            s.edicion_id,
             s.fecha,
             s.hora_inicio,
             s.hora_fin,
             s.estado,
-            c.nombre,
-            c.modalidad
+            ca.nombre,
+            ca.modalidad
         FROM sesiones_curso s
-        JOIN capacitaciones c ON c.id = s.id_curso
-        JOIN ({cursos_vinculados_query}) cv ON cv.id_curso = s.id_curso
+        JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+        JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = s.edicion_id
         ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
         ''',
         params_vinculados,
@@ -507,12 +588,13 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
 
     eventos = []
     for curso in cursos_vinculados:
-        fecha_iso = _fecha_iso_desde_partes_curso(curso['anio'], curso['mes'], curso['dia'])
+        fecha_iso = (curso['fecha_inicio'] or '').strip()[:10]
         if not fecha_iso:
             continue
 
         eventos.append(
             {
+                'edicion_id': curso['id'],
                 'id_curso': curso['id'],
                 'nombre_curso': curso['nombre'],
                 'fecha_iso': fecha_iso,
@@ -532,7 +614,8 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
 
         eventos.append(
             {
-                'id_curso': sesion['id_curso'],
+                'edicion_id': sesion['edicion_id'],
+                'id_curso': sesion['edicion_id'],
                 'nombre_curso': sesion['nombre'],
                 'fecha_iso': fecha_iso,
                 'hora_inicio': sesion['hora_inicio'],
@@ -544,7 +627,7 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
             }
         )
 
-    eventos.sort(key=lambda ev: (ev.get('fecha_iso') or '', ev.get('hora_inicio') or '00:00', ev.get('id_curso') or ''))
+    eventos.sort(key=lambda ev: (ev.get('fecha_iso') or '', ev.get('hora_inicio') or '00:00', ev.get('edicion_id') or ''))
     return eventos
 
 
@@ -597,7 +680,7 @@ def construir_notificaciones_docente(
             agregar(
                 tipo='resultado',
                 titulo='Resultado publicado: Aprobado',
-                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                mensaje=f"{fila['nombre_accion']} ({fila['edicion_id']})",
                 nivel='success',
                 icono='✅',
                 fecha=fecha,
@@ -606,17 +689,17 @@ def construir_notificaciones_docente(
             agregar(
                 tipo='certificado',
                 titulo='Certificado disponible',
-                mensaje=f"Tu certificado de {fila['nombre_curso']} está disponible.",
+                mensaje=f"Tu certificado de {fila['nombre_accion']} está disponible.",
                 nivel='success',
                 icono='🎓',
                 fecha=fecha,
-                clave=f"cert-{fila['id_capacitacion']}-{fila['matricula_id']}",
+                clave=f"cert-{fila['edicion_id']}-{fila['matricula_id']}",
             )
         elif estado == 'NO_APROBADA':
             agregar(
                 tipo='resultado',
                 titulo='Resultado publicado: No aprobado',
-                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                mensaje=f"{fila['nombre_accion']} ({fila['edicion_id']})",
                 nivel='danger',
                 icono='❌',
                 fecha=fecha,
@@ -626,17 +709,18 @@ def construir_notificaciones_docente(
             agregar(
                 tipo='resultado',
                 titulo='Estado actualizado: Abandono',
-                mensaje=f"{fila['nombre_curso']} ({fila['id_capacitacion']})",
+                mensaje=f"{fila['nombre_accion']} ({fila['edicion_id']})",
                 nivel='warning',
                 icono='⚠️',
                 fecha=fecha,
                 clave=f"res-ab-{fila['id']}",
             )
         elif estado == 'PENDIENTE':
+            nombre_accion = fila.get('nombre_accion') or fila.get('nombre_curso') or 'Acción Formativa'
             agregar(
                 tipo='matricula',
                 titulo='Confirmación de Matrícula',
-                mensaje=f"Te has inscrito exitosamente en la Acción Formativa: \"{fila['nombre_curso']}\".",
+                mensaje=f"Te has inscrito exitosamente en la Acción Formativa: \"{nombre_accion}\".",
                 nivel='success',
                 icono='✅',
                 fecha=fecha,
@@ -649,12 +733,12 @@ def construir_notificaciones_docente(
         agregar(
             tipo='nueva_oferta',
             titulo='Nueva acción formativa disponible',
-            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['id']})",
+            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['edicion_id']})",
             nivel='info',
             icono='🆕',
             fecha='Disponible ahora',
-            clave=f"oferta-{curso['id']}",
-            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+            clave=f"oferta-{curso['edicion_id']}",
+            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['edicion_id']}",
             accion_label='Ir a la acción formativa',
         )
     if len(cursos_disponibles) > 4:
@@ -673,12 +757,12 @@ def construir_notificaciones_docente(
         agregar(
             tipo='asistencia',
             titulo='Marcado de asistencia habilitado',
-            mensaje=f"Puedes registrar asistencia en {curso['nombre']} ({curso['id']}).",
+            mensaje=f"Puedes registrar asistencia en {curso['nombre']} ({curso['edicion_id']}).",
             nivel='warning',
             icono='⚡',
             fecha='Acción requerida',
             clave=f"asis-{curso['matricula_id']}",
-            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['edicion_id']}",
             accion_label='Registrar asistencia',
         )
 
@@ -741,9 +825,8 @@ def resumir_notificaciones(notificaciones):
 def registrar_evento_matricula(
     conn,
     numero_empleado,
-    id_capacitacion,
-    nombre_curso,
-    horario_elegido,
+    edicion_id,
+    nombre_accion,
     estado_codigo,
     matricula_id=None,
     detalle='',
@@ -751,17 +834,16 @@ def registrar_evento_matricula(
     conn.execute(
         '''
         INSERT INTO matricula_historial (
-            matricula_id, numero_empleado, id_capacitacion, nombre_curso,
-            horario_elegido, estado_codigo, detalle
+            matricula_id, numero_empleado, edicion_id, nombre_accion,
+            estado_codigo, detalle
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         ''',
         (
             matricula_id,
             numero_empleado,
-            id_capacitacion,
-            nombre_curso,
-            horario_elegido,
+            edicion_id,
+            nombre_accion,
             estado_codigo,
             detalle,
         ),
@@ -775,19 +857,21 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
         SELECT
             h.id,
             h.matricula_id,
-            h.id_capacitacion,
-            h.nombre_curso,
-            h.horario_elegido,
+            h.edicion_id,
+            h.nombre_accion,
             h.estado_codigo,
             h.fecha_evento,
             c.nombre AS estado_nombre,
             c.categoria AS estado_categoria,
             m_act.id AS matricula_activa_id,
-            cap.modalidad AS modalidad_actual
+            cap.modalidad AS modalidad_actual,
+            ef.jornada AS jornada_edicion,
+            ef.hora AS hora_edicion
         FROM matricula_historial h
         JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
         LEFT JOIN matriculas m_act ON m_act.id = h.matricula_id
-        LEFT JOIN capacitaciones cap ON cap.id = h.id_capacitacion
+        LEFT JOIN ediciones_formativas ef ON ef.id = h.edicion_id
+        LEFT JOIN catalogo_acciones cap ON cap.id = ef.catalogo_id
         JOIN (
             SELECT COALESCE(matricula_id, -id) AS agrupador, MAX(id) AS max_id
             FROM matricula_historial
@@ -815,13 +899,7 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
 
         modalidad = (fila['modalidad_actual'] or '').strip()
         if modalidad not in {'Virtual', 'Presencial'}:
-            curso_id = (fila['id_capacitacion'] or '').upper()
-            if '-V-' in curso_id:
-                modalidad = 'Virtual'
-            elif '-P-' in curso_id:
-                modalidad = 'Presencial'
-            else:
-                modalidad = 'No definida'
+            modalidad = 'No definida'
 
         modalidad_icono = 'V' if modalidad == 'Virtual' else 'P' if modalidad == 'Presencial' else '?'
 
@@ -829,9 +907,9 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
             {
                 'id': fila['id'],
                 'matricula_id': fila['matricula_id'],
-                'id_capacitacion': fila['id_capacitacion'],
-                'nombre_curso': fila['nombre_curso'],
-                'horario_elegido': fila['horario_elegido'],
+                'edicion_id': fila['edicion_id'],
+                'nombre_accion': fila['nombre_accion'],
+                'horario_elegido': _etiqueta_horario_desde_edicion(fila['jornada_edicion'], fila['hora_edicion']),
                 'estado_codigo': estado_codigo,
                 'estado_nombre': estado_nombre,
                 'estado_categoria': estado_categoria,

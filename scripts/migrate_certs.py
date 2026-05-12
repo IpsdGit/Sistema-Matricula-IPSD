@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-project_root = os.path.dirname(__file__)
+project_root = os.path.dirname(os.path.dirname(__file__))
 db_path = os.path.join(project_root, 'matricula.db')
 
 conexion = sqlite3.connect(db_path)
@@ -23,7 +23,9 @@ cursor.execute('''
 ''')
 
 try:
-    cursor.execute('ALTER TABLE capacitaciones ADD COLUMN id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)')
+    cursor.execute(
+        'ALTER TABLE catalogo_acciones ADD COLUMN id_plantilla_certificado INTEGER REFERENCES plantillas_certificados(id)'
+    )
 except sqlite3.OperationalError as e:
     if "duplicate column name" in str(e).lower():
         print("La columna id_plantilla_certificado ya existe.")
