@@ -8,8 +8,10 @@ from config import DB_PATH
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    # Se aumenta el timeout a 20 segundos y se activa el modo WAL para mejorar la concurrencia
+    conn = sqlite3.connect(DB_PATH, timeout=20)
     conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -173,8 +175,9 @@ def asegurar_migraciones_minimas():
                 cupos_maximos INTEGER,
                 enlace_acceso TEXT,
                 docente_responsable TEXT,
+                persona_apoyo TEXT,
                 privacidad TEXT DEFAULT 'Abierta',
-                estado TEXT DEFAULT 'Programada',
+                estado TEXT DEFAULT 'En Edicion',
                 FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
             )
             '''
@@ -198,6 +201,14 @@ def asegurar_migraciones_minimas():
             cursor.execute(
                 'ALTER TABLE ediciones_formativas ADD COLUMN duracion_horas INTEGER'
             )
+        if 'persona_apoyo' not in columnas_ediciones:
+            cursor.execute(
+                'ALTER TABLE ediciones_formativas ADD COLUMN persona_apoyo TEXT'
+            )
+
+        cursor.execute(
+            "UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'"
+        )
 
         cursor.execute(
             '''

@@ -505,8 +505,8 @@
               {% for evento in calendario_eventos_docente[:5] %}
               <a href="/dashboard?seccion=calendario" class="proximas-item" title="Ir al calendario">
                 <div class="proximas-item-date">
-                  <span class="proximas-item-day">{{ evento.fecha_formateada.split(',')[0][:3].upper() if ',' in (evento.fecha_formateada or '') else (evento.fecha_formateada or '')[:3].upper() }}</span>
-                  <span class="proximas-item-num">{{ evento.fecha_formateada[-2:] if evento.fecha_formateada else '—' }}</span>
+                  <span class="proximas-item-day">{{ evento.dia_sem_corto }}</span>
+                  <span class="proximas-item-num">{{ evento.dia_mes }}</span>
                 </div>
                 <div class="proximas-item-info">
                   <span class="proximas-item-type">{% if evento.tipo_evento == 'sesion' %}Sesión{% else %}Inicio{% endif %}</span>

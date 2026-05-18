@@ -96,8 +96,9 @@ def inicializar_bd():
             cupos_maximos INTEGER,
             enlace_acceso TEXT,
             docente_responsable TEXT,
+            persona_apoyo TEXT,
             privacidad TEXT DEFAULT 'Abierta',
-            estado TEXT DEFAULT 'Programada',
+            estado TEXT DEFAULT 'En Edicion',
             FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
         )
     ''')

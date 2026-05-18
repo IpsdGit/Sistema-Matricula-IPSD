@@ -13,11 +13,117 @@
   <title>{% block title %}IPSD – Matrícula Docente{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Public+Sans:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Tailwind Configuration from Design System -->
+  <script id="tailwind-config">
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#6f5400",
+            "surface-container-lowest": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-surface": "#191c1e",
+            "secondary-fixed-dim": "#f6bf22",
+            "inverse-primary": "#aac7ff",
+            "on-tertiary": "#ffffff",
+            "error": "#ba1a1a",
+            "surface-variant": "#e0e3e5",
+            "primary-container": "#002b5c",
+            "on-tertiary-container": "#4395f3",
+            "error-container": "#ffdad6",
+            "surface-container-highest": "#e0e3e5",
+            "on-secondary-fixed": "#251a00",
+            "on-primary-container": "#7594cb",
+            "on-primary-fixed-variant": "#264779",
+            "on-tertiary-fixed": "#001c3a",
+            "primary": "#001736",
+            "tertiary-container": "#002c56",
+            "inverse-on-surface": "#eff1f3",
+            "surface-container-low": "#f2f4f6",
+            "on-tertiary-fixed-variant": "#004785",
+            "secondary-container": "#ffc72c",
+            "on-secondary-fixed-variant": "#5a4300",
+            "secondary": "#775a00",
+            "secondary-fixed": "#ffdf99",
+            "outline-variant": "#c4c6d0",
+            "surface-container-high": "#e6e8ea",
+            "primary-fixed-dim": "#aac7ff",
+            "on-primary-fixed": "#001b3e",
+            "tertiary-fixed-dim": "#a5c8ff",
+            "on-error": "#ffffff",
+            "inverse-surface": "#2d3133",
+            "surface-bright": "#f7f9fb",
+            "background": "#f7f9fb",
+            "surface-container": "#eceef0",
+            "surface-dim": "#d8dadc",
+            "outline": "#747780",
+            "on-primary": "#ffffff",
+            "tertiary": "#001732",
+            "surface-tint": "#3f5f92",
+            "on-surface-variant": "#43474f",
+            "on-secondary": "#ffffff",
+            "on-background": "#191c1e",
+            "tertiary-fixed": "#d4e3ff",
+            "primary-fixed": "#d6e3ff",
+            "surface": "#f7f9fb"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "unit": "8px",
+            "organic-offset": "64px",
+            "container-padding": "40px",
+            "gutter": "24px"
+          },
+          "fontFamily": {
+            "body-md": ["Manrope"],
+            "headline-lg": ["Manrope"],
+            "label-caps": ["Public Sans"],
+            "display-xl": ["Manrope"],
+            "headline-md": ["Manrope"],
+            "body-lg": ["Manrope"]
+          },
+          "fontSize": {
+            "body-md": ["16px", { "lineHeight": "160%", "fontWeight": "400" }],
+            "headline-lg": ["32px", { "lineHeight": "120%", "fontWeight": "700" }],
+            "label-caps": ["12px", { "lineHeight": "100%", "letterSpacing": "0.08em", "fontWeight": "700" }],
+            "display-xl": ["48px", { "lineHeight": "110%", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+            "headline-md": ["24px", { "lineHeight": "130%", "fontWeight": "600" }],
+            "body-lg": ["18px", { "lineHeight": "160%", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined[data-weight="fill"] {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
   {% block extra_head %}{% endblock %}
 </head>
 
@@ -67,6 +173,17 @@
   {% if session.get('admin_logueado') or session.get('empleado_portal') %}
   <script src="{{ url_for('static', filename='chat-widget.js') }}"></script>
   {% endif %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (typeof flatpickr !== "undefined") {
+        flatpickr("input[type='date']", { locale: "es" });
+        flatpickr("input[type='datetime-local']", { enableTime: true, locale: "es", dateFormat: "Y-m-d H:i" });
+        flatpickr("input[type='time']", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
+      }
+    });
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 

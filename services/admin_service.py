@@ -795,35 +795,28 @@ def update_matricula_resultado(
 
     try:
         conn = get_db_connection()
-        if admin_rol != 'superadmin':
-            permiso = conn.execute(
-                '''
-                SELECT 1
-                FROM ediciones_formativas ef
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ef.id = ? AND ca.direccion_codigo = ?
-                LIMIT 1
-                ''',
-                (edicion_id, admin_direccion),
-            ).fetchone()
-            if not permiso:
-                conn.close()
-                return {'ok': False, 'error': 'No autorizado para esta acción', 'status_code': 403}
-
+        
         matricula_actual = conn.execute(
             '''
-            SELECT m.id, ca.nombre
+            SELECT m.id, ca.nombre, m.edicion_id, ca.direccion_codigo
             FROM matriculas m
             JOIN ediciones_formativas ef ON ef.id = m.edicion_id
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE m.id = ? AND m.numero_empleado = ? AND m.edicion_id = ?
+            WHERE m.id = ? AND m.numero_empleado = ?
             ''',
-            (matricula_id, numero_empleado, edicion_id),
+            (matricula_id, numero_empleado),
         ).fetchone()
 
         if not matricula_actual:
             conn.close()
             return {'ok': False, 'error': 'Matrícula no encontrada', 'status_code': 404}
+
+        real_edicion_id = matricula_actual['edicion_id']
+        
+        if admin_rol != 'superadmin':
+            if matricula_actual['direccion_codigo'] != admin_direccion:
+                conn.close()
+                return {'ok': False, 'error': 'No autorizado para esta acción', 'status_code': 403}
 
         comentario_limpio = (comentario_validacion or '').strip()
         comentario_db = comentario_limpio if comentario_limpio else None
@@ -832,13 +825,13 @@ def update_matricula_resultado(
         if aprobado == 1:
             fecha_aprobacion = datetime.now().strftime('%Y-%m-%d')
             cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ?, comentario_validacion = ? WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
-                (aprobado, fecha_aprobacion, comentario_db, matricula_id, numero_empleado, edicion_id),
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ?, comentario_validacion = ? WHERE id = ?',
+                (aprobado, fecha_aprobacion, comentario_db, matricula_id),
             )
         else:
             cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL, comentario_validacion = ? WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
-                (aprobado, comentario_db, matricula_id, numero_empleado, edicion_id),
+                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL, comentario_validacion = ? WHERE id = ?',
+                (aprobado, comentario_db, matricula_id),
             )
 
         detalle_evento = 'Resultado actualizado desde panel administrativo'
@@ -848,7 +841,7 @@ def update_matricula_resultado(
         registrar_evento_matricula(
             conn,
             numero_empleado=numero_empleado,
-            edicion_id=edicion_id,
+            edicion_id=real_edicion_id,
             nombre_accion=matricula_actual['nombre'],
             estado_codigo=estado_codigo,
             matricula_id=matricula_id,
@@ -957,12 +950,14 @@ def update_edicion_metadata(
     jornada=None,
     hora=None,
     docente_responsable=None,
+    persona_apoyo=None,
     etiqueta_edicion=None,
     privacidad=None,
     fecha_limite_matricula=None,
     enlace_acceso=None,
     requisitos=None,
     duracion_horas=None,
+    estado=None,
 ):
     try:
         conn = get_db_connection()
@@ -994,6 +989,10 @@ def update_edicion_metadata(
             campos.append('docente_responsable = ?')
             params.append(docente_responsable)
 
+        if persona_apoyo is not None:
+            campos.append('persona_apoyo = ?')
+            params.append(persona_apoyo)
+
         if etiqueta_edicion is not None:
             campos.append('etiqueta_edicion = ?')
             params.append(etiqueta_edicion)
@@ -1018,6 +1017,10 @@ def update_edicion_metadata(
         if duracion_horas is not None:
             campos.append('duracion_horas = ?')
             params.append(duracion_horas)
+
+        if estado is not None:
+            campos.append('estado = ?')
+            params.append(estado)
 
         if not campos:
             conn.close()
@@ -1065,8 +1068,8 @@ def listar_ediciones_catalogo(catalogo_id):
         ediciones = conn.execute(
             '''
             SELECT id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula,
-                   jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, privacidad,
-                   requisitos, duracion_horas
+                     jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo,
+                     privacidad, estado, requisitos, duracion_horas
             FROM ediciones_formativas
             WHERE catalogo_id = ?
             ORDER BY id ASC
@@ -1089,7 +1092,9 @@ def crear_edicion_formativa(
     cupos_maximos=None,
     enlace_acceso=None,
     docente_responsable='',
+    persona_apoyo='',
     privacidad='Abierta',
+    estado='En Edicion',
     etiqueta_edicion='',
     requisitos='',
     duracion_horas=None,
@@ -1105,8 +1110,9 @@ def crear_edicion_formativa(
             '''
             INSERT INTO ediciones_formativas
             (id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula, jornada,
-             hora, cupos_maximos, enlace_acceso, docente_responsable, privacidad, estado, requisitos, duracion_horas)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo, privacidad, estado,
+             requisitos, duracion_horas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''',
             (
                 edicion_id,
@@ -1120,8 +1126,9 @@ def crear_edicion_formativa(
                 cupos_maximos,
                 enlace_acceso,
                 docente_responsable,
+                persona_apoyo,
                 privacidad or 'Abierta',
-                'Programada',
+                estado or 'En Edicion',
                 requisitos or '',
                 duracion_horas,
             ),

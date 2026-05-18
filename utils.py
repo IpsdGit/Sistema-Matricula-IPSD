@@ -371,7 +371,8 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
 
     resumen_intentos = obtener_resumen_intentos_por_curso(conn, numero_empleado)
 
-    query_disponibles = '''
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    query_disponibles = f'''
         SELECT ef.id AS edicion_id,
                ca.nombre,
                ca.modalidad,
@@ -383,11 +384,11 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         FROM ediciones_formativas ef
         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE ef.privacidad = 'Abierta'
-          AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= datetime('now'))
-          AND ef.estado = 'Programada'
+          AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= ?)
+                    AND ef.estado = 'Programado'
         ORDER BY ef.fecha_inicio DESC, ef.id DESC
     '''
-    cursos_raw = conn.execute(query_disponibles).fetchall()
+    cursos_raw = conn.execute(query_disponibles, (now_str,)).fetchall()
 
     cursos_disponibles = []
     for c in cursos_raw:
@@ -589,30 +590,25 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
             return f"{fecha_str} {hora_str or ''}"
 
     eventos = []
-    for curso in cursos_vinculados:
-        fecha_iso = (curso['fecha_inicio'] or '').strip()[:10]
-        if not fecha_iso:
-            continue
-
-        eventos.append(
-            {
-                'edicion_id': curso['id'],
-                'id_curso': curso['id'],
-                'nombre_curso': curso['nombre'],
-                'fecha_iso': fecha_iso,
-                'hora_inicio': None,
-                'hora_fin': None,
-                'tipo_evento': 'curso',
-                'estado': None,
-                'modalidad': curso['modalidad'] or '',
-                'fecha_formateada': _formatear_fecha_corta(fecha_iso, None)
-            }
-        )
-
     for sesion in sesiones_vinculadas:
         fecha_iso = (sesion['fecha'] or '').strip()
         if not fecha_iso:
             continue
+
+        try:
+            dt_obj = datetime.strptime(fecha_iso, '%Y-%m-%d')
+            dia_mes = str(dt_obj.day).zfill(2)
+            # Determinar día semana corto (HOY, MAÑ, LUN, etc)
+            dia_sem = DIAS_SEMANA[dt_obj.weekday()].upper()
+            if dt_obj.date() == datetime.now().date():
+                dia_sem = "HOY"
+            elif dt_obj.date() == (datetime.now() + __import__('datetime').timedelta(days=1)).date():
+                dia_sem = "MAÑ"
+            else:
+                dia_sem = dia_sem[:3]
+        except:
+            dia_mes = "00"
+            dia_sem = "???"
 
         eventos.append(
             {
@@ -625,7 +621,9 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
                 'tipo_evento': 'sesion',
                 'estado': sesion['estado'],
                 'modalidad': sesion['modalidad'] or '',
-                'fecha_formateada': _formatear_fecha_corta(fecha_iso, sesion['hora_inicio'])
+                'fecha_formateada': _formatear_fecha_corta(fecha_iso, sesion['hora_inicio']),
+                'dia_mes': dia_mes,
+                'dia_sem_corto': dia_sem
             }
         )
 

@@ -4709,7 +4709,68 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Mayo 12, 2026  
-**Versión actual**: 1.15.0 (Soporte B-Learning y Optimización de UI)  
-**Estado**: Development - Integración de modalidades completada; sistema de validación robustecido.
+## 🚀 Versión 1.16 - Modernización UI y Refinamiento de Procesos
 
+### Cambio 16.6: Rediseño Moderno y Sistema de Tema de Colores
+**Fecha**: Mayo 18, 2026  
+**Archivos afectados**: `templates/admin.html`, `templates/base.html`, `templates/dashboard.html`
+
+**QUÉ**:
+- Implementación de un sistema de variables CSS (design tokens) en `base.html` para paletas de colores modernos.
+- Integración de **Flatpickr** con configuración en español para todos los inputs de tipo fecha y hora.
+- Adopción de la librería de íconos **Material Symbols Outlined** (con variante filled).
+- Rediseño general de la interfaz administrativa usando principios de glassmorphism y componentes Tailwind avanzados.
+- Actualización de `dashboard.html` para mostrar fechas de próximas actividades en formato corto (e.g., "HOY", "MAÑ", "LUN" + día del mes).
+
+**POR QUÉ**:
+- La interfaz requería un aspecto más profesional, atractivo y alineado con los estándares modernos de diseño web.
+- Los inputs nativos de fecha y hora varían drásticamente entre navegadores y a menudo ofrecen una mala experiencia de usuario.
+- En el dashboard docente, identificar a simple vista cuándo era una sesión mejora la usabilidad.
+
+**PARA QUÉ**:
+- Brindar una experiencia visual premium ("wow effect") y cohesiva en toda la aplicación.
+- Estandarizar la interacción con calendarios y selección de fechas para los administradores y docentes.
+
+---
+
+### Cambio 16.7: Ciclo de Vida de Ediciones y Personas de Apoyo
+**Fecha**: Mayo 18, 2026  
+**Archivos afectados**: `database.py`, `scripts/setup_bd.py`, `routes/admin.py`, `services/admin_service.py`, `services/portal_service.py`, `utils.py`
+
+**QUÉ**:
+- Nuevas columnas en `ediciones_formativas`: `persona_apoyo` y `estado`.
+- Cambio del estado por defecto al crear una edición: de "Programada" a "En Edicion".
+- Soporte en toda la lógica CRUD del backend y frontend (modales) para asignar una Persona de Apoyo.
+- Parametrización segura (usando `?`) de las sentencias SQL relacionadas a `fecha_limite_matricula` y `datetime.now()` en `utils.py`.
+- Integración de la selección de plantilla de certificado directamente en la vista de Catálogos (`id_plantilla_certificado`).
+
+**POR QUÉ**:
+- Las capacitaciones a menudo involucran personal administrativo o docentes auxiliares, no solo un responsable principal.
+- Un curso recién creado no debe estar inmediatamente abierto ("Programado") sin antes configurar sus sesiones.
+- Es imperativo evitar inyecciones SQL o comportamientos inesperados del reloj interno de SQLite (`datetime('now')`).
+
+**PARA QUÉ**:
+- Otorgar a los administradores un control granular sobre el ciclo de vida de un curso (En Edicion -> Programado).
+- Asegurar mayor integridad en la selección y asignación de plantillas de certificados.
+
+---
+
+### Cambio 16.8: Resiliencia en Libro de Calificaciones
+**Fecha**: Mayo 18, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- Actualización de las expresiones Jinja2 en la tabla de asistencia (ej. `{% if (docente['porcentaje'] or 0) >= 80 %}`).
+- Uso de fallback `or 0` al calcular y mostrar el ancho de la barra de progreso.
+
+**POR QUÉ**:
+- El sistema fallaba con un `TypeError` cuando un docente no tenía registro de asistencias y el porcentaje se procesaba como `None`.
+
+**PARA QUÉ**:
+- Evitar caídas en el renderizado del panel de control de evaluaciones y hacer la vista robusta frente a datos nulos.
+
+---
+
+**Última actualización**: Mayo 18, 2026  
+**Versión actual**: 1.16.0 (Modernización UI y Estados de Edición)  
+**Estado**: Development - Interfaz premium integrada y flujos de edición estabilizados.

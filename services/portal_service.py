@@ -130,7 +130,7 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
             conn.close()
             return {'ok': False, 'error': 'Acción formativa inválida.', 'error_view': 'index'}
 
-        if (edicion['privacidad'] or '').strip() != 'Abierta' or (edicion['estado'] or '').strip() != 'Programada':
+        if (edicion['privacidad'] or '').strip() != 'Abierta' or (edicion['estado'] or '').strip() != 'Programado':
             conn.close()
             return {'ok': False, 'error': 'Esta acción formativa no está disponible.', 'error_view': 'index'}
 

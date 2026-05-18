@@ -115,6 +115,16 @@ def register_admin_routes(app):
         except Exception:
             return False
 
+    def _normalizar_estado_edicion(valor):
+        texto = (valor or '').strip().lower()
+        if texto in {'en edicion', 'en edición', 'en_edicion'}:
+            return 'En Edicion'
+        if texto in {'programado', 'programada'}:
+            return 'Programado'
+        if texto in {'finalizado', 'finalizada'}:
+            return 'Finalizado'
+        return 'En Edicion'
+
     def _obtener_curso_de_sesion(id_sesion):
         try:
             id_sesion_int = int(id_sesion)
@@ -142,10 +152,14 @@ def register_admin_routes(app):
             # Intentar como edicion
             fila = conn.execute(
                 '''
-                SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.trimestre, ef.fecha_inicio,
-                       ef.fecha_limite_matricula, ef.cupos_maximos, ef.enlace_acceso,
-                       ef.privacidad, ef.jornada, ef.hora, ef.docente_responsable,
-                       ca.tipo_accion, ca.modalidad, ca.nombre
+                  SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.trimestre, ef.fecha_inicio,
+                      ef.fecha_limite_matricula, ef.cupos_maximos, ef.enlace_acceso,
+                      ef.privacidad, ef.jornada, ef.hora, ef.docente_responsable, ef.persona_apoyo,
+                        ef.estado, ef.duracion_horas,
+                      ca.id_plantilla_certificado,
+                      COALESCE(NULLIF(ef.requisitos, ''), ca.requisitos) AS requisitos,
+                      ca.requisitos AS requisitos_catalogo,
+                      ca.tipo_accion, ca.modalidad, ca.nombre
                 FROM ediciones_formativas ef
                 JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
                 WHERE ef.id = ?
@@ -158,10 +172,14 @@ def register_admin_routes(app):
                 # Intentar como catalogo (retornar estructura similar pero sin campos de edicion)
                 fila = conn.execute(
                     '''
-                    SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as trimestre, 
-                           NULL as fecha_inicio, NULL as fecha_limite_matricula, NULL as cupos_maximos, 
-                           NULL as enlace_acceso, 'Abierta' as privacidad, 'UNICA' as jornada, 
-                           '' as hora, '' as docente_responsable, tipo_accion, modalidad, nombre
+                          SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as trimestre, 
+                              NULL as fecha_inicio, NULL as fecha_limite_matricula, NULL as cupos_maximos, 
+                              NULL as enlace_acceso, 'Abierta' as privacidad, 'UNICA' as jornada, 
+                              '' as hora, '' as docente_responsable, '' as persona_apoyo,
+                              'En Edicion' as estado, NULL as duracion_horas,
+                              id_plantilla_certificado,
+                              requisitos as requisitos, requisitos as requisitos_catalogo,
+                              tipo_accion, modalidad, nombre
                     FROM catalogo_acciones
                     WHERE id = ?
                     LIMIT 1
@@ -245,6 +263,7 @@ def register_admin_routes(app):
             'fecha_inicio': fecha_fallback,
             'fecha_fin': fecha_fallback,
             'dias_semana': [],
+            'dias_clase': '',
             'hora_inicio': '',
             'hora_fin': '',
             'jornada': jornada_fallback,
@@ -281,6 +300,7 @@ def register_admin_routes(app):
             config[f'hora_inicio{sufijo}'] = hora_inicio or ''
             config[f'hora_fin{sufijo}'] = hora_fin or ''
             config[f'dias_semana{sufijo}'] = sorted(data['dias_semana'])
+            config[f'dias_clase{sufijo}'] = ','.join(str(dia) for dia in sorted(data['dias_semana']))
             config[f'docente_sesion{sufijo}'] = _modo_valor(data.get('docentes', {}))
             config[f'edicion{sufijo}'] = _modo_valor(data.get('ediciones', {}))
 
@@ -479,6 +499,7 @@ def register_admin_routes(app):
             vista_inicial=vista_solicitada,
             fecha_hoy=fecha_hoy,
             horarios_base=HORARIOS_BASE,
+            plantillas=plantillas,
             curso_sesiones_id='',
             curso_sesion_detalle=catalogo_detalle,
             curso_sesion_config=curso_sesion_config,
@@ -542,9 +563,11 @@ def register_admin_routes(app):
                     'edicion_id': edicion['id'],
                     'etiqueta_edicion': edicion['etiqueta_edicion'] or '',
                     'docente_responsable': edicion['docente_responsable'] or '',
+                    'persona_apoyo': edicion['persona_apoyo'] or '',
                     'trimestre': edicion['trimestre'] or '',
                     'cupos_maximos': edicion['cupos_maximos'] if edicion['cupos_maximos'] is not None else 0,
                     'privacidad': (edicion['privacidad'] or 'Abierta'),
+                    'estado': edicion['estado'] or 'En Edicion',
                     'fecha_limite_input': _formatear_datetime_local(edicion['fecha_limite_matricula']),
                 }
             )
@@ -554,6 +577,12 @@ def register_admin_routes(app):
             curso_sesion_config = jornadas_config[0]
         else:
             curso_sesion_config = _construir_configuracion_sesiones([], fecha_hoy)
+
+        from services.certificate_service import obtener_plantillas_por_direccion, obtener_todas_las_plantillas
+        if admin_rol == 'superadmin':
+            plantillas = obtener_todas_las_plantillas()
+        else:
+            plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
         return render_template(
             'admin.html',
@@ -573,6 +602,7 @@ def register_admin_routes(app):
             vista_inicial=vista_solicitada,
             fecha_hoy=fecha_hoy,
             horarios_base=HORARIOS_BASE,
+            plantillas=plantillas,
             curso_sesiones_id=id_curso,
             curso_sesion_detalle=curso_sesion_detalle,
             curso_sesion_config=curso_sesion_config,
@@ -688,6 +718,16 @@ def register_admin_routes(app):
             flash(payload_error['error'], 'danger')
             return redireccion_admin_vista('ediciones')
 
+        id_plantilla_certificado = payload.get('id_plantilla_certificado')
+        if id_plantilla_certificado:
+            try:
+                conn = get_db_connection()
+                conn.execute('UPDATE catalogo_acciones SET id_plantilla_certificado = ? WHERE id = ?', (id_plantilla_certificado, catalogo_id))
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+
         if not fecha_inicio or not fecha_fin:
             payload_error = {'ok': False, 'error': 'Debes indicar fecha de inicio y fin.'}
             if es_ajax:
@@ -702,7 +742,7 @@ def register_admin_routes(app):
             modalidad_curso = (detalle_curso['modalidad'] or '').strip()
         elif catalogo_detalle:
             modalidad_curso = (catalogo_detalle.get('modalidad') or '').strip()
-        if modalidad_curso != 'Virtual':
+        if modalidad_curso not in ('Virtual', 'B-Learning'):
             enlace_virtual = None
         elif enlace_virtual and not validar_enlace_virtual(enlace_virtual):
             payload_error = {'ok': False, 'error': 'Debes ingresar un enlace valido para modalidad virtual.'}
@@ -734,8 +774,10 @@ def register_admin_routes(app):
             hora_fin = (bloque.get('hora_fin') or '').strip()
             jornada = (bloque.get('jornada') or 'UNICA').strip().upper()
             docente_responsable = (bloque.get('docente_responsable') or '').strip()
+            persona_apoyo = (bloque.get('persona_apoyo') or '').strip()
             etiqueta_edicion = (bloque.get('etiqueta_edicion') or '').strip()
             privacidad = (bloque.get('privacidad') or '').strip().title()
+            estado = _normalizar_estado_edicion(bloque.get('estado'))
             fecha_limite_raw = (bloque.get('fecha_limite_matricula') or '').strip()
             trimestre = (bloque.get('trimestre') or '').strip().upper()
             cupos_raw = (bloque.get('cupos_maximos') or '').strip()
@@ -789,7 +831,9 @@ def register_admin_routes(app):
                     cupos_maximos=cupos_maximos,
                     enlace_acceso=enlace_virtual,
                     docente_responsable=docente_responsable,
+                    persona_apoyo=persona_apoyo,
                     privacidad=privacidad,
+                    estado=estado,
                     etiqueta_edicion=etiqueta_edicion,
                     requisitos=req_bloque,
                     duracion_horas=dur_horas,
@@ -809,8 +853,10 @@ def register_admin_routes(app):
                     jornada=jornada,
                     hora=hora_texto,
                     docente_responsable=docente_responsable,
+                    persona_apoyo=persona_apoyo,
                     etiqueta_edicion=etiqueta_edicion,
                     privacidad=privacidad,
+                    estado=estado,
                     fecha_limite_matricula=fecha_limite_matricula,
                     enlace_acceso=enlace_virtual,
                     requisitos=req_bloque,
