@@ -3,7 +3,9 @@ import os
 from datetime import datetime
 from io import StringIO
 
+# pyrefly: ignore [missing-import]
 from flask import Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
+# pyrefly: ignore [missing-import]
 from werkzeug.utils import secure_filename
 
 from config import DIAS_SEMANA, HORARIOS_BASE, MESES_ES
@@ -71,23 +73,27 @@ def register_admin_routes(app):
         try:
             conn = get_db_connection()
             # Primero intentamos como edicion
-            fila = conn.execute(
-                '''
-                SELECT 1
-                FROM ediciones_formativas ef
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ef.id = ? AND ca.direccion_codigo = ?
-                LIMIT 1
-                ''',
-                (id_curso, admin_direccion),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT 1
+                    FROM ediciones_formativas ef
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ef.id = %s AND ca.direccion_codigo = %s
+                    LIMIT 1
+                    ''',
+                    (id_curso, admin_direccion),
+                )
+                fila = cur.fetchone()
             
             if not fila:
                 # Si no es edicion, intentamos como catalogo
-                fila = conn.execute(
-                    'SELECT 1 FROM catalogo_acciones WHERE id = ? AND direccion_codigo = ? LIMIT 1',
-                    (id_curso, admin_direccion),
-                ).fetchone()
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'SELECT 1 FROM catalogo_acciones WHERE id = %s AND direccion_codigo = %s LIMIT 1',
+                        (id_curso, admin_direccion),
+                    )
+                    fila = cur.fetchone()
                 
             conn.close()
             return bool(fila)
@@ -106,10 +112,12 @@ def register_admin_routes(app):
         admin_direccion = normalizar_direccion(session.get('admin_direccion', 'IPSD')) or 'IPSD'
         try:
             conn = get_db_connection()
-            fila = conn.execute(
-                'SELECT 1 FROM catalogo_acciones WHERE id = ? AND direccion_codigo = ? LIMIT 1',
-                (catalogo_id, admin_direccion),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT 1 FROM catalogo_acciones WHERE id = %s AND direccion_codigo = %s LIMIT 1',
+                    (catalogo_id, admin_direccion),
+                )
+                fila = cur.fetchone()
             conn.close()
             return bool(fila)
         except Exception:
@@ -133,10 +141,12 @@ def register_admin_routes(app):
 
         try:
             conn = get_db_connection()
-            fila = conn.execute(
-                'SELECT edicion_id FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
-                (id_sesion_int,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT edicion_id FROM sesiones_curso WHERE id_sesion = %s LIMIT 1',
+                    (id_sesion_int,),
+                )
+                fila = cur.fetchone()
             conn.close()
             return fila['edicion_id'] if fila else None
         except Exception:
@@ -150,42 +160,46 @@ def register_admin_routes(app):
         try:
             conn = get_db_connection()
             # Intentar como edicion
-            fila = conn.execute(
-                '''
-                  SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.trimestre, ef.fecha_inicio,
-                      ef.fecha_limite_matricula, ef.cupos_maximos, ef.enlace_acceso,
-                      ef.privacidad, ef.jornada, ef.hora, ef.docente_responsable, ef.persona_apoyo,
-                        ef.estado, ef.duracion_horas,
-                      ca.id_plantilla_certificado,
-                      COALESCE(NULLIF(ef.requisitos, ''), ca.requisitos) AS requisitos,
-                      ca.requisitos AS requisitos_catalogo,
-                      ca.tipo_accion, ca.modalidad, ca.nombre
-                FROM ediciones_formativas ef
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ef.id = ?
-                LIMIT 1
-                ''',
-                (id_curso,),
-            ).fetchone()
-            
-            if not fila:
-                # Intentar como catalogo (retornar estructura similar pero sin campos de edicion)
-                fila = conn.execute(
+            with conn.cursor() as cur:
+                cur.execute(
                     '''
-                          SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as trimestre, 
-                              NULL as fecha_inicio, NULL as fecha_limite_matricula, NULL as cupos_maximos, 
-                              NULL as enlace_acceso, 'Abierta' as privacidad, 'UNICA' as jornada, 
-                              '' as hora, '' as docente_responsable, '' as persona_apoyo,
-                              'En Edicion' as estado, NULL as duracion_horas,
-                              id_plantilla_certificado,
-                              requisitos as requisitos, requisitos as requisitos_catalogo,
-                              tipo_accion, modalidad, nombre
-                    FROM catalogo_acciones
-                    WHERE id = ?
+                      SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.trimestre, ef.fecha_inicio,
+                          ef.fecha_limite_matricula, ef.cupos_maximos, ef.enlace_acceso,
+                          ef.privacidad, ef.jornada, ef.hora, ef.docente_responsable, ef.persona_apoyo,
+                            ef.estado, ef.duracion_horas,
+                          ca.id_plantilla_certificado,
+                          COALESCE(NULLIF(ef.requisitos, ''), ca.requisitos) AS requisitos,
+                          ca.requisitos AS requisitos_catalogo,
+                          ca.tipo_accion, ca.modalidad, ca.nombre
+                    FROM ediciones_formativas ef
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ef.id = %s
                     LIMIT 1
                     ''',
                     (id_curso,),
-                ).fetchone()
+                )
+                fila = cur.fetchone()
+            
+            if not fila:
+                # Intentar como catalogo (retornar estructura similar pero sin campos de edicion)
+                with conn.cursor() as cur:
+                    cur.execute(
+                        '''
+                              SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as trimestre, 
+                                  NULL as fecha_inicio, NULL as fecha_limite_matricula, NULL as cupos_maximos, 
+                                  NULL as enlace_acceso, 'Abierta' as privacidad, 'UNICA' as jornada, 
+                                  '' as hora, '' as docente_responsable, '' as persona_apoyo,
+                                  'En Edicion' as estado, NULL as duracion_horas,
+                                  id_plantilla_certificado,
+                                  requisitos as requisitos, requisitos as requisitos_catalogo,
+                                  tipo_accion, modalidad, nombre
+                        FROM catalogo_acciones
+                        WHERE id = %s
+                        LIMIT 1
+                        ''',
+                        (id_curso,),
+                    )
+                    fila = cur.fetchone()
                 
             conn.close()
             return dict(fila) if fila else None
@@ -199,15 +213,17 @@ def register_admin_routes(app):
 
         try:
             conn = get_db_connection()
-            fila = conn.execute(
-                '''
-                SELECT id, nombre, modalidad, tipo_accion, direccion_codigo, id_plantilla_certificado
-                FROM catalogo_acciones
-                WHERE id = ?
-                LIMIT 1
-                ''',
-                (catalogo_id,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT id, nombre, modalidad, tipo_accion, direccion_codigo, id_plantilla_certificado
+                    FROM catalogo_acciones
+                    WHERE id = %s
+                    LIMIT 1
+                    ''',
+                    (catalogo_id,),
+                )
+                fila = cur.fetchone()
             conn.close()
             return dict(fila) if fila else None
         except Exception:
@@ -220,36 +236,45 @@ def register_admin_routes(app):
             return
 
         def _parse_iso(iso_str):
-            iso_str = (iso_str or '').strip()
             if not iso_str:
                 return None
+            if hasattr(iso_str, 'strftime'):
+                if hasattr(iso_str, 'date'):
+                    return iso_str.date()
+                return iso_str
+            iso_str_clean = str(iso_str).strip()
+            if not iso_str_clean:
+                return None
             try:
-                return datetime.strptime(iso_str, '%Y-%m-%d').date()
+                return datetime.strptime(iso_str_clean, '%Y-%m-%d').date()
             except ValueError:
                 return None
 
         try:
             conn = get_db_connection()
-            fila = conn.execute(
-                'SELECT MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin FROM sesiones_curso WHERE edicion_id = ?',
-                (id_curso,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT MIN(fecha) AS fecha_inicio, MAX(fecha) AS fecha_fin FROM sesiones_curso WHERE edicion_id = %s',
+                    (id_curso,),
+                )
+                fila = cur.fetchone()
 
-            fecha_inicio_iso = (fila['fecha_inicio'] or '').strip() if fila else ''
-            inicio_dt = _parse_iso(fecha_inicio_iso) or _parse_iso(fecha_inicio_fallback)
+            fecha_inicio_val = fila['fecha_inicio'] if fila else None
+            inicio_dt = _parse_iso(fecha_inicio_val) or _parse_iso(fecha_inicio_fallback)
 
             if not inicio_dt:
                 conn.close()
                 return
 
-            conn.execute(
-                '''
-                UPDATE ediciones_formativas
-                SET fecha_inicio = ?
-                WHERE id = ?
-                ''',
-                (inicio_dt.strftime('%Y-%m-%d'), id_curso),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    UPDATE ediciones_formativas
+                    SET fecha_inicio = %s
+                    WHERE id = %s
+                    ''',
+                    (inicio_dt.strftime('%Y-%m-%d'), id_curso),
+                )
             conn.commit()
             conn.close()
         except Exception:
@@ -365,9 +390,13 @@ def register_admin_routes(app):
         return None
 
     def _formatear_datetime_local(valor):
-        texto = (valor or '').strip()
-        if not texto:
+        if not valor:
             return ''
+        if hasattr(valor, 'strftime'):
+            if hasattr(valor, 'hour'):
+                return valor.strftime('%Y-%m-%dT%H:%M')
+            return valor.strftime('%Y-%m-%d')
+        texto = str(valor).strip()
         texto = texto.replace(' ', 'T')
         return texto[:16]
 
@@ -480,6 +509,12 @@ def register_admin_routes(app):
 
         fecha_hoy = datetime.now().strftime('%Y-%m-%d')
         curso_sesion_config = _construir_configuracion_sesiones([], fecha_hoy)
+
+        from services.certificate_service import obtener_plantillas_por_direccion, obtener_todas_las_plantillas
+        if dashboard_payload['es_superadmin']:
+            plantillas = obtener_todas_las_plantillas()
+        else:
+            plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
         return render_template(
             'admin.html',
@@ -722,7 +757,11 @@ def register_admin_routes(app):
         if id_plantilla_certificado:
             try:
                 conn = get_db_connection()
-                conn.execute('UPDATE catalogo_acciones SET id_plantilla_certificado = ? WHERE id = ?', (id_plantilla_certificado, catalogo_id))
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'UPDATE catalogo_acciones SET id_plantilla_certificado = %s WHERE id = %s',
+                        (id_plantilla_certificado, catalogo_id),
+                    )
                 conn.commit()
                 conn.close()
             except Exception:
@@ -922,14 +961,14 @@ def register_admin_routes(app):
         try:
             conn = get_db_connection()
             # Cascade manually: asistencias → sesiones → matrículas → edición
-            sesiones = conn.execute(
-                'SELECT id_sesion FROM sesiones_curso WHERE edicion_id = ?', (edicion_id,)
-            ).fetchall()
-            for s in sesiones:
-                conn.execute('DELETE FROM asistencias WHERE id_sesion = ?', (s['id_sesion'],))
-            conn.execute('DELETE FROM sesiones_curso WHERE edicion_id = ?', (edicion_id,))
-            conn.execute('DELETE FROM matriculas WHERE edicion_id = ?', (edicion_id,))
-            conn.execute('DELETE FROM ediciones_formativas WHERE id = ?', (edicion_id,))
+            with conn.cursor() as cur:
+                cur.execute('SELECT id_sesion FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
+                sesiones = cur.fetchall()
+                for s in sesiones:
+                    cur.execute('DELETE FROM asistencias WHERE id_sesion = %s', (s['id_sesion'],))
+                cur.execute('DELETE FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
+                cur.execute('DELETE FROM matriculas WHERE edicion_id = %s', (edicion_id,))
+                cur.execute('DELETE FROM ediciones_formativas WHERE id = %s', (edicion_id,))
             conn.commit()
             conn.close()
         except Exception as e:
@@ -1467,9 +1506,15 @@ def register_admin_routes(app):
         nombre = request.form.get('nombre', '').strip()
 
         if not codigo or codigo == 'GLOBAL' or not validar_nombre_direccion(nombre):
+            flash('Completa correctamente los campos de la dirección.', 'danger')
             return redireccion_admin_vista('usuarios')
 
-        create_direccion_record(codigo, nombre)
+        resultado = create_direccion_record(codigo, nombre)
+        if not resultado.get('ok'):
+            flash('No se pudo crear la dirección. Verifica si ya existe o intenta nuevamente.', 'danger')
+            return redireccion_admin_vista('usuarios')
+
+        flash('Dirección creada correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 

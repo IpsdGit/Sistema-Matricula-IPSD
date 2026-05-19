@@ -4771,6 +4771,74 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Mayo 18, 2026  
-**Versión actual**: 1.16.0 (Modernización UI y Estados de Edición)  
-**Estado**: Development - Interfaz premium integrada y flujos de edición estabilizados.
+## 🐘 Migración a PostgreSQL y Optimización UI/UX (v1.17.0)
+
+### Cambio 17.1: Migración completa del motor de base de datos a PostgreSQL
+**Fecha**: Mayo 19, 2026  
+**Archivos afectados**: `database.py`, `app.py`, `config.py`, `requirements.txt`, `services/admin_service.py`, `services/portal_service.py`, `services/certificate_service.py`, `services/ia_service.py`, `services/validacion_service.py`, `routes/admin.py`, `routes/portal.py`, `scripts/setup_bd.py`, `scripts/sync_docentes_excel.py`, `tests/test_docente_login.py`, `scripts/migrate_placeholders.py` (nuevo), `scripts/fix_strftime.py` (nuevo)
+
+**QUÉ**:
+- Sustitución íntegra de la base de datos SQLite (`sqlite3`) por el motor **PostgreSQL** mediante el conector **psycopg2**.
+- Modificación de tipos de datos en la estructura de esquemas: `INTEGER PRIMARY KEY AUTOINCREMENT` pasó a `SERIAL PRIMARY KEY`, y `DATETIME` a `TIMESTAMP`.
+- Reemplazo masivo de placeholders de consultas SQL de la sintaxis de SQLite (`?`) a la sintaxis estándar de PostgreSQL (`%s`).
+- Implementación de scripts de automatización:
+  - `migrate_placeholders.py` para reescribir sentencias SQL adaptando comodines de coincidencia y condiciones de búsqueda `LIKE` a `ILIKE`.
+  - `fix_strftime.py` para reemplazar la función nativa `strftime` de SQLite por las funciones nativas `EXTRACT` y `TO_CHAR` de PostgreSQL.
+- Eliminación de dependencias residuales locales y rutas estáticas de SQLite (`DB_PATH`, `resolve_db_path()`) en `config.py`.
+- Actualización de los scripts de inicialización (`setup_bd.py`) y sincronización Excel (`sync_docentes_excel.py`) para operar en producción mediante PostgreSQL.
+
+**POR QUÉ**:
+- SQLite posee limitaciones de concurrencia y lectura/escritura simultánea que hacían inviable su uso en producción para un sistema de matrícula concurrente.
+- PostgreSQL provee el nivel de escalabilidad, seguridad, concurrencia transaccional e integridad referencial requeridos.
+
+**PARA QUÉ**:
+- Desplegar la aplicación en producción de manera estable.
+- Incrementar significativamente la velocidad de procesamiento de peticiones y consultas a la base de datos.
+- Prevenir bloqueos de base de datos (`locked database`) cuando múltiples docentes se matriculan simultáneamente.
+
+---
+
+### Cambio 17.2: Resolución de compatibilidad de fechas nativas PostgreSQL
+**Fecha**: Mayo 19, 2026  
+**Archivos afectados**: `utils.py`, `templates/dashboard.html`, `templates/admin.html`
+
+**QUÉ**:
+- **Tratamiento dinámico de objetos**: Modificación de `construir_notificaciones_docente` en `utils.py` para comprobar si la columna `fecha_evento` devuelta por la base de datos es un objeto `datetime.datetime` nativo (retornado por PostgreSQL) o una cadena, aplicando `.strftime('%Y-%m-%d %H:%M')` como formateo seguro.
+- **Filtro Jinja2**: Adición de filtros de conversión a cadena (`|string`) antes de realizar recortes de índices (`[:10]` o `[:16]`) en las plantillas HTML del historial del docente y los reportes de matrículas administrativas.
+
+**POR QUÉ**:
+- El conector de PostgreSQL devuelve las columnas `TIMESTAMP` como objetos de tipo `datetime` de Python, mientras que SQLite las devolvía formateadas como cadenas de texto. Esto causaba excepciones de tipo (`TypeError: 'datetime.datetime' object is not subscriptable`) al intentar manipularlas como arrays de caracteres directos en las vistas de Jinja2 o en utilidades.
+
+**PARA QUÉ**:
+- Evitar caídas 500 al renderizar vistas y asegurar que el historial del docente, las alertas y la visualización de reportes carguen correctamente con la base de datos PostgreSQL.
+
+---
+
+### Cambio 17.3: Rediseño, interactividad y optimización responsiva del modal de plantillas
+**Fecha**: Mayo 19, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- **Optimización de Dimensiones**: Se aumentó el tamaño de los modales de creación y edición de plantillas de certificados a `w-[96%] max-w-[1160px] h-[90vh] max-h-[920px]`.
+- **Estructura Interna Antidesborde**: Se configuró la etiqueta del `<form>` con clases `max-h-full overflow-hidden`, garantizando que el scroll vertical intermedio (`flex-1 overflow-y-auto`) responda correctamente y mantenga el pie de página visible.
+- **Diseño Crisp & Limpio**:
+  - Eliminación de grises opacos en inputs y sustitución por un estilo en blanco sólido y slate claro con foco dinámico azul (`bg-white border border-slate-200 focus:ring-4 focus:ring-primary/10 rounded-xl`).
+  - Chips de variables de inyección (`[NOMBRE]`, `[CURSO]`, etc.) rediseñados como botones/chips interactivos sobre fondo blanco limpio.
+- **Remoción de Duplicados**: Eliminación de las flechas de iconos absolutos `<span>expand_more</span>` y clases `appearance-none pr-10`, confiando exclusivamente en el diseño integrado de la clase `.form-select`.
+- **Micro-interacciones en Botones**: Integración de la clase premium `.btn-primary-ipsd` al botón de creación ("Nueva Plantilla") y efectos físicos tridimensionales en hover para "Configurar Firma y Logo".
+
+**POR QUÉ**:
+- En pantallas de resoluciones estándar, los modales se recortaban verticalmente ocultando los botones para cancelar y guardar cambios.
+- Los menús desplegables mostraban flechas duplicadas debido al choque entre estilos nativos CSS y el markup del HTML.
+- El diseño anterior resultaba sombrío y no ofrecía retroalimentación visual al usuario en las acciones del header.
+
+**PARA QUÉ**:
+- Asegurar que los modales de plantillas de certificados sean completamente responsivos en cualquier resolución de pantalla sin necesidad de alejar el zoom del navegador.
+- Alinear el módulo de certificados con la identidad de diseño premium y de alto contraste del portal del IPSD.
+
+---
+
+**Última actualización**: Mayo 19, 2026  
+**Versión actual**: 1.17.0 (Migración a PostgreSQL y Pulido UX de Plantillas)  
+**Estado**: Development - Base de datos PostgreSQL integrada con éxito y diseño de modales responsivo refinado.
+

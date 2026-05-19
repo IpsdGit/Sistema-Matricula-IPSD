@@ -236,7 +236,7 @@
               <div class="historial-glass-footer">
                 <div class="historial-glass-date">
                   <span class="historial-glass-date-label">Fecha del evento</span>
-                  <span class="historial-glass-date-value">{{ item0['fecha_evento'][:10] if item0['fecha_evento'] else
+                  <span class="historial-glass-date-value">{{ (item0['fecha_evento']|string)[:10] if item0['fecha_evento'] else
                     'Sin fecha' }}</span>
                 </div>
                 <span class="historial-arrow-icon">→</span>
@@ -312,7 +312,7 @@
               <h4 class="historial-glass-title historial-glass-title--sm">{{ accion['nombre_accion'] }}</h4>
               <p class="historial-glass-meta">
                 {{ accion['edicion_id'] }}<br>
-                {{ accion['fecha_evento'][:10] if accion['fecha_evento'] else 'Sin fecha' }}
+                {{ (accion['fecha_evento']|string)[:10] if accion['fecha_evento'] else 'Sin fecha' }}
               </p>
               <span class="historial-arrow-icon" style="margin-top:auto; display:block;">→</span>
             </div>
@@ -341,7 +341,7 @@
                   </div>
                   <div>
                     <p class="historial-list-name">{{ accion['nombre_accion'] }}</p>
-                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ accion['fecha_evento'][:10] if
+                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ (accion['fecha_evento']|string)[:10] if
                       accion['fecha_evento'] else 'Sin fecha' }}</p>
                   </div>
                 </div>

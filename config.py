@@ -1,25 +1,8 @@
 import os
 import secrets
 
-DB_ENV_VAR = 'DATABASE_PATH'
+DB_ENV_VAR = 'DATABASE_URL'
 
-
-def resolve_db_path():
-    env_db_path = os.environ.get(DB_ENV_VAR)
-    if env_db_path:
-        return env_db_path
-
-    local_db = os.path.join(os.path.dirname(__file__), 'matricula.db')
-    pythonanywhere_db = '/home/IPSDUNAH/mysite/matricula.db'
-
-    if os.path.exists(local_db):
-        return local_db
-    if os.path.exists(pythonanywhere_db):
-        return pythonanywhere_db
-    return local_db
-
-
-DB_PATH = resolve_db_path()
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
 MESES_ES = [

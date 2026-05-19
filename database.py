@@ -1,31 +1,24 @@
 import os
 import re
-import sqlite3
-
+import psycopg2
+import psycopg2.extras
 from werkzeug.security import generate_password_hash
 
-from config import DB_PATH
-
-
 def get_db_connection():
-    # Se aumenta el timeout a 20 segundos y se activa el modo WAL para mejorar la concurrencia
-    conn = sqlite3.connect(DB_PATH, timeout=20)
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode = WAL')
-    conn.row_factory = sqlite3.Row
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.DictCursor)
+    # Autocommit is sometimes preferred in simple apps, but we can manage transactions.
     return conn
 
-
 def asegurar_migraciones_minimas():
-    """Evita fallos en despliegues donde aún no se ha corrido parche.py."""
+    """Evita fallos en despliegues donde aún no se ha corrido setup_bd.py."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute('PRAGMA foreign_keys = ON')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS admin_users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 rol TEXT NOT NULL DEFAULT 'admin',
@@ -45,7 +38,7 @@ def asegurar_migraciones_minimas():
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS plantillas_certificados (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 direccion_codigo TEXT NOT NULL,
                 nombre_plantilla TEXT NOT NULL,
                 tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
@@ -59,82 +52,77 @@ def asegurar_migraciones_minimas():
             '''
         )
 
-        columnas_direcciones = {
-            row[1] for row in cursor.execute('PRAGMA table_info(direcciones)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'direcciones'")
+        columnas_direcciones = {row['column_name'] for row in cursor.fetchall()}
         if 'ruta_firma_img' not in columnas_direcciones:
-            cursor.execute(
-                "ALTER TABLE direcciones ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE direcciones ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''")
         if 'ruta_logo_img' not in columnas_direcciones:
-            cursor.execute(
-                "ALTER TABLE direcciones ADD COLUMN ruta_logo_img TEXT NOT NULL DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE direcciones ADD COLUMN ruta_logo_img TEXT NOT NULL DEFAULT ''")
 
-        columnas_plantillas = {
-            row[1] for row in cursor.execute('PRAGMA table_info(plantillas_certificados)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'plantillas_certificados'")
+        columnas_plantillas = {row['column_name'] for row in cursor.fetchall()}
         if 'ruta_firma_img' not in columnas_plantillas:
-            cursor.execute(
-                "ALTER TABLE plantillas_certificados ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE plantillas_certificados ADD COLUMN ruta_firma_img TEXT NOT NULL DEFAULT ''")
         if 'texto_certificado' not in columnas_plantillas:
-            cursor.execute(
-                "ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE plantillas_certificados ADD COLUMN texto_certificado TEXT NOT NULL DEFAULT ''")
 
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS docentes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 numero_empleado TEXT UNIQUE NOT NULL,
                 nombre_completo TEXT NOT NULL,
-                correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                correo_institucional TEXT UNIQUE NOT NULL,
                 centro_universitario_regional TEXT NOT NULL DEFAULT '',
                 activo INTEGER NOT NULL DEFAULT 1,
-                fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
+                fecha_sincronizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             '''
         )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_docentes_numero ON docentes (numero_empleado)'
-        )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)'
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_numero ON docentes (numero_empleado)')
+        # En Postgres no hay COLLATE NOCASE fácil así, preferimos índice o lower()
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_docentes_correo ON docentes (correo_institucional)')
 
-        columnas_docentes = {
-            row[1] for row in cursor.execute('PRAGMA table_info(docentes)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'docentes'")
+        columnas_docentes = {row['column_name'] for row in cursor.fetchall()}
         if 'centro_universitario_regional' not in columnas_docentes:
-            cursor.execute(
-                "ALTER TABLE docentes ADD COLUMN centro_universitario_regional TEXT NOT NULL DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE docentes ADD COLUMN centro_universitario_regional TEXT NOT NULL DEFAULT ''")
 
-        direcciones_admin = cursor.execute(
-            '''
+        cursor.execute('''
             SELECT DISTINCT direccion
             FROM admin_users
             WHERE rol = 'admin' AND direccion IS NOT NULL AND TRIM(direccion) <> ''
-            '''
-        ).fetchall()
+        ''')
+        direcciones_admin = cursor.fetchall()
         for row in direcciones_admin:
-            codigo_dir = (row[0] or '').strip().upper().replace(' ', '')
+            codigo_dir = (row['direccion'] or '').strip().upper().replace(' ', '')
             if codigo_dir and codigo_dir != 'GLOBAL':
                 if not re.match(r'^[A-Z0-9]{2,12}$', codigo_dir):
                     continue
                 cursor.execute(
-                    'INSERT OR IGNORE INTO direcciones (codigo, nombre) VALUES (?, ?)',
+                    'INSERT INTO direcciones (codigo, nombre) VALUES (%s, %s) ON CONFLICT (codigo) DO NOTHING',
                     (codigo_dir, codigo_dir)
                 )
 
-        columnas_admin = {
-            row[1] for row in cursor.execute('PRAGMA table_info(admin_users)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'admin_users'")
+        columnas_admin = {row['column_name'] for row in cursor.fetchall()}
         if 'rol' not in columnas_admin:
             cursor.execute("ALTER TABLE admin_users ADD COLUMN rol TEXT NOT NULL DEFAULT 'admin'")
         if 'direccion' not in columnas_admin:
             cursor.execute("ALTER TABLE admin_users ADD COLUMN direccion TEXT NOT NULL DEFAULT 'IPSD'")
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
+                codigo TEXT PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                horas_minimas INTEGER NOT NULL,
+                horas_maximas INTEGER,
+                semanas_minimas INTEGER NOT NULL,
+                semanas_maximas INTEGER
+            )
+            '''
+        )
 
         cursor.execute(
             '''
@@ -153,13 +141,10 @@ def asegurar_migraciones_minimas():
             '''
         )
 
-        columnas_catalogo = {
-            row[1] for row in cursor.execute('PRAGMA table_info(catalogo_acciones)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'catalogo_acciones'")
+        columnas_catalogo = {row['column_name'] for row in cursor.fetchall()}
         if 'requisitos' not in columnas_catalogo:
-            cursor.execute(
-                "ALTER TABLE catalogo_acciones ADD COLUMN requisitos TEXT DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE catalogo_acciones ADD COLUMN requisitos TEXT DEFAULT ''")
 
         cursor.execute(
             '''
@@ -169,7 +154,7 @@ def asegurar_migraciones_minimas():
                 etiqueta_edicion TEXT DEFAULT '',
                 trimestre TEXT,
                 fecha_inicio DATE,
-                fecha_limite_matricula DATETIME,
+                fecha_limite_matricula TIMESTAMP,
                 jornada TEXT,
                 hora TEXT,
                 cupos_maximos INTEGER,
@@ -182,66 +167,44 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_ediciones_catalogo ON ediciones_formativas (catalogo_id)'
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ediciones_catalogo ON ediciones_formativas (catalogo_id)')
 
-        columnas_ediciones = {
-            row[1] for row in cursor.execute('PRAGMA table_info(ediciones_formativas)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'ediciones_formativas'")
+        columnas_ediciones = {row['column_name'] for row in cursor.fetchall()}
         if 'etiqueta_edicion' not in columnas_ediciones:
-            cursor.execute(
-                "ALTER TABLE ediciones_formativas ADD COLUMN etiqueta_edicion TEXT DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE ediciones_formativas ADD COLUMN etiqueta_edicion TEXT DEFAULT ''")
         if 'requisitos' not in columnas_ediciones:
-            cursor.execute(
-                "ALTER TABLE ediciones_formativas ADD COLUMN requisitos TEXT DEFAULT ''"
-            )
+            cursor.execute("ALTER TABLE ediciones_formativas ADD COLUMN requisitos TEXT DEFAULT ''")
         if 'duracion_horas' not in columnas_ediciones:
-            cursor.execute(
-                'ALTER TABLE ediciones_formativas ADD COLUMN duracion_horas INTEGER'
-            )
+            cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN duracion_horas INTEGER')
         if 'persona_apoyo' not in columnas_ediciones:
+            cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN persona_apoyo TEXT')
+
+        cursor.execute("UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'")
+
+        extras = [
+            ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
+            ('SEMINARIO', 'Seminario', 16, 120, 1, 16),
+            ('CURSO', 'Curso', 20, 240, 1, 52),
+        ]
+        for extra in extras:
             cursor.execute(
-                'ALTER TABLE ediciones_formativas ADD COLUMN persona_apoyo TEXT'
+                '''
+                INSERT INTO tipo_accion_formativa
+                (codigo, nombre, horas_minimas, horas_maximas, semanas_minimas, semanas_maximas)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (codigo) DO NOTHING
+                ''',
+                extra
             )
-
-        cursor.execute(
-            "UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'"
-        )
-
-        cursor.execute(
-            '''
-            CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
-                codigo TEXT PRIMARY KEY,
-                nombre TEXT NOT NULL,
-                horas_minimas INTEGER NOT NULL,
-                horas_maximas INTEGER,
-                semanas_minimas INTEGER NOT NULL,
-                semanas_maximas INTEGER
-            )
-            '''
-        )
-        cursor.executemany(
-            '''
-            INSERT OR IGNORE INTO tipo_accion_formativa
-            (codigo, nombre, horas_minimas, horas_maximas, semanas_minimas, semanas_maximas)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''',
-            [
-                ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
-                ('SEMINARIO', 'Seminario', 16, 120, 1, 16),
-                ('CURSO', 'Curso', 20, 240, 1, 52),
-            ],
-        )
 
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS matriculas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 numero_empleado TEXT NOT NULL,
                 edicion_id TEXT NOT NULL,
-                fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
+                fecha_matricula TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 aprobado INTEGER,
                 fecha_aprobacion TEXT,
                 comentario_validacion TEXT,
@@ -250,13 +213,12 @@ def asegurar_migraciones_minimas():
             '''
         )
 
-        columnas_matriculas = {
-            row[1] for row in cursor.execute('PRAGMA table_info(matriculas)').fetchall()
-        }
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'matriculas'")
+        columnas_matriculas = {row['column_name'] for row in cursor.fetchall()}
         if 'edicion_id' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN edicion_id TEXT')
         if 'fecha_matricula' not in columnas_matriculas:
-            cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP')
+            cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_matricula TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
         if 'aprobado' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN aprobado INTEGER')
         if 'fecha_aprobacion' not in columnas_matriculas:
@@ -278,36 +240,32 @@ def asegurar_migraciones_minimas():
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS matricula_historial (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 matricula_id INTEGER,
                 numero_empleado TEXT NOT NULL,
                 edicion_id TEXT NOT NULL,
                 nombre_accion TEXT NOT NULL,
                 estado_codigo TEXT NOT NULL,
                 detalle TEXT,
-                fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
+                fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo),
                 FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id)
             )
             '''
         )
 
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_historial_empleado_fecha ON matricula_historial (numero_empleado, id DESC)'
-        )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_historial_matricula_id ON matricula_historial (matricula_id)'
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_empleado_fecha ON matricula_historial (numero_empleado, id DESC)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_matricula_id ON matricula_historial (matricula_id)')
 
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS historial_chat (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 usuario_tipo TEXT NOT NULL,
                 usuario_id TEXT NOT NULL,
                 mensaje_usuario TEXT NOT NULL,
                 respuesta_modelo TEXT NOT NULL,
-                fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP
+                fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             '''
         )
@@ -315,7 +273,7 @@ def asegurar_migraciones_minimas():
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS sesiones_curso (
-                id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_sesion SERIAL PRIMARY KEY,
                 edicion_id TEXT NOT NULL,
                 fecha TEXT NOT NULL,
                 hora_inicio TEXT NOT NULL,
@@ -326,14 +284,12 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (edicion_id, fecha, hora_inicio)'
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (edicion_id, fecha, hora_inicio)')
 
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS registro_asistencia (
-                id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_registro SERIAL PRIMARY KEY,
                 id_sesion INTEGER NOT NULL,
                 numero_empleado TEXT NOT NULL,
                 fecha_marcado TEXT NOT NULL,
@@ -344,19 +300,9 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_registro_asistencia_sesion ON registro_asistencia (id_sesion)'
-        )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_registro_asistencia_empleado ON registro_asistencia (numero_empleado)'
-        )
-
-        cursor.execute(
-            '''
-            CREATE INDEX IF NOT EXISTS idx_historial_chat_usuario
-            ON historial_chat (usuario_tipo, usuario_id, id DESC)
-            '''
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_registro_asistencia_sesion ON registro_asistencia (id_sesion)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_registro_asistencia_empleado ON registro_asistencia (numero_empleado)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_chat_usuario ON historial_chat (usuario_tipo, usuario_id, id DESC)')
 
         estados_catalogo = [
             ('PENDIENTE', 'Pendiente', 'pendientes', 10),
@@ -368,27 +314,27 @@ def asegurar_migraciones_minimas():
         for estado in estados_catalogo:
             cursor.execute(
                 '''
-                INSERT OR IGNORE INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (codigo) DO NOTHING
                 ''',
                 estado,
             )
 
-        matriculas_sin_historial = cursor.execute(
+        cursor.execute(
             '''
             SELECT m.id, m.numero_empleado, m.edicion_id, m.aprobado, ca.nombre
             FROM matriculas m
             JOIN ediciones_formativas e ON e.id = m.edicion_id
             JOIN catalogo_acciones ca ON ca.id = e.catalogo_id
             WHERE NOT EXISTS (
-                SELECT 1
-                FROM matricula_historial h
-                WHERE h.matricula_id = m.id
+                SELECT 1 FROM matricula_historial h WHERE h.matricula_id = m.id
             )
             '''
-        ).fetchall()
+        )
+        matriculas_sin_historial = cursor.fetchall()
         for fila in matriculas_sin_historial:
-            valor_aprobado = fila[3]
+            valor_aprobado = fila['aprobado']
             if valor_aprobado == 1:
                 estado_codigo = 'APROBADA'
             elif valor_aprobado == 0:
@@ -404,46 +350,40 @@ def asegurar_migraciones_minimas():
                     matricula_id, numero_empleado, edicion_id, nombre_accion,
                     estado_codigo, detalle
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ''',
                 (
-                    fila[0], fila[1], fila[2], fila[4], estado_codigo,
+                    fila['id'], fila['numero_empleado'], fila['edicion_id'], fila['nombre'], estado_codigo,
                     'Sincronizado desde matrículas existentes'
                 )
             )
 
         superadmin_username = os.environ.get('SUPERADMIN_USERNAME', 'admin').strip() or 'admin'
-        superadmin_password = os.environ.get(
-            'SUPERADMIN_PASSWORD',
-            os.environ.get('ADMIN_PASSWORD', 'IPSD@admin2026')
-        )
+        superadmin_password = os.environ.get('SUPERADMIN_PASSWORD', os.environ.get('ADMIN_PASSWORD', 'IPSD@admin2026'))
 
-        existe_superadmin = cursor.execute(
-            'SELECT id FROM admin_users WHERE username = ?',
-            (superadmin_username,)
-        ).fetchone()
+        cursor.execute('SELECT id FROM admin_users WHERE username = %s', (superadmin_username,))
+        existe_superadmin = cursor.fetchone()
 
         if existe_superadmin:
             cursor.execute(
-                'UPDATE admin_users SET rol = ?, direccion = ? WHERE username = ?',
+                'UPDATE admin_users SET rol = %s, direccion = %s WHERE username = %s',
                 ('superadmin', 'GLOBAL', superadmin_username)
             )
         else:
             cursor.execute(
-                'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (?, ?, ?, ?)',
+                'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (%s, %s, %s, %s)',
                 (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
             )
 
-        # ── Tabla de certificados emitidos (sistema QR) ──────────────────────
         cursor.execute(
             '''
             CREATE TABLE IF NOT EXISTS certificados_emitidos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 token_validacion TEXT UNIQUE NOT NULL,
                 matricula_id INTEGER NOT NULL,
                 numero_empleado TEXT NOT NULL,
                 edicion_id TEXT NOT NULL,
-                fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
+                fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 tipo_documento TEXT NOT NULL,
                 veces_validado INTEGER NOT NULL DEFAULT 0,
                 activo INTEGER NOT NULL DEFAULT 1,
@@ -453,11 +393,12 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
-        cursor.execute(
-            'CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)'
-        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)')
 
         conn.commit()
-        conn.close()
-    except sqlite3.Error:
+    except Exception as e:
+        print(f"Error asegurando migraciones: {e}")
+    finally:
+        if 'conn' in locals() and conn:
+            conn.close()
         pass

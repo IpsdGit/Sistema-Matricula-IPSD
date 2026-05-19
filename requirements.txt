@@ -4,4 +4,5 @@ google-genai==1.12.1
 python-dotenv==1.0.1
 openpyxl==3.1.5
 pdfkit==1.0.0
-qrcode[pil]>=7.4.2
+qrcode[pil]>=7.4.2
+psycopg2-binary>=2.9.9

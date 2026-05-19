@@ -1,10 +1,12 @@
-import sqlite3
+import psycopg2
 import re
 import uuid
 import os
 from datetime import datetime, timedelta
 
+# pyrefly: ignore [missing-import]
 from werkzeug.security import check_password_hash, generate_password_hash
+# pyrefly: ignore [missing-import]
 from werkzeug.utils import secure_filename
 
 from config import DIAS_SEMANA, MESES_ES
@@ -38,10 +40,14 @@ def _fecha_iso_desde_partes_curso(anio, mes_nombre, dia):
 
 
 def _fecha_mostrar_desde_iso(fecha_iso):
+    if not fecha_iso:
+        return ''
+    if hasattr(fecha_iso, 'strftime'):
+        return fecha_iso.strftime('%d/%m/%Y')
     try:
-        return datetime.strptime((fecha_iso or '').strip(), '%Y-%m-%d').strftime('%d/%m/%Y')
-    except ValueError:
-        return fecha_iso or ''
+        return datetime.strptime(str(fecha_iso).strip(), '%Y-%m-%d').strftime('%d/%m/%Y')
+    except (ValueError, TypeError):
+        return str(fecha_iso)
 
 
 def _mes_numero_desde_nombre(nombre):
@@ -75,10 +81,12 @@ def _etiqueta_horario_edicion(jornada, hora):
 
 
 def _generar_id_edicion(conn, catalogo_id):
-    existentes = conn.execute(
-        'SELECT id FROM ediciones_formativas WHERE id LIKE ? ORDER BY id ASC',
-        (f'{catalogo_id}-E%',),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT id FROM ediciones_formativas WHERE id LIKE %s ORDER BY id ASC',
+            (f'{catalogo_id}-E%',),
+        )
+        existentes = cur.fetchall()
 
     ultimo = 0
     patron = re.compile(rf'^{re.escape(catalogo_id)}-E(\d{{3}})$')
@@ -91,16 +99,18 @@ def _generar_id_edicion(conn, catalogo_id):
 
 
 def _sincronizar_edicion_desde_sesiones(conn, edicion_id, jornada=None, hora_texto=None):
-    primer = conn.execute(
-        '''
-        SELECT fecha, hora_inicio, hora_fin
-        FROM sesiones_curso
-        WHERE edicion_id = ?
-        ORDER BY fecha ASC, hora_inicio ASC
-        LIMIT 1
-        ''',
-        (edicion_id,),
-    ).fetchone()
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            SELECT fecha, hora_inicio, hora_fin
+            FROM sesiones_curso
+            WHERE edicion_id = %s
+            ORDER BY fecha ASC, hora_inicio ASC
+            LIMIT 1
+            ''',
+            (edicion_id,),
+        )
+        primer = cur.fetchone()
 
     fecha_inicio = (primer['fecha'] or '').strip() if primer else ''
     if not hora_texto and primer:
@@ -112,23 +122,24 @@ def _sincronizar_edicion_desde_sesiones(conn, edicion_id, jornada=None, hora_tex
     campos = []
     params = []
     if fecha_inicio:
-        campos.append('fecha_inicio = ?')
+        campos.append('fecha_inicio = %s')
         params.append(fecha_inicio)
     if jornada:
-        campos.append('jornada = ?')
+        campos.append('jornada = %s')
         params.append(_normalizar_jornada(jornada))
     if hora_texto is not None:
-        campos.append('hora = ?')
+        campos.append('hora = %s')
         params.append(hora_texto)
 
     if not campos:
         return
 
     params.append(edicion_id)
-    conn.execute(
-        f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = ?",
-        tuple(params),
-    )
+    with conn.cursor() as cur:
+        cur.execute(
+            f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = %s",
+            tuple(params),
+        )
 
 
 def _normalizar_duracion_tipo(valor):
@@ -284,15 +295,19 @@ def authenticate_admin(username, password):
     try:
         conn = get_db_connection()
         try:
-            admin = conn.execute(
-                'SELECT password_hash, rol, direccion FROM admin_users WHERE username = ?',
-                (username,),
-            ).fetchone()
-        except sqlite3.OperationalError:
-            admin = conn.execute(
-                'SELECT password_hash FROM admin_users WHERE username = ?',
-                (username,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT password_hash, rol, direccion FROM admin_users WHERE username = %s',
+                    (username,),
+                )
+                admin = cur.fetchone()
+        except psycopg2.OperationalError:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT password_hash FROM admin_users WHERE username = %s',
+                    (username,),
+                )
+                admin = cur.fetchone()
         conn.close()
 
         if admin and check_password_hash(admin['password_hash'], password):
@@ -308,7 +323,7 @@ def authenticate_admin(username, password):
             }
 
         return {'ok': False, 'error': 'Usuario o contraseña incorrectos.'}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'Error de conexión con la base de datos.'}
 
 
@@ -332,9 +347,9 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 ef.hora,
                 m.fecha_matricula,
                 m.aprobado,
-                strftime('%Y', ef.fecha_inicio) AS anio,
-                strftime('%m', ef.fecha_inicio) AS mes_num,
-                strftime('%d', ef.fecha_inicio) AS dia
+                EXTRACT(YEAR FROM ef.fecha_inicio) AS anio,
+                EXTRACT(MONTH FROM ef.fecha_inicio) AS mes_num,
+                EXTRACT(DAY FROM ef.fecha_inicio) AS dia
             FROM matriculas m
             JOIN ediciones_formativas ef ON m.edicion_id = ef.id
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
@@ -343,19 +358,19 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         params = []
 
         if not es_superadmin:
-            query_matriculas += ' AND ca.direccion_codigo = ?'
+            query_matriculas += ' AND ca.direccion_codigo = %s'
             params.append(admin_direccion)
 
         if anio_filtro:
-            query_matriculas += " AND strftime('%Y', ef.fecha_inicio) = ?"
+            query_matriculas += " AND EXTRACT(YEAR FROM ef.fecha_inicio) = %s"
             params.append(anio_filtro)
         if trimestre_filtro:
-            query_matriculas += ' AND ef.trimestre = ?'
+            query_matriculas += ' AND ef.trimestre = %s'
             params.append(trimestre_filtro)
         if mes_filtro:
             mes_num = _mes_numero_desde_nombre(mes_filtro)
             if mes_num:
-                query_matriculas += " AND strftime('%m', ef.fecha_inicio) = ?"
+                query_matriculas += " AND EXTRACT(MONTH FROM ef.fecha_inicio) = %s"
                 params.append(f'{mes_num:02d}')
         if resultado_filtro == 'aprobado':
             query_matriculas += ' AND m.aprobado = 1'
@@ -367,7 +382,9 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             query_matriculas += ' AND m.aprobado IS NULL'
 
         query_matriculas += ' ORDER BY ef.fecha_inicio DESC, ef.id, m.numero_empleado'
-        registros_raw = conn.execute(query_matriculas, params).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(query_matriculas, params)
+            registros_raw = cur.fetchall()
         registros = []
         for fila in registros_raw:
             item = dict(fila)
@@ -395,9 +412,9 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 ef.duracion_horas,
                 ca.id_plantilla_certificado,
                 ca.requisitos AS requisitos_catalogo,
-                strftime('%Y', ef.fecha_inicio) AS anio,
-                strftime('%m', ef.fecha_inicio) AS mes_num,
-                strftime('%d', ef.fecha_inicio) AS dia,
+                EXTRACT(YEAR FROM ef.fecha_inicio) AS anio,
+                EXTRACT(MONTH FROM ef.fecha_inicio) AS mes_num,
+                EXTRACT(DAY FROM ef.fecha_inicio) AS dia,
                 COUNT(DISTINCT m.numero_empleado) as total_inscritos
             FROM ediciones_formativas ef
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
@@ -405,11 +422,13 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         '''
         cursos_params = []
         if not es_superadmin:
-            query_cursos += ' WHERE ca.direccion_codigo = ?'
+            query_cursos += ' WHERE ca.direccion_codigo = %s'
             cursos_params.append(admin_direccion)
 
-        query_cursos += ' GROUP BY ef.id ORDER BY ef.fecha_inicio DESC, ef.id'
-        cursos_raw = conn.execute(query_cursos, cursos_params).fetchall()
+        query_cursos += ' GROUP BY ef.id, ca.id ORDER BY ef.fecha_inicio DESC, ef.id'
+        with conn.cursor() as cur:
+            cur.execute(query_cursos, cursos_params)
+            cursos_raw = cur.fetchall()
         cursos = []
         for fila in cursos_raw:
             item = dict(fila)
@@ -439,11 +458,13 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         '''
         catalogos_params = []
         if not es_superadmin:
-            query_catalogos += ' WHERE ca.direccion_codigo = ?'
+            query_catalogos += ' WHERE ca.direccion_codigo = %s'
             catalogos_params.append(admin_direccion)
 
         query_catalogos += ' GROUP BY ca.id ORDER BY ca.id'
-        catalogos_raw = conn.execute(query_catalogos, catalogos_params).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(query_catalogos, catalogos_params)
+            catalogos_raw = cur.fetchall()
         catalogos = []
         for fila in catalogos_raw:
             item = dict(fila)
@@ -465,16 +486,22 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         '''
         calendario_params = []
         if not es_superadmin:
-            query_calendario += ' WHERE ca.direccion_codigo = ?'
+            query_calendario += ' WHERE ca.direccion_codigo = %s'
             calendario_params.append(admin_direccion)
 
         query_calendario += ' ORDER BY s.fecha ASC, s.hora_inicio ASC, ef.id ASC'
-        calendario_sesiones = conn.execute(query_calendario, calendario_params).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(query_calendario, calendario_params)
+            calendario_sesiones = cur.fetchall()
 
         cursos_con_sesion = set()
         calendario_eventos = []
         for fila in calendario_sesiones:
-            fecha_iso = (fila['fecha'] or '').strip()
+            fecha_val = fila['fecha']
+            if hasattr(fecha_val, 'strftime'):
+                fecha_iso = fecha_val.strftime('%Y-%m-%d')
+            else:
+                fecha_iso = (fecha_val or '').strip()
             if not fecha_iso:
                 continue
 
@@ -486,7 +513,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 {
                     'tipo_evento': 'sesion',
                     'fecha_iso': fecha_iso,
-                    'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_iso),
+                    'fecha_mostrar': _fecha_mostrar_desde_iso(fecha_val),
                     'hora_inicio': fila['hora_inicio'],
                     'hora_fin': fila['hora_fin'],
                     'id_curso': edicion_id,
@@ -502,7 +529,11 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             if not edicion_id or edicion_id in cursos_con_sesion:
                 continue
 
-            fecha_iso = (curso.get('fecha_inicio') or '').strip()[:10]
+            fecha_val = curso.get('fecha_inicio')
+            if hasattr(fecha_val, 'strftime'):
+                fecha_iso = fecha_val.strftime('%Y-%m-%d')
+            else:
+                fecha_iso = (fecha_val or '').strip()[:10]
             if not fecha_iso:
                 continue
 
@@ -534,55 +565,65 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             SELECT COUNT(*)
             FROM ediciones_formativas ef
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE ef.trimestre = ?
+            WHERE ef.trimestre = %s
               AND (ef.estado IS NULL OR ef.estado NOT IN ('Finalizada', 'Cancelada'))
         '''
         trimestre_params = [trimestre_actual]
         if not es_superadmin:
-            query_ediciones_trimestre += ' AND ca.direccion_codigo = ?'
+            query_ediciones_trimestre += ' AND ca.direccion_codigo = %s'
             trimestre_params.append(admin_direccion)
 
-        ediciones_trimestre_actual = conn.execute(
-            query_ediciones_trimestre,
-            trimestre_params,
-        ).fetchone()[0]
+        with conn.cursor() as cur:
+            cur.execute(
+                query_ediciones_trimestre,
+                trimestre_params,
+            )
+            ediciones_trimestre_actual = cur.fetchone()[0]
 
         if es_superadmin:
-            total_matriculas = conn.execute('SELECT COUNT(*) FROM matriculas').fetchone()[0]
-            total_cursos = conn.execute('SELECT COUNT(*) FROM ediciones_formativas').fetchone()[0]
-            total_profesores = conn.execute('SELECT COUNT(DISTINCT numero_empleado) FROM matriculas').fetchone()[0]
+            with conn.cursor() as cur:
+                cur.execute('SELECT COUNT(*) FROM matriculas')
+                total_matriculas = cur.fetchone()[0]
+                cur.execute('SELECT COUNT(*) FROM ediciones_formativas')
+                total_cursos = cur.fetchone()[0]
+                cur.execute('SELECT COUNT(DISTINCT numero_empleado) FROM matriculas')
+                total_profesores = cur.fetchone()[0]
         else:
-            total_matriculas = conn.execute(
-                '''
-                SELECT COUNT(*)
-                FROM matriculas m
-                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ca.direccion_codigo = ?
-                ''',
-                (admin_direccion,),
-            ).fetchone()[0]
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT COUNT(*)
+                    FROM matriculas m
+                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ca.direccion_codigo = %s
+                    ''',
+                    (admin_direccion,),
+                )
+                total_matriculas = cur.fetchone()[0]
 
-            total_cursos = conn.execute(
-                '''
-                SELECT COUNT(*)
-                FROM ediciones_formativas ef
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ca.direccion_codigo = ?
-                ''',
-                (admin_direccion,),
-            ).fetchone()[0]
+                cur.execute(
+                    '''
+                    SELECT COUNT(*)
+                    FROM ediciones_formativas ef
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ca.direccion_codigo = %s
+                    ''',
+                    (admin_direccion,),
+                )
+                total_cursos = cur.fetchone()[0]
 
-            total_profesores = conn.execute(
-                '''
-                SELECT COUNT(DISTINCT m.numero_empleado)
-                FROM matriculas m
-                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ca.direccion_codigo = ?
-                ''',
-                (admin_direccion,),
-            ).fetchone()[0]
+                cur.execute(
+                    '''
+                    SELECT COUNT(DISTINCT m.numero_empleado)
+                    FROM matriculas m
+                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ca.direccion_codigo = %s
+                    ''',
+                    (admin_direccion,),
+                )
+                total_profesores = cur.fetchone()[0]
 
         stats = {
             'total_matriculas': total_matriculas,
@@ -595,23 +636,26 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         usuarios_admin = []
         direcciones_gestion = []
         if es_superadmin:
-            usuarios_admin = conn.execute(
-                '''
-                SELECT username, rol, direccion
-                FROM admin_users
-                ORDER BY CASE WHEN rol = 'superadmin' THEN 0 ELSE 1 END, username
-                '''
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT username, rol, direccion
+                    FROM admin_users
+                    ORDER BY CASE WHEN rol = 'superadmin' THEN 0 ELSE 1 END, username
+                    '''
+                )
+                usuarios_admin = cur.fetchall()
 
-            direcciones_gestion = conn.execute(
-                '''
-                SELECT d.codigo, d.nombre, d.ruta_firma_img,
-                       (SELECT COUNT(*) FROM admin_users a WHERE a.direccion = d.codigo AND a.rol = 'admin') as total_admins,
-                       (SELECT COUNT(*) FROM catalogo_acciones ca WHERE ca.direccion_codigo = d.codigo) as total_cursos
-                FROM direcciones d
-                ORDER BY d.codigo
-                '''
-            ).fetchall()
+                cur.execute(
+                    '''
+                    SELECT d.codigo, d.nombre, d.ruta_firma_img,
+                           (SELECT COUNT(*) FROM admin_users a WHERE a.direccion = d.codigo AND a.rol = 'admin') as total_admins,
+                           (SELECT COUNT(*) FROM catalogo_acciones ca WHERE ca.direccion_codigo = d.codigo) as total_cursos
+                    FROM direcciones d
+                    ORDER BY d.codigo
+                    '''
+                )
+                direcciones_gestion = cur.fetchall()
 
         conn.close()
 
@@ -635,7 +679,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 'resultado': resultado_filtro,
             },
         }
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {
             'ok': False,
             'admin_direccion': admin_direccion,
@@ -673,36 +717,39 @@ def get_admin_stats_payload(admin_rol, admin_direccion):
         where_stats = ''
         params = []
         if admin_rol != 'superadmin':
-            where_stats = ' WHERE ca.direccion_codigo = ? '
+            where_stats = ' WHERE ca.direccion_codigo = %s '
             params.append(admin_direccion)
 
-        datos_cursos = conn.execute(
-            f'''
-            SELECT ca.nombre, COUNT(m.numero_empleado) as total
-            FROM ediciones_formativas ef
-            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            LEFT JOIN matriculas m ON ef.id = m.edicion_id
-            {where_stats}
-            GROUP BY ef.id
-            ORDER BY total DESC
-            LIMIT 10
-            ''',
-            params,
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                f'''
+                SELECT ca.nombre, COUNT(m.numero_empleado) as total
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                LEFT JOIN matriculas m ON ef.id = m.edicion_id
+                {where_stats}
+                GROUP BY ef.id, ca.id
+                ORDER BY total DESC
+                LIMIT 10
+                ''',
+                params,
+            )
+            datos_cursos = cur.fetchall()
 
-        datos_meses = conn.execute(
-            f'''
-            SELECT strftime('%m %Y', m.fecha_matricula) as periodo, COUNT(m.id) as total
-            FROM matriculas m
-            JOIN ediciones_formativas ef ON m.edicion_id = ef.id
-            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            {where_stats}
-            GROUP BY periodo
-            ORDER BY MAX(m.fecha_matricula) DESC
-            LIMIT 12
-            ''',
-            params,
-        ).fetchall()
+            cur.execute(
+                f'''
+                SELECT TO_CHAR(m.fecha_matricula, 'MM YYYY') as periodo, COUNT(m.id) as total
+                FROM matriculas m
+                JOIN ediciones_formativas ef ON m.edicion_id = ef.id
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                {where_stats}
+                GROUP BY periodo
+                ORDER BY MAX(m.fecha_matricula) DESC
+                LIMIT 12
+                ''',
+                params,
+            )
+            datos_meses = cur.fetchall()
 
         conn.close()
 
@@ -717,7 +764,7 @@ def get_admin_stats_payload(admin_rol, admin_direccion):
                 'data': [r['total'] for r in datos_meses],
             },
         }
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'cursos': {'labels': [], 'data': []}, 'meses': {'labels': [], 'data': []}}
 
 
@@ -737,8 +784,8 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
                    ef.hora,
                    m.fecha_matricula,
                    m.aprobado,
-                   strftime('%Y', ef.fecha_inicio) AS anio,
-                   strftime('%m', ef.fecha_inicio) AS mes_num
+                   EXTRACT(YEAR FROM ef.fecha_inicio) AS anio,
+                   EXTRACT(MONTH FROM ef.fecha_inicio) AS mes_num
             FROM matriculas m
             JOIN ediciones_formativas ef ON m.edicion_id = ef.id
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
@@ -746,18 +793,18 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
         '''
         params = []
         if admin_rol != 'superadmin':
-            query += ' AND ca.direccion_codigo = ?'
+            query += ' AND ca.direccion_codigo = %s'
             params.append(admin_direccion)
         if anio_filtro:
-            query += " AND strftime('%Y', ef.fecha_inicio) = ?"
+            query += " AND EXTRACT(YEAR FROM ef.fecha_inicio) = %s"
             params.append(anio_filtro)
         if trimestre_filtro:
-            query += ' AND ef.trimestre = ?'
+            query += ' AND ef.trimestre = %s'
             params.append(trimestre_filtro)
         if mes_filtro:
             mes_num = _mes_numero_desde_nombre(mes_filtro)
             if mes_num:
-                query += " AND strftime('%m', ef.fecha_inicio) = ?"
+                query += " AND EXTRACT(MONTH FROM ef.fecha_inicio) = %s"
                 params.append(f'{mes_num:02d}')
         if resultado_filtro == 'aprobado':
             query += ' AND m.aprobado = 1'
@@ -769,7 +816,9 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
             query += ' AND m.aprobado IS NULL'
 
         query += ' ORDER BY ef.fecha_inicio DESC, ef.id, m.numero_empleado'
-        registros_raw = conn.execute(query, params).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            registros_raw = cur.fetchall()
         registros = []
         for fila in registros_raw:
             item = dict(fila)
@@ -777,7 +826,7 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
             registros.append(item)
         conn.close()
         return {'ok': True, 'registros': registros}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'registros': []}
 
 
@@ -795,17 +844,19 @@ def update_matricula_resultado(
 
     try:
         conn = get_db_connection()
-        
-        matricula_actual = conn.execute(
-            '''
-            SELECT m.id, ca.nombre, m.edicion_id, ca.direccion_codigo
-            FROM matriculas m
-            JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE m.id = ? AND m.numero_empleado = ?
-            ''',
-            (matricula_id, numero_empleado),
-        ).fetchone()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT m.id, ca.nombre, m.edicion_id, ca.direccion_codigo
+                FROM matriculas m
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE m.id = %s AND m.numero_empleado = %s
+                ''',
+                (matricula_id, numero_empleado),
+            )
+            matricula_actual = cur.fetchone()
 
         if not matricula_actual:
             conn.close()
@@ -824,15 +875,19 @@ def update_matricula_resultado(
         # Actualizar aprobación y fecha de aprobación si corresponde
         if aprobado == 1:
             fecha_aprobacion = datetime.now().strftime('%Y-%m-%d')
-            cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = ?, comentario_validacion = ? WHERE id = ?',
-                (aprobado, fecha_aprobacion, comentario_db, matricula_id),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE matriculas SET aprobado = %s, fecha_aprobacion = %s, comentario_validacion = %s WHERE id = %s',
+                    (aprobado, fecha_aprobacion, comentario_db, matricula_id),
+                )
+                rowcount = cur.rowcount
         else:
-            cursor = conn.execute(
-                'UPDATE matriculas SET aprobado = ?, fecha_aprobacion = NULL, comentario_validacion = ? WHERE id = ?',
-                (aprobado, comentario_db, matricula_id),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE matriculas SET aprobado = %s, fecha_aprobacion = NULL, comentario_validacion = %s WHERE id = %s',
+                    (aprobado, comentario_db, matricula_id),
+                )
+                rowcount = cur.rowcount
 
         detalle_evento = 'Resultado actualizado desde panel administrativo'
         if comentario_limpio:
@@ -851,11 +906,11 @@ def update_matricula_resultado(
         conn.commit()
         conn.close()
 
-        if cursor.rowcount == 0:
+        if rowcount == 0:
             return {'ok': False, 'error': 'Matrícula no encontrada', 'status_code': 404}
 
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo actualizar el resultado', 'status_code': 500}
 
 
@@ -866,18 +921,19 @@ def actualizar_catalogo_accion(catalogo_id, nombre, modalidad, tipo_accion, id_p
         
     try:
         conn = get_db_connection()
-        conn.execute(
-            '''
-            UPDATE catalogo_acciones
-            SET nombre = ?, modalidad = ?, tipo_accion = ?, id_plantilla_certificado = ?, requisitos = ?
-            WHERE id = ?
-            ''',
-            (nombre, modalidad, tipo_accion, id_plantilla_certificado or None, requisitos or '', catalogo_id)
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                UPDATE catalogo_acciones
+                SET nombre = %s, modalidad = %s, tipo_accion = %s, id_plantilla_certificado = %s, requisitos = %s
+                WHERE id = %s
+                ''',
+                (nombre, modalidad, tipo_accion, id_plantilla_certificado or None, requisitos or '', catalogo_id)
+            )
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         return {'ok': False, 'error': f'Error al actualizar catálogo: {str(e)}'}
 
 def eliminar_catalogo_accion(catalogo_id):
@@ -888,11 +944,12 @@ def eliminar_catalogo_accion(catalogo_id):
     try:
         conn = get_db_connection()
         # El ON DELETE CASCADE se encarga de las ediciones y matrículas
-        conn.execute('DELETE FROM catalogo_acciones WHERE id = ?', (catalogo_id,))
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM catalogo_acciones WHERE id = %s', (catalogo_id,))
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         return {'ok': False, 'error': f'Error al eliminar catálogo: {str(e)}'}
 
 
@@ -912,29 +969,30 @@ def create_curso_records(
         tipo_accion_norm = _normalizar_tipo_accion(tipo_accion)
 
         catalogo_id = generar_id_curso(conn, direccion_curso, modalidad)
-        conn.execute(
-            '''
-            INSERT INTO catalogo_acciones
-            (id, nombre, modalidad, tipo_accion, id_plantilla_certificado, direccion_codigo)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''',
-            (
-                catalogo_id,
-                nombre_curso,
-                modalidad,
-                tipo_accion_norm,
-                id_plantilla_certificado,
-                direccion_curso,
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                INSERT INTO catalogo_acciones
+                (id, nombre, modalidad, tipo_accion, id_plantilla_certificado, direccion_codigo)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ''',
+                (
+                    catalogo_id,
+                    nombre_curso,
+                    modalidad,
+                    tipo_accion_norm,
+                    id_plantilla_certificado,
+                    direccion_curso,
+                ),
+            )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.IntegrityError as e:
+    except psycopg2.IntegrityError as e:
         print(f"Error al crear: {e}")
         return {'ok': False}
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         print(f"Error al crear: {e}")
         return {'ok': False}
     except Exception as e:
@@ -966,60 +1024,60 @@ def update_edicion_metadata(
         params = []
 
         if trimestre:
-            campos.append('trimestre = ?')
+            campos.append('trimestre = %s')
             params.append(trimestre)
 
         if fecha_inicio:
-            campos.append('fecha_inicio = ?')
+            campos.append('fecha_inicio = %s')
             params.append(fecha_inicio)
 
         if cupos_maximos is not None:
-            campos.append('cupos_maximos = ?')
+            campos.append('cupos_maximos = %s')
             params.append(cupos_maximos)
 
         if jornada is not None:
-            campos.append('jornada = ?')
+            campos.append('jornada = %s')
             params.append(_normalizar_jornada(jornada))
 
         if hora is not None:
-            campos.append('hora = ?')
+            campos.append('hora = %s')
             params.append(hora)
 
         if docente_responsable is not None:
-            campos.append('docente_responsable = ?')
+            campos.append('docente_responsable = %s')
             params.append(docente_responsable)
 
         if persona_apoyo is not None:
-            campos.append('persona_apoyo = ?')
+            campos.append('persona_apoyo = %s')
             params.append(persona_apoyo)
 
         if etiqueta_edicion is not None:
-            campos.append('etiqueta_edicion = ?')
+            campos.append('etiqueta_edicion = %s')
             params.append(etiqueta_edicion)
 
         if privacidad is not None:
-            campos.append('privacidad = ?')
+            campos.append('privacidad = %s')
             params.append(privacidad)
 
         if fecha_limite_matricula is not None:
-            campos.append('fecha_limite_matricula = ?')
+            campos.append('fecha_limite_matricula = %s')
             valor_fecha_limite = fecha_limite_matricula or None
             params.append(valor_fecha_limite)
 
         if enlace_acceso is not None:
-            campos.append('enlace_acceso = ?')
+            campos.append('enlace_acceso = %s')
             params.append(enlace_acceso)
 
         if requisitos is not None:
-            campos.append('requisitos = ?')
+            campos.append('requisitos = %s')
             params.append(requisitos)
 
         if duracion_horas is not None:
-            campos.append('duracion_horas = ?')
+            campos.append('duracion_horas = %s')
             params.append(duracion_horas)
 
         if estado is not None:
-            campos.append('estado = ?')
+            campos.append('estado = %s')
             params.append(estado)
 
         if not campos:
@@ -1027,17 +1085,19 @@ def update_edicion_metadata(
             return {'ok': True}
 
         params.append(edicion_id)
-        cursor = conn.execute(
-            f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = ?",
-            tuple(params),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE ediciones_formativas SET {', '.join(campos)} WHERE id = %s",
+                tuple(params),
+            )
+            rowcount = cur.rowcount
         conn.commit()
         conn.close()
 
-        if cursor.rowcount == 0:
+        if rowcount == 0:
             return {'ok': False, 'not_found': True}
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1048,13 +1108,15 @@ def obtener_catalogo_id_por_edicion(edicion_id):
 
     try:
         conn = get_db_connection()
-        fila = conn.execute(
-            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ? LIMIT 1',
-            (edicion_id_limpio,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT catalogo_id FROM ediciones_formativas WHERE id = %s LIMIT 1',
+                (edicion_id_limpio,),
+            )
+            fila = cur.fetchone()
         conn.close()
         return fila['catalogo_id'] if fila else None
-    except sqlite3.Error:
+    except psycopg2.Error:
         return None
 
 
@@ -1065,20 +1127,22 @@ def listar_ediciones_catalogo(catalogo_id):
 
     try:
         conn = get_db_connection()
-        ediciones = conn.execute(
-            '''
-            SELECT id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula,
-                     jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo,
-                     privacidad, estado, requisitos, duracion_horas
-            FROM ediciones_formativas
-            WHERE catalogo_id = ?
-            ORDER BY id ASC
-            ''',
-            (catalogo_id_limpio,),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula,
+                         jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo,
+                         privacidad, estado, requisitos, duracion_horas
+                FROM ediciones_formativas
+                WHERE catalogo_id = %s
+                ORDER BY id ASC
+                ''',
+                (catalogo_id_limpio,),
+            )
+            ediciones = cur.fetchall()
         conn.close()
         return ediciones
-    except sqlite3.Error:
+    except psycopg2.Error:
         return []
 
 
@@ -1106,37 +1170,38 @@ def crear_edicion_formativa(
     try:
         conn = get_db_connection()
         edicion_id = _generar_id_edicion(conn, catalogo_id_limpio)
-        conn.execute(
-            '''
-            INSERT INTO ediciones_formativas
-            (id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula, jornada,
-             hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo, privacidad, estado,
-             requisitos, duracion_horas)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''',
-            (
-                edicion_id,
-                catalogo_id_limpio,
-                etiqueta_edicion,
-                trimestre,
-                fecha_inicio,
-                fecha_limite_matricula,
-                _normalizar_jornada(jornada),
-                hora,
-                cupos_maximos,
-                enlace_acceso,
-                docente_responsable,
-                persona_apoyo,
-                privacidad or 'Abierta',
-                estado or 'En Edicion',
-                requisitos or '',
-                duracion_horas,
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                INSERT INTO ediciones_formativas
+                (id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula, jornada,
+                 hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo, privacidad, estado,
+                 requisitos, duracion_horas)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''',
+                (
+                    edicion_id,
+                    catalogo_id_limpio,
+                    etiqueta_edicion,
+                    trimestre,
+                    fecha_inicio,
+                    fecha_limite_matricula,
+                    _normalizar_jornada(jornada),
+                    hora,
+                    cupos_maximos,
+                    enlace_acceso,
+                    docente_responsable,
+                    persona_apoyo,
+                    privacidad or 'Abierta',
+                    estado or 'En Edicion',
+                    requisitos or '',
+                    duracion_horas,
+                ),
+            )
         conn.commit()
         conn.close()
         return {'ok': True, 'edicion_id': edicion_id}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1158,10 +1223,12 @@ def update_curso_record(
 ):
     try:
         conn = get_db_connection()
-        curso = conn.execute(
-            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ?',
-            (id_curso,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT catalogo_id FROM ediciones_formativas WHERE id = %s',
+                (id_curso,),
+            )
+            curso = cur.fetchone()
 
         if not curso:
             conn.close()
@@ -1178,45 +1245,47 @@ def update_curso_record(
         fecha_iso = _fecha_iso_desde_partes_curso(anio, mes, dia)
 
         if fecha_iso:
-            conn.execute(
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    UPDATE ediciones_formativas
+                    SET trimestre = %s,
+                        fecha_inicio = %s,
+                        fecha_limite_matricula = %s,
+                        cupos_maximos = %s,
+                        enlace_acceso = %s
+                    WHERE id = %s
+                    ''',
+                    (
+                        trimestre,
+                        fecha_iso,
+                        fecha_iso,
+                        cupos_maximos,
+                        enlace_virtual,
+                        id_curso,
+                    ),
+                )
+
+        with conn.cursor() as cur:
+            cur.execute(
                 '''
-                UPDATE ediciones_formativas
-                SET trimestre = ?,
-                    fecha_inicio = ?,
-                    fecha_limite_matricula = ?,
-                    cupos_maximos = ?,
-                    enlace_acceso = ?
-                WHERE id = ?
+                UPDATE catalogo_acciones
+                SET nombre = %s, modalidad = %s, tipo_accion = %s, id_plantilla_certificado = %s
+                WHERE id = %s
                 ''',
                 (
-                    trimestre,
-                    fecha_iso,
-                    fecha_iso,
-                    cupos_maximos,
-                    enlace_virtual,
-                    id_curso,
+                    nombre_curso,
+                    modalidad,
+                    tipo_accion_norm,
+                    id_plantilla_certificado,
+                    curso['catalogo_id'],
                 ),
             )
-
-        conn.execute(
-            '''
-            UPDATE catalogo_acciones
-            SET nombre = ?, modalidad = ?, tipo_accion = ?, id_plantilla_certificado = ?
-            WHERE id = ?
-            ''',
-            (
-                nombre_curso,
-                modalidad,
-                tipo_accion_norm,
-                id_plantilla_certificado,
-                curso['catalogo_id'],
-            ),
-        )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1228,82 +1297,91 @@ def create_admin_user_record(username, password, direccion):
             conn.close()
             return {'ok': False, 'invalid_direction': True}
 
-        conn.execute(
-            'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (?, ?, ?, ?)',
-            (username, generate_password_hash(password), 'admin', direccion),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (%s, %s, %s, %s)',
+                (username, generate_password_hash(password), 'admin', direccion),
+            )
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         return {'ok': False}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
 def update_admin_user_record(username, new_password, direccion):
     try:
         conn = get_db_connection()
-        admin_objetivo = conn.execute(
-            'SELECT rol FROM admin_users WHERE username = ?',
-            (username,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT rol FROM admin_users WHERE username = %s',
+                (username,),
+            )
+            admin_objetivo = cur.fetchone()
 
         if not admin_objetivo or admin_objetivo['rol'] == 'superadmin' or not direccion_existe(conn, direccion):
             conn.close()
             return {'ok': False, 'not_allowed': True}
 
         if new_password:
-            conn.execute(
-                'UPDATE admin_users SET direccion = ?, password_hash = ? WHERE username = ?',
-                (direccion, generate_password_hash(new_password), username),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE admin_users SET direccion = %s, password_hash = %s WHERE username = %s',
+                    (direccion, generate_password_hash(new_password), username),
+                )
         else:
-            conn.execute(
-                'UPDATE admin_users SET direccion = ? WHERE username = ?',
-                (direccion, username),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE admin_users SET direccion = %s WHERE username = %s',
+                    (direccion, username),
+                )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
 def delete_admin_user_record(username):
     try:
         conn = get_db_connection()
-        admin_objetivo = conn.execute(
-            'SELECT rol FROM admin_users WHERE username = ?',
-            (username,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT rol FROM admin_users WHERE username = %s',
+                (username,),
+            )
+            admin_objetivo = cur.fetchone()
 
         if not admin_objetivo or admin_objetivo['rol'] == 'superadmin':
             conn.close()
             return {'ok': False, 'not_allowed': True}
 
-        conn.execute('DELETE FROM admin_users WHERE username = ?', (username,))
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM admin_users WHERE username = %s', (username,))
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
 def create_direccion_record(codigo, nombre):
     try:
         conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO direcciones (codigo, nombre) VALUES (?, ?)',
-            (codigo, nombre),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                'INSERT INTO direcciones (codigo, nombre) VALUES (%s, %s)',
+                (codigo, nombre),
+            )
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         return {'ok': False}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1320,44 +1398,48 @@ def update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo, ruta_firm
                 conn.close()
                 return {'ok': False, 'duplicate': True}
 
-            conn.execute(
-                'UPDATE catalogo_acciones SET direccion_codigo = ? WHERE direccion_codigo = ?',
-                (codigo_nuevo, codigo_actual),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE catalogo_acciones SET direccion_codigo = %s WHERE direccion_codigo = %s',
+                    (codigo_nuevo, codigo_actual),
+                )
 
-            conn.execute(
-                'UPDATE admin_users SET direccion = ? WHERE direccion = ? AND rol = ?',
-                (codigo_nuevo, codigo_actual, 'admin'),
-            )
+                cur.execute(
+                    'UPDATE admin_users SET direccion = %s WHERE direccion = %s AND rol = %s',
+                    (codigo_nuevo, codigo_actual, 'admin'),
+                )
 
-            conn.execute(
-                'UPDATE direcciones SET codigo = ?, nombre = ? WHERE codigo = ?',
-                (codigo_nuevo, nombre_nuevo, codigo_actual),
-            )
+                cur.execute(
+                    'UPDATE direcciones SET codigo = %s, nombre = %s WHERE codigo = %s',
+                    (codigo_nuevo, nombre_nuevo, codigo_actual),
+                )
         else:
-            conn.execute(
-                'UPDATE direcciones SET nombre = ? WHERE codigo = ?',
-                (nombre_nuevo, codigo_actual),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE direcciones SET nombre = %s WHERE codigo = %s',
+                    (nombre_nuevo, codigo_actual),
+                )
 
         if ruta_firma_img is not None:
             codigo_destino = codigo_nuevo if codigo_actual != codigo_nuevo else codigo_actual
-            conn.execute(
-                'UPDATE direcciones SET ruta_firma_img = ? WHERE codigo = ?',
-                (ruta_firma_img, codigo_destino),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE direcciones SET ruta_firma_img = %s WHERE codigo = %s',
+                    (ruta_firma_img, codigo_destino),
+                )
 
         if ruta_logo_img is not None:
             codigo_destino = codigo_nuevo if codigo_actual != codigo_nuevo else codigo_actual
-            conn.execute(
-                'UPDATE direcciones SET ruta_logo_img = ? WHERE codigo = ?',
-                (ruta_logo_img, codigo_destino),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE direcciones SET ruta_logo_img = %s WHERE codigo = %s',
+                    (ruta_logo_img, codigo_destino),
+                )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1376,10 +1458,11 @@ def actualizar_identidad_direccion(direccion_codigo, file_firma, file_logo, uplo
             ruta_guardado_firma = os.path.join(dir_path, filename_firma)
             file_firma.save(ruta_guardado_firma)
             ruta_firma_web = f'/uploads/direcciones/{direccion_codigo}/{filename_firma}'
-            conn.execute(
-                'UPDATE direcciones SET ruta_firma_img = ? WHERE codigo = ?',
-                (ruta_firma_web, direccion_codigo),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE direcciones SET ruta_firma_img = %s WHERE codigo = %s',
+                    (ruta_firma_web, direccion_codigo),
+                )
             
         if file_logo and file_logo.filename:
             filename_orig = secure_filename(file_logo.filename)
@@ -1388,10 +1471,11 @@ def actualizar_identidad_direccion(direccion_codigo, file_firma, file_logo, uplo
             ruta_guardado_logo = os.path.join(dir_path, filename_logo)
             file_logo.save(ruta_guardado_logo)
             ruta_logo_web = f'/uploads/direcciones/{direccion_codigo}/{filename_logo}'
-            conn.execute(
-                'UPDATE direcciones SET ruta_logo_img = ? WHERE codigo = ?',
-                (ruta_logo_web, direccion_codigo),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE direcciones SET ruta_logo_img = %s WHERE codigo = %s',
+                    (ruta_logo_web, direccion_codigo),
+                )
 
         conn.commit()
         conn.close()
@@ -1404,53 +1488,61 @@ def delete_direccion_record(codigo):
     try:
         conn = get_db_connection()
 
-        total_direcciones = conn.execute('SELECT COUNT(*) FROM direcciones').fetchone()[0]
-        total_admins = conn.execute(
-            'SELECT COUNT(*) FROM admin_users WHERE direccion = ? AND rol = ?',
-            (codigo, 'admin'),
-        ).fetchone()[0]
-        total_cursos = conn.execute(
-            'SELECT COUNT(*) FROM catalogo_acciones WHERE direccion_codigo = ?',
-            (codigo,),
-        ).fetchone()[0]
+        with conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) FROM direcciones')
+            total_direcciones = cur.fetchone()[0]
+            cur.execute(
+                'SELECT COUNT(*) FROM admin_users WHERE direccion = %s AND rol = %s',
+                (codigo, 'admin'),
+            )
+            total_admins = cur.fetchone()[0]
+            cur.execute(
+                'SELECT COUNT(*) FROM catalogo_acciones WHERE direccion_codigo = %s',
+                (codigo,),
+            )
+            total_cursos = cur.fetchone()[0]
 
         if total_direcciones <= 1 or total_admins > 0 or total_cursos > 0:
             conn.close()
             return {'ok': False, 'blocked': True}
 
-        conn.execute('DELETE FROM direcciones WHERE codigo = ?', (codigo,))
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM direcciones WHERE codigo = %s', (codigo,))
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
 def delete_curso_record(id_curso):
     try:
         conn = get_db_connection()
-        catalogo = conn.execute(
-            'SELECT catalogo_id FROM ediciones_formativas WHERE id = ?',
-            (id_curso,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT catalogo_id FROM ediciones_formativas WHERE id = %s',
+                (id_curso,),
+            )
+            catalogo = cur.fetchone()
 
-        conn.execute('DELETE FROM certificados_emitidos WHERE edicion_id = ?', (id_curso,))
-        conn.execute('DELETE FROM matricula_historial WHERE edicion_id = ?', (id_curso,))
-        conn.execute('DELETE FROM matriculas WHERE edicion_id = ?', (id_curso,))
-        conn.execute('DELETE FROM sesiones_curso WHERE edicion_id = ?', (id_curso,))
-        conn.execute('DELETE FROM ediciones_formativas WHERE id = ?', (id_curso,))
+            cur.execute('DELETE FROM certificados_emitidos WHERE edicion_id = %s', (id_curso,))
+            cur.execute('DELETE FROM matricula_historial WHERE edicion_id = %s', (id_curso,))
+            cur.execute('DELETE FROM matriculas WHERE edicion_id = %s', (id_curso,))
+            cur.execute('DELETE FROM sesiones_curso WHERE edicion_id = %s', (id_curso,))
+            cur.execute('DELETE FROM ediciones_formativas WHERE id = %s', (id_curso,))
 
-        if catalogo:
-            restante = conn.execute(
-                'SELECT 1 FROM ediciones_formativas WHERE catalogo_id = ? LIMIT 1',
-                (catalogo['catalogo_id'],),
-            ).fetchone()
-            if not restante:
-                conn.execute('DELETE FROM catalogo_acciones WHERE id = ?', (catalogo['catalogo_id'],))
+            if catalogo:
+                cur.execute(
+                    'SELECT 1 FROM ediciones_formativas WHERE catalogo_id = %s LIMIT 1',
+                    (catalogo['catalogo_id'],),
+                )
+                restante = cur.fetchone()
+                if not restante:
+                    cur.execute('DELETE FROM catalogo_acciones WHERE id = %s', (catalogo['catalogo_id'],))
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
@@ -1518,10 +1610,12 @@ def _normalizar_bloques_horarios(horas):
 def _generar_token_asistencia_unico(conn):
     for _ in range(10):
         token = uuid.uuid4().hex[:8]
-        token_en_uso = conn.execute(
-            'SELECT 1 FROM sesiones_curso WHERE token_asistencia = ? LIMIT 1',
-            (token,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT 1 FROM sesiones_curso WHERE token_asistencia = %s LIMIT 1',
+                (token,),
+            )
+            token_en_uso = cur.fetchone()
         if not token_en_uso:
             return token
 
@@ -1544,35 +1638,39 @@ def listar_sesiones_curso(id_target):
     try:
         conn = get_db_connection()
         # Intentar buscar por edicion_id directamente primero
-        sesiones = conn.execute(
-            '''
-            SELECT s.id_sesion, s.edicion_id, s.fecha, s.hora_inicio, s.hora_fin, s.estado, s.token_asistencia,
-                   ef.jornada, ef.docente_responsable, ef.etiqueta_edicion
-            FROM sesiones_curso s
-            JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-            WHERE s.edicion_id = ?
-            ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
-            ''',
-            (id_limpio,),
-        ).fetchall()
-        
-        if not sesiones:
-            # Si no hay, intentar buscar todas las sesiones de todas las ediciones de un catalogo_id
-            sesiones = conn.execute(
+        with conn.cursor() as cur:
+            cur.execute(
                 '''
                 SELECT s.id_sesion, s.edicion_id, s.fecha, s.hora_inicio, s.hora_fin, s.estado, s.token_asistencia,
                        ef.jornada, ef.docente_responsable, ef.etiqueta_edicion
                 FROM sesiones_curso s
                 JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                WHERE ef.catalogo_id = ?
+                WHERE s.edicion_id = %s
                 ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
                 ''',
                 (id_limpio,),
-            ).fetchall()
+            )
+            sesiones = cur.fetchall()
+        
+        if not sesiones:
+            # Si no hay, intentar buscar todas las sesiones de todas las ediciones de un catalogo_id
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT s.id_sesion, s.edicion_id, s.fecha, s.hora_inicio, s.hora_fin, s.estado, s.token_asistencia,
+                           ef.jornada, ef.docente_responsable, ef.etiqueta_edicion
+                    FROM sesiones_curso s
+                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                    WHERE ef.catalogo_id = %s
+                    ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+                    ''',
+                    (id_limpio,),
+                )
+                sesiones = cur.fetchall()
             
         conn.close()
         return {'ok': True, 'sesiones': sesiones}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudieron cargar las sesiones'}
 
 
@@ -1593,45 +1691,52 @@ def crear_sesion_manual(edicion_id, fecha, hora_inicio, hora_fin, jornada='UNICA
 
     try:
         conn = get_db_connection()
-        curso = conn.execute(
-            'SELECT id FROM ediciones_formativas WHERE id = ? LIMIT 1',
-            (edicion_id_limpio,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT id FROM ediciones_formativas WHERE id = %s LIMIT 1',
+                (edicion_id_limpio,),
+            )
+            curso = cur.fetchone()
         if not curso:
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado'}
 
-        existe = conn.execute(
-            '''
-            SELECT 1
-            FROM sesiones_curso
-            WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
-            LIMIT 1
-            ''',
-            (edicion_id_limpio, fecha_obj.isoformat(), hora_inicio_norm, hora_fin_norm),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT 1
+                FROM sesiones_curso
+                WHERE edicion_id = %s AND fecha = %s AND hora_inicio = %s AND hora_fin = %s
+                LIMIT 1
+                ''',
+                (edicion_id_limpio, fecha_obj.isoformat(), hora_inicio_norm, hora_fin_norm),
+            )
+            existe = cur.fetchone()
         if existe:
             conn.close()
             return {'ok': False, 'error': 'La sesión ya existe para ese horario y jornada'}
 
-        cursor = conn.execute(
-            '''
-            INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
-            VALUES (?, ?, ?, ?, 0, NULL)
-            ''',
-            (
-                edicion_id_limpio,
-                fecha_obj.isoformat(),
-                hora_inicio_norm,
-                hora_fin_norm,
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
+                VALUES (%s, %s, %s, %s, 0, NULL)
+                RETURNING id_sesion
+                ''',
+                (
+                    edicion_id_limpio,
+                    fecha_obj.isoformat(),
+                    hora_inicio_norm,
+                    hora_fin_norm,
+                ),
+            )
+            nueva_sesion = cur.fetchone()
         _sincronizar_edicion_desde_sesiones(conn, edicion_id_limpio, jornada=jornada_norm)
         conn.commit()
-        id_sesion = cursor.lastrowid
+        id_sesion = nueva_sesion['id_sesion'] if nueva_sesion else None
         conn.close()
         return {'ok': True, 'id_sesion': id_sesion}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo crear la sesión'}
 
 
@@ -1654,10 +1759,12 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
 
     try:
         conn = get_db_connection()
-        sesion = conn.execute(
-            'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
-            (id_sesion_int,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = %s LIMIT 1',
+                (id_sesion_int,),
+            )
+            sesion = cur.fetchone()
         if not sesion:
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada'}
@@ -1666,43 +1773,46 @@ def editar_sesion(id_sesion, fecha, hora_inicio, hora_fin, jornada='UNICA', doce
             conn.close()
             return {'ok': False, 'error': 'Solo se pueden editar sesiones cerradas'}
 
-        existe = conn.execute(
-            '''
-            SELECT 1
-            FROM sesiones_curso
-            WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ? AND id_sesion <> ?
-            LIMIT 1
-            ''',
-            (
-                sesion['edicion_id'],
-                fecha_obj.isoformat(),
-                hora_inicio_norm,
-                hora_fin_norm,
-                id_sesion_int,
-            ),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT 1
+                FROM sesiones_curso
+                WHERE edicion_id = %s AND fecha = %s AND hora_inicio = %s AND hora_fin = %s AND id_sesion <> %s
+                LIMIT 1
+                ''',
+                (
+                    sesion['edicion_id'],
+                    fecha_obj.isoformat(),
+                    hora_inicio_norm,
+                    hora_fin_norm,
+                    id_sesion_int,
+                ),
+            )
+            existe = cur.fetchone()
         if existe:
             conn.close()
             return {'ok': False, 'error': 'Ya existe otra sesión con el mismo horario y jornada'}
 
-        conn.execute(
-            '''
-            UPDATE sesiones_curso
-            SET fecha = ?, hora_inicio = ?, hora_fin = ?
-            WHERE id_sesion = ?
-            ''',
-            (
-                fecha_obj.isoformat(),
-                hora_inicio_norm,
-                hora_fin_norm,
-                id_sesion_int,
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                UPDATE sesiones_curso
+                SET fecha = %s, hora_inicio = %s, hora_fin = %s
+                WHERE id_sesion = %s
+                ''',
+                (
+                    fecha_obj.isoformat(),
+                    hora_inicio_norm,
+                    hora_fin_norm,
+                    id_sesion_int,
+                ),
+            )
         _sincronizar_edicion_desde_sesiones(conn, sesion['edicion_id'], jornada=jornada_norm)
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo editar la sesión'}
 
 
@@ -1714,18 +1824,22 @@ def eliminar_sesion(id_sesion):
 
     try:
         conn = get_db_connection()
-        sesion = conn.execute(
-            'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = ? LIMIT 1',
-            (id_sesion_int,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT edicion_id, estado FROM sesiones_curso WHERE id_sesion = %s LIMIT 1',
+                (id_sesion_int,),
+            )
+            sesion = cur.fetchone()
         if not sesion:
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada'}
 
-        total_asistencia = conn.execute(
-            'SELECT COUNT(*) FROM registro_asistencia WHERE id_sesion = ?',
-            (id_sesion_int,),
-        ).fetchone()[0]
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT COUNT(*) FROM registro_asistencia WHERE id_sesion = %s',
+                (id_sesion_int,),
+            )
+            total_asistencia = cur.fetchone()[0]
         if total_asistencia > 0:
             conn.close()
             return {'ok': False, 'error': 'No se puede eliminar una sesión con asistencia registrada'}
@@ -1734,12 +1848,13 @@ def eliminar_sesion(id_sesion):
             conn.close()
             return {'ok': False, 'error': 'No se puede eliminar una sesión abierta'}
 
-        conn.execute('DELETE FROM sesiones_curso WHERE id_sesion = ?', (id_sesion_int,))
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM sesiones_curso WHERE id_sesion = %s', (id_sesion_int,))
         _sincronizar_edicion_desde_sesiones(conn, sesion['edicion_id'])
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo eliminar la sesión'}
 
 
@@ -1765,10 +1880,12 @@ def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, ho
 
     try:
         conn = get_db_connection()
-        curso = conn.execute(
-            'SELECT id FROM ediciones_formativas WHERE id = ? LIMIT 1',
-            (edicion_id_limpio,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT id FROM ediciones_formativas WHERE id = %s LIMIT 1',
+                (edicion_id_limpio,),
+            )
+            curso = cur.fetchone()
         if not curso:
             conn.close()
             return {'ok': False, 'error': 'Curso no encontrado'}
@@ -1776,37 +1893,39 @@ def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, ho
         sesiones_creadas = 0
         fecha_cursor = fecha_inicio_obj
 
-        while fecha_cursor <= fecha_fin_obj:
-            if fecha_cursor.weekday() in dias_norm:
-                fecha_iso = fecha_cursor.isoformat()
-                for hora_inicio_norm, hora_fin_norm in bloques_horarios:
-                    existe = conn.execute(
-                        '''
-                        SELECT 1
-                        FROM sesiones_curso
-                        WHERE edicion_id = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
-                        LIMIT 1
-                        ''',
-                        (edicion_id_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm),
-                    ).fetchone()
-                    if existe:
-                        continue
+        with conn.cursor() as cur:
+            while fecha_cursor <= fecha_fin_obj:
+                if fecha_cursor.weekday() in dias_norm:
+                    fecha_iso = fecha_cursor.isoformat()
+                    for hora_inicio_norm, hora_fin_norm in bloques_horarios:
+                        cur.execute(
+                            '''
+                            SELECT 1
+                            FROM sesiones_curso
+                            WHERE edicion_id = %s AND fecha = %s AND hora_inicio = %s AND hora_fin = %s
+                            LIMIT 1
+                            ''',
+                            (edicion_id_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm),
+                        )
+                        existe = cur.fetchone()
+                        if existe:
+                            continue
 
-                    conn.execute(
-                        '''
-                        INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
-                        VALUES (?, ?, ?, ?, 0, NULL)
-                        ''',
-                        (
-                            edicion_id_limpio,
-                            fecha_iso,
-                            hora_inicio_norm,
-                            hora_fin_norm,
-                        ),
-                    )
-                    sesiones_creadas += 1
+                        cur.execute(
+                            '''
+                            INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
+                            VALUES (%s, %s, %s, %s, 0, NULL)
+                            ''',
+                            (
+                                edicion_id_limpio,
+                                fecha_iso,
+                                hora_inicio_norm,
+                                hora_fin_norm,
+                            ),
+                        )
+                        sesiones_creadas += 1
 
-            fecha_cursor += timedelta(days=1)
+                fecha_cursor += timedelta(days=1)
 
         hora_texto = None
         if len(bloques_horarios) == 1:
@@ -1817,7 +1936,7 @@ def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, ho
         conn.commit()
         conn.close()
         return {'ok': True, 'sesiones_creadas': sesiones_creadas}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo generar el calendario base'}
 
 
@@ -1829,29 +1948,33 @@ def obtener_reporte_asistencia_curso(id_target):
     try:
         conn = get_db_connection()
         # Intentar obtener detalle como edicion
-        curso = conn.execute(
-            '''
-            SELECT ef.id, ca.nombre, ef.trimestre, ef.fecha_inicio, ca.modalidad, ca.tipo_accion, ef.jornada, ef.hora, ca.id as catalogo_id
-            FROM ediciones_formativas ef
-            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE ef.id = ?
-            LIMIT 1
-            ''',
-            (id_limpio,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT ef.id, ca.nombre, ef.trimestre, ef.fecha_inicio, ca.modalidad, ca.tipo_accion, ef.jornada, ef.hora, ca.id as catalogo_id
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ef.id = %s
+                LIMIT 1
+                ''',
+                (id_limpio,),
+            )
+            curso = cur.fetchone()
         
         es_catalogo = False
         if not curso:
             # Intentar como catalogo
-            curso = conn.execute(
-                '''
-                SELECT id as catalogo_id, id, nombre, modalidad, tipo_accion, NULL as trimestre, NULL as fecha_inicio, 'UNICA' as jornada, '' as hora
-                FROM catalogo_acciones
-                WHERE id = ?
-                LIMIT 1
-                ''',
-                (id_limpio,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT id as catalogo_id, id, nombre, modalidad, tipo_accion, NULL as trimestre, NULL as fecha_inicio, 'UNICA' as jornada, '' as hora
+                    FROM catalogo_acciones
+                    WHERE id = %s
+                    LIMIT 1
+                    ''',
+                    (id_limpio,),
+                )
+                curso = cur.fetchone()
             es_catalogo = True
             
         if not curso:
@@ -1859,35 +1982,46 @@ def obtener_reporte_asistencia_curso(id_target):
             return {'ok': False, 'error': 'Registro no encontrado'}
 
         if es_catalogo:
-            sesiones = conn.execute(
-                '''
-                SELECT s.id_sesion, s.hora_inicio, s.hora_fin, s.fecha, s.estado, s.edicion_id
-                FROM sesiones_curso s
-                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                WHERE ef.catalogo_id = ?
-                ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT s.id_sesion, s.hora_inicio, s.hora_fin, s.fecha, s.estado, s.edicion_id
+                    FROM sesiones_curso s
+                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                    WHERE ef.catalogo_id = %s
+                    ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+                    ''',
+                    (id_limpio,),
+                )
+                sesiones = cur.fetchall()
         else:
-            sesiones = conn.execute(
-                '''
-                SELECT id_sesion, hora_inicio, hora_fin, fecha, estado, edicion_id
-                FROM sesiones_curso
-                WHERE edicion_id = ?
-                ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT id_sesion, hora_inicio, hora_fin, fecha, estado, edicion_id
+                    FROM sesiones_curso
+                    WHERE edicion_id = %s
+                    ORDER BY fecha ASC, hora_inicio ASC, id_sesion ASC
+                    ''',
+                    (id_limpio,),
+                )
+                sesiones = cur.fetchall()
 
         jornada_edicion = _normalizar_jornada(curso['jornada'])
         sesiones_curso_ordenadas = []
         total_sesiones_curso = 0
         for sesion in sesiones:
             id_sesion = int(sesion['id_sesion']) if sesion['id_sesion'] is not None else None
-            hora_inicio = (sesion['hora_inicio'] or '').strip()[:5]
-            hora_fin = (sesion['hora_fin'] or '').strip()[:5]
-            fecha_iso = (sesion['fecha'] or '').strip()
+            
+            hora_val = sesion['hora_inicio']
+            hora_inicio = hora_val.strftime('%H:%M:%S')[:5] if hasattr(hora_val, 'strftime') else (hora_val or '').strip()[:5]
+            
+            hora_fin_val = sesion['hora_fin']
+            hora_fin = hora_fin_val.strftime('%H:%M:%S')[:5] if hasattr(hora_fin_val, 'strftime') else (hora_fin_val or '').strip()[:5]
+            
+            fecha_val = sesion['fecha']
+            fecha_iso = fecha_val.strftime('%Y-%m-%d') if hasattr(fecha_val, 'strftime') else (fecha_val or '').strip()
+            
             estado_sesion = int(sesion['estado'] or 0)
 
             sesiones_curso_ordenadas.append(
@@ -1903,38 +2037,42 @@ def obtener_reporte_asistencia_curso(id_target):
             total_sesiones_curso += 1
 
         if es_catalogo:
-            matriculas_raw = conn.execute(
-                '''
-                SELECT
-                    m.id AS matricula_id,
-                    m.numero_empleado,
-                    m.aprobado,
-                    m.comentario_validacion,
-                    d.nombre_completo
-                FROM matriculas m
-                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
-                WHERE ef.catalogo_id = ?
-                ORDER BY m.id DESC
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT
+                        m.id AS matricula_id,
+                        m.numero_empleado,
+                        m.aprobado,
+                        m.comentario_validacion,
+                        d.nombre_completo
+                    FROM matriculas m
+                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                    LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                    WHERE ef.catalogo_id = %s
+                    ORDER BY m.id DESC
+                    ''',
+                    (id_limpio,),
+                )
+                matriculas_raw = cur.fetchall()
         else:
-            matriculas_raw = conn.execute(
-                '''
-                SELECT
-                    m.id AS matricula_id,
-                    m.numero_empleado,
-                    m.aprobado,
-                    m.comentario_validacion,
-                    d.nombre_completo
-                FROM matriculas m
-                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
-                WHERE m.edicion_id = ?
-                ORDER BY m.id DESC
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT
+                        m.id AS matricula_id,
+                        m.numero_empleado,
+                        m.aprobado,
+                        m.comentario_validacion,
+                        d.nombre_completo
+                    FROM matriculas m
+                    LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                    WHERE m.edicion_id = %s
+                    ORDER BY m.id DESC
+                    ''',
+                    (id_limpio,),
+                )
+                matriculas_raw = cur.fetchall()
 
         matriculas_por_docente = {}
         for fila in matriculas_raw:
@@ -1945,53 +2083,61 @@ def obtener_reporte_asistencia_curso(id_target):
 
         asistencia_por_docente = {}
         if es_catalogo:
-            asistencia_raw = conn.execute(
-                '''
-                SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
-                FROM registro_asistencia ra
-                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                WHERE ef.catalogo_id = ?
-                GROUP BY ra.numero_empleado
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                    WHERE ef.catalogo_id = %s
+                    GROUP BY ra.numero_empleado
+                    ''',
+                    (id_limpio,),
+                )
+                asistencia_raw = cur.fetchall()
         else:
-            asistencia_raw = conn.execute(
-                '''
-                SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
-                FROM registro_asistencia ra
-                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                WHERE s.edicion_id = ?
-                GROUP BY ra.numero_empleado
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    WHERE s.edicion_id = %s
+                    GROUP BY ra.numero_empleado
+                    ''',
+                    (id_limpio,),
+                )
+                asistencia_raw = cur.fetchall()
         for fila in asistencia_raw:
             numero_empleado = (fila['numero_empleado'] or '').strip()
             asistencia_por_docente[numero_empleado] = int(fila['total_asistencias'] or 0)
 
         if es_catalogo:
-            asistencia_detalle_raw = conn.execute(
-                '''
-                SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
-                FROM registro_asistencia ra
-                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                WHERE ef.catalogo_id = ?
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+                    WHERE ef.catalogo_id = %s
+                    ''',
+                    (id_limpio,),
+                )
+                asistencia_detalle_raw = cur.fetchall()
         else:
-            asistencia_detalle_raw = conn.execute(
-                '''
-                SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
-                FROM registro_asistencia ra
-                JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                WHERE s.edicion_id = ?
-                ''',
-                (id_limpio,),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    WHERE s.edicion_id = %s
+                    ''',
+                    (id_limpio,),
+                )
+                asistencia_detalle_raw = cur.fetchall()
 
         asistencias_por_docente_sesion = {}
         ultima_marcacion_por_docente = {}
@@ -2009,8 +2155,12 @@ def obtener_reporte_asistencia_curso(id_target):
                 asistencias_por_docente_sesion[numero_empleado] = set()
             asistencias_por_docente_sesion[numero_empleado].add(id_sesion_asistencia)
 
-            fecha_marcado = (fila['fecha_marcado'] or '').strip()
-            hora_marcado = (fila['hora_marcado'] or '').strip()[:5]
+            fecha_val = fila['fecha_marcado']
+            fecha_marcado = fecha_val.strftime('%Y-%m-%d') if hasattr(fecha_val, 'strftime') else (fecha_val or '').strip()
+            
+            hora_val = fila['hora_marcado']
+            hora_marcado = hora_val.strftime('%H:%M:%S')[:5] if hasattr(hora_val, 'strftime') else (hora_val or '').strip()[:5]
+            
             marca_dt = None
             if fecha_marcado and hora_marcado:
                 try:
@@ -2024,11 +2174,19 @@ def obtener_reporte_asistencia_curso(id_target):
                     ultima_marcacion_por_docente[numero_empleado] = marca_dt
 
         def _formatear_fecha_mes(fecha_iso):
-            fecha_limpia = (fecha_iso or '').strip()
-            if not fecha_limpia:
+            if not fecha_iso:
                 return None
+            if hasattr(fecha_iso, 'strftime'):
+                fecha_obj = fecha_iso
+            else:
+                fecha_limpia = str(fecha_iso).strip()
+                if not fecha_limpia:
+                    return None
+                try:
+                    fecha_obj = datetime.strptime(fecha_limpia, '%Y-%m-%d')
+                except ValueError:
+                    return None
             try:
-                fecha_obj = datetime.strptime(fecha_limpia, '%Y-%m-%d')
                 mes_nombre = MESES_ES[fecha_obj.month - 1].capitalize()
                 return f"{fecha_obj.day:02d}/{mes_nombre}"
             except (ValueError, IndexError):
@@ -2165,7 +2323,7 @@ def obtener_reporte_asistencia_curso(id_target):
             'docentes_con_asistencia': docentes_con_asistencia,
             'docentes_pendientes_asistencia': docentes_pendientes_asistencia,
         }
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo cargar el reporte de asistencias'}
 
 
@@ -2177,15 +2335,17 @@ def abrir_asistencia_sesion(id_sesion):
 
     try:
         conn = get_db_connection()
-        sesion = conn.execute(
-            '''
-            SELECT id_sesion, estado
-            FROM sesiones_curso
-            WHERE id_sesion = ?
-            LIMIT 1
-            ''',
-            (id_sesion_int,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id_sesion, estado
+                FROM sesiones_curso
+                WHERE id_sesion = %s
+                LIMIT 1
+                ''',
+                (id_sesion_int,),
+            )
+            sesion = cur.fetchone()
         if not sesion:
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada'}
@@ -2195,20 +2355,21 @@ def abrir_asistencia_sesion(id_sesion):
             return {'ok': False, 'error': 'La asistencia ya está habilitada en esta sesión'}
 
         token = _generar_token_asistencia_unico(conn)
-        conn.execute(
-            '''
-            UPDATE sesiones_curso
-            SET estado = 1,
-                token_asistencia = ?
-            WHERE id_sesion = ?
-            ''',
-            (token, id_sesion_int),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                UPDATE sesiones_curso
+                SET estado = 1,
+                    token_asistencia = %s
+                WHERE id_sesion = %s
+                ''',
+                (token, id_sesion_int),
+            )
 
         conn.commit()
         conn.close()
         return {'ok': True, 'token_asistencia': token}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo abrir la asistencia'}
 
 
@@ -2220,15 +2381,17 @@ def cerrar_asistencia_sesion(id_sesion):
 
     try:
         conn = get_db_connection()
-        sesion = conn.execute(
-            '''
-            SELECT id_sesion, estado
-            FROM sesiones_curso
-            WHERE id_sesion = ?
-            LIMIT 1
-            ''',
-            (id_sesion_int,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id_sesion, estado
+                FROM sesiones_curso
+                WHERE id_sesion = %s
+                LIMIT 1
+                ''',
+                (id_sesion_int,),
+            )
+            sesion = cur.fetchone()
         if not sesion:
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada'}
@@ -2237,19 +2400,20 @@ def cerrar_asistencia_sesion(id_sesion):
             conn.close()
             return {'ok': False, 'error': 'Solo se puede desactivar asistencia en sesiones abiertas'}
 
-        conn.execute(
-            '''
-            UPDATE sesiones_curso
-            SET estado = 2
-            WHERE id_sesion = ?
-            ''',
-            (id_sesion_int,),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                UPDATE sesiones_curso
+                SET estado = 2
+                WHERE id_sesion = %s
+                ''',
+                (id_sesion_int,),
+            )
 
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo desactivar la asistencia'}
 
 
@@ -2257,28 +2421,31 @@ def delete_matricula_record(numero_empleado, edicion_id, matricula_id=None):
     try:
         conn = get_db_connection()
         if matricula_id:
-            conn.execute(
-                'DELETE FROM matriculas WHERE id = ? AND numero_empleado = ? AND edicion_id = ?',
-                (matricula_id, numero_empleado, edicion_id),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM matriculas WHERE id = %s AND numero_empleado = %s AND edicion_id = %s',
+                    (matricula_id, numero_empleado, edicion_id),
+                )
         else:
-            conn.execute(
-                'DELETE FROM matriculas WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL',
-                (numero_empleado, edicion_id),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM matriculas WHERE numero_empleado = %s AND edicion_id = %s AND aprobado IS NULL',
+                    (numero_empleado, edicion_id),
+                )
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}
 
 
 def vaciar_matriculas_records():
     try:
         conn = get_db_connection()
-        conn.execute('DELETE FROM matriculas')
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM matriculas')
         conn.commit()
         conn.close()
         return {'ok': True}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False}

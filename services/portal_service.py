@@ -1,4 +1,4 @@
-import sqlite3
+import psycopg2
 from datetime import datetime
 
 from config import LIMITE_ABANDONO, LIMITE_REPROBADO, MESES_ES
@@ -20,7 +20,13 @@ def _normalizar_tipo_accion(valor):
 
 
 def _parse_fecha_limite(valor):
-    texto = (valor or '').strip()
+    if not valor:
+        return None
+    if isinstance(valor, datetime):
+        return valor
+    if hasattr(valor, 'strftime'):
+        return datetime(valor.year, valor.month, valor.day)
+    texto = str(valor).strip()
     if not texto:
         return None
     for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
@@ -35,10 +41,17 @@ def _parse_fecha_limite(valor):
 
 
 def _partes_fecha_iso(fecha_iso):
-    try:
-        fecha_dt = datetime.strptime((fecha_iso or '').strip()[:10], '%Y-%m-%d')
-    except ValueError:
+    if not fecha_iso:
         return None, None, None
+    if isinstance(fecha_iso, datetime):
+        fecha_dt = fecha_iso
+    elif hasattr(fecha_iso, 'strftime'):
+        fecha_dt = datetime(fecha_iso.year, fecha_iso.month, fecha_iso.day)
+    else:
+        try:
+            fecha_dt = datetime.strptime(str(fecha_iso).strip()[:10], '%Y-%m-%d')
+        except (ValueError, TypeError):
+            return None, None, None
     anio = str(fecha_dt.year)
     mes = MESES_ES[fecha_dt.month - 1]
     dia = str(fecha_dt.day)
@@ -52,15 +65,24 @@ def _calcular_duracion_sesiones(sesiones):
     total_horas = 0.0
     fechas = []
     for fila in sesiones:
-        fecha_iso = (fila['fecha'] or '').strip()
-        try:
-            fecha_dt = datetime.strptime(fecha_iso[:10], '%Y-%m-%d')
+        fecha_val = fila['fecha']
+        if hasattr(fecha_val, 'strftime'):
+            fecha_dt = datetime(fecha_val.year, fecha_val.month, fecha_val.day)
             fechas.append(fecha_dt)
-        except ValueError:
-            pass
+        else:
+            fecha_iso = (fecha_val or '').strip()
+            try:
+                fecha_dt = datetime.strptime(fecha_iso[:10], '%Y-%m-%d')
+                fechas.append(fecha_dt)
+            except (ValueError, TypeError):
+                pass
 
-        hora_inicio = (fila['hora_inicio'] or '').strip()[:5]
-        hora_fin = (fila['hora_fin'] or '').strip()[:5]
+        hora_ini_val = fila['hora_inicio']
+        hora_inicio = hora_ini_val.strftime('%H:%M:%S')[:5] if hasattr(hora_ini_val, 'strftime') else (hora_ini_val or '').strip()[:5]
+        
+        hora_fin_val = fila['hora_fin']
+        hora_fin = hora_fin_val.strftime('%H:%M:%S')[:5] if hasattr(hora_fin_val, 'strftime') else (hora_fin_val or '').strip()[:5]
+        
         try:
             hi = datetime.strptime(hora_inicio, '%H:%M')
             hf = datetime.strptime(hora_fin, '%H:%M')
@@ -98,33 +120,35 @@ def load_dashboard_context(
         )
         conn.close()
         return {'ok': True, 'contexto': contexto}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'Error de conexión. Intente nuevamente.'}
 
 
 def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
     try:
         conn = get_db_connection()
-        edicion = conn.execute(
-            '''
-            SELECT
-                ef.id,
-                ef.fecha_inicio,
-                ef.fecha_limite_matricula,
-                ef.cupos_maximos,
-                ef.jornada,
-                ef.hora,
-                ef.privacidad,
-                ef.estado,
-                ca.nombre,
-                ca.tipo_accion,
-                ca.modalidad
-            FROM ediciones_formativas ef
-            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE ef.id = ?
-            ''',
-            (edicion_id,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT
+                    ef.id,
+                    ef.fecha_inicio,
+                    ef.fecha_limite_matricula,
+                    ef.cupos_maximos,
+                    ef.jornada,
+                    ef.hora,
+                    ef.privacidad,
+                    ef.estado,
+                    ca.nombre,
+                    ca.tipo_accion,
+                    ca.modalidad
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                WHERE ef.id = %s
+                ''',
+                (edicion_id,),
+            )
+            edicion = cur.fetchone()
 
         if not edicion:
             conn.close()
@@ -198,25 +222,28 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
                 'contexto': contexto,
             }
 
-        if edicion['cupos_maximos']:
-            total_matriculas = conn.execute(
-                'SELECT COUNT(*) AS total FROM matriculas WHERE edicion_id = ?',
-                (edicion_id,),
-            ).fetchone()
-            if total_matriculas and total_matriculas['total'] >= int(edicion['cupos_maximos']):
-                contexto = construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
-                conn.close()
-                return {
-                    'ok': False,
-                    'error': 'No hay cupos disponibles para esta acción formativa.',
-                    'error_view': 'dashboard',
-                    'contexto': contexto,
-                }
+        with conn.cursor() as cur:
+            if edicion['cupos_maximos']:
+                cur.execute(
+                    'SELECT COUNT(*) AS total FROM matriculas WHERE edicion_id = %s',
+                    (edicion_id,),
+                )
+                total_matriculas = cur.fetchone()
+                if total_matriculas and total_matriculas['total'] >= int(edicion['cupos_maximos']):
+                    contexto = construir_contexto_dashboard(conn, numero_empleado, seccion_activa='disponibles')
+                    conn.close()
+                    return {
+                        'ok': False,
+                        'error': 'No hay cupos disponibles para esta acción formativa.',
+                        'error_view': 'dashboard',
+                        'contexto': contexto,
+                    }
 
-        nueva_matricula = conn.execute(
-            'INSERT INTO matriculas (numero_empleado, edicion_id) VALUES (?, ?)',
-            (numero_empleado, edicion_id),
-        )
+            cur.execute(
+                'INSERT INTO matriculas (numero_empleado, edicion_id) VALUES (%s, %s) RETURNING id',
+                (numero_empleado, edicion_id),
+            )
+            nueva_matricula = cur.fetchone()
 
         registrar_evento_matricula(
             conn,
@@ -224,13 +251,13 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
             edicion_id=edicion_id,
             nombre_accion=edicion['nombre'],
             estado_codigo='PENDIENTE',
-            matricula_id=nueva_matricula.lastrowid,
+            matricula_id=(nueva_matricula['id'] if nueva_matricula else None),
             detalle='Inscripción realizada por el docente',
         )
         horario_resumen = (obtener_horarios_disponibles_curso(conn, edicion_id) or [None])[0]
         conn.commit()
         conn.close()
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'Error al procesar la matrícula.', 'error_view': 'index'}
 
     return {
@@ -246,16 +273,18 @@ def process_cancelar_matricula(numero_empleado, edicion_id, matricula_id):
     try:
         conn = get_db_connection()
         if matricula_id:
-            matricula = conn.execute(
-                '''
-                SELECT m.id, m.edicion_id, ca.nombre
-                FROM matriculas m
-                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE m.id = ? AND m.numero_empleado = ?
-                ''',
-                (matricula_id, numero_empleado),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT m.id, m.edicion_id, ca.nombre
+                    FROM matriculas m
+                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE m.id = %s AND m.numero_empleado = %s
+                    ''',
+                    (matricula_id, numero_empleado),
+                )
+                matricula = cur.fetchone()
             if not matricula:
                 conn.close()
                 return {'ok': False, 'http_status': 404}
@@ -271,30 +300,35 @@ def process_cancelar_matricula(numero_empleado, edicion_id, matricula_id):
                 matricula_id=matricula['id'],
                 detalle='Matrícula cancelada por el docente',
             )
-            conn.execute(
-                'DELETE FROM matriculas WHERE id = ? AND numero_empleado = ? AND aprobado IS NULL',
-                (matricula_id, numero_empleado),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM matriculas WHERE id = %s AND numero_empleado = %s AND aprobado IS NULL',
+                    (matricula_id, numero_empleado),
+                )
         else:
-            accion = conn.execute(
-                '''
-                SELECT ca.nombre
-                FROM ediciones_formativas ef
-                JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-                WHERE ef.id = ?
-                ''',
-                (edicion_id,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT ca.nombre
+                    FROM ediciones_formativas ef
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    WHERE ef.id = %s
+                    ''',
+                    (edicion_id,),
+                )
+                accion = cur.fetchone()
             nombre_accion = accion['nombre'] if accion else edicion_id
 
-            pendientes = conn.execute(
-                '''
-                SELECT id
-                FROM matriculas
-                WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL
-                ''',
-                (numero_empleado, edicion_id),
-            ).fetchall()
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT id
+                    FROM matriculas
+                    WHERE numero_empleado = %s AND edicion_id = %s AND aprobado IS NULL
+                    ''',
+                    (numero_empleado, edicion_id),
+                )
+                pendientes = cur.fetchall()
 
             for fila in pendientes:
                 registrar_evento_matricula(
@@ -307,14 +341,15 @@ def process_cancelar_matricula(numero_empleado, edicion_id, matricula_id):
                     detalle='Matrícula cancelada por el docente',
                 )
 
-            conn.execute(
-                'DELETE FROM matriculas WHERE numero_empleado = ? AND edicion_id = ? AND aprobado IS NULL',
-                (numero_empleado, edicion_id),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM matriculas WHERE numero_empleado = %s AND edicion_id = %s AND aprobado IS NULL',
+                    (numero_empleado, edicion_id),
+                )
 
         conn.commit()
         conn.close()
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'Error al cancelar la matrícula.'}
 
     return {
@@ -340,91 +375,119 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
 
     try:
         conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT 1
+                FROM matriculas
+                WHERE numero_empleado = %s AND edicion_id = %s
+                LIMIT 1
+                ''',
+                (numero_empleado, edicion_id),
+            )
+            matricula_docente = cur.fetchone()
 
-        matricula_docente = conn.execute(
-            '''
-            SELECT 1
-            FROM matriculas
-            WHERE numero_empleado = ? AND edicion_id = ?
-            LIMIT 1
-            ''',
-            (numero_empleado, edicion_id),
-        ).fetchone()
+            cur.execute(
+                '''
+                SELECT 1
+                FROM matricula_historial
+                WHERE numero_empleado = %s AND edicion_id = %s
+                LIMIT 1
+                ''',
+                (numero_empleado, edicion_id),
+            )
+            historial_docente = cur.fetchone()
 
-        historial_docente = conn.execute(
-            '''
-            SELECT 1
-            FROM matricula_historial
-            WHERE numero_empleado = ? AND edicion_id = ?
-            LIMIT 1
-            ''',
-            (numero_empleado, edicion_id),
-        ).fetchone()
+            if not matricula_docente and not historial_docente:
+                conn.close()
+                return {'ok': False, 'error': 'No tienes acceso a este curso', 'status_code': 403}
 
-        if not matricula_docente and not historial_docente:
-            conn.close()
-            return {'ok': False, 'error': 'No tienes acceso a este curso', 'status_code': 403}
+            cur.execute(
+                '''
+                SELECT
+                    ef.id,
+                    ef.trimestre,
+                    ef.fecha_inicio,
+                    ef.jornada,
+                    ef.hora,
+                    ef.enlace_acceso,
+                    ef.docente_responsable,
+                    ef.privacidad,
+                    ef.estado,
+                    ef.requisitos,
+                    ca.nombre,
+                    ca.modalidad,
+                    ca.tipo_accion,
+                    ca.id_plantilla_certificado,
+                    p.activo AS plantilla_activa,
+                    ddir.ruta_firma_img,
+                    p.texto_certificado
+                FROM ediciones_formativas ef
+                JOIN catalogo_acciones ca
+                    ON ca.id = ef.catalogo_id
+                LEFT JOIN plantillas_certificados p
+                    ON p.id = ca.id_plantilla_certificado
+                LEFT JOIN direcciones ddir
+                    ON ddir.codigo = p.direccion_codigo
+                WHERE ef.id = %s
+                LIMIT 1
+                ''',
+                (edicion_id,),
+            )
+            curso = cur.fetchone()
+            if not curso:
+                conn.close()
+                return {'ok': False, 'error': 'Curso no encontrado', 'status_code': 404}
 
-        curso = conn.execute(
-            '''
-            SELECT
-                ef.id,
-                ef.trimestre,
-                ef.fecha_inicio,
-                ef.jornada,
-                ef.hora,
-                ef.enlace_acceso,
-                ef.docente_responsable,
-                ef.privacidad,
-                ef.estado,
-                ef.requisitos,
-                ca.nombre,
-                ca.modalidad,
-                ca.tipo_accion,
-                ca.id_plantilla_certificado,
-                p.activo AS plantilla_activa,
-                ddir.ruta_firma_img,
-                p.texto_certificado
-            FROM ediciones_formativas ef
-            JOIN catalogo_acciones ca
-                ON ca.id = ef.catalogo_id
-            LEFT JOIN plantillas_certificados p
-                ON p.id = ca.id_plantilla_certificado
-            LEFT JOIN direcciones ddir
-                ON ddir.codigo = p.direccion_codigo
-            WHERE ef.id = ?
-            LIMIT 1
-            ''',
-            (edicion_id,),
-        ).fetchone()
-        if not curso:
-            conn.close()
-            return {'ok': False, 'error': 'Curso no encontrado', 'status_code': 404}
+            cur.execute(
+                '''
+                SELECT id, aprobado, fecha_matricula
+                FROM matriculas
+                WHERE numero_empleado = %s AND edicion_id = %s
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                (numero_empleado, edicion_id),
+            )
+            matricula_activa = cur.fetchone()
+
+            cur.execute(
+                '''
+                SELECT h.estado_codigo, c.nombre AS estado_nombre, h.fecha_evento
+                FROM matricula_historial h
+                LEFT JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
+                WHERE h.numero_empleado = %s AND h.edicion_id = %s
+                ORDER BY h.id DESC
+                LIMIT 1
+                ''',
+                (numero_empleado, edicion_id),
+            )
+            historial_ultimo = cur.fetchone()
+
+            cur.execute(
+                '''
+                SELECT
+                    s.id_sesion,
+                    s.edicion_id,
+                    s.fecha,
+                    s.hora_inicio,
+                    s.hora_fin,
+                    s.estado,
+                    s.token_asistencia,
+                    ra.id_registro AS asistencia_id,
+                    ra.fecha_marcado,
+                    ra.hora_marcado
+                FROM sesiones_curso s
+                LEFT JOIN registro_asistencia ra
+                    ON ra.id_sesion = s.id_sesion AND ra.numero_empleado = %s
+                WHERE s.edicion_id = %s
+                ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+                ''',
+                (numero_empleado, edicion_id),
+            )
+            sesiones = cur.fetchall()
 
         horarios = obtener_horarios_disponibles_curso(conn, edicion_id)
-
-        matricula_activa = conn.execute(
-            '''
-            SELECT id, aprobado, fecha_matricula
-            FROM matriculas
-            WHERE numero_empleado = ? AND edicion_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-            ''',
-            (numero_empleado, edicion_id),
-        ).fetchone()
-
-        historial_ultimo = conn.execute(
-            '''
-            SELECT h.estado_codigo, c.nombre AS estado_nombre, h.fecha_evento
-            FROM matricula_historial h
-            LEFT JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
-            WHERE h.numero_empleado = ? AND h.edicion_id = ?
-            ORDER BY h.id DESC
-            LIMIT 1
-            ''',
-            (numero_empleado, edicion_id),
-        ).fetchone()
 
         estados_finales = {'APROBADA', 'NO_APROBADA', 'ABANDONO', 'CANCELADA'}
         estado_historial = (historial_ultimo['estado_codigo'] or '').strip().upper() if historial_ultimo else ''
@@ -441,27 +504,6 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
         }
         jornada_docente = nombres_jornada.get(jornada_docente_codigo, 'Por confirmar')
 
-        sesiones = conn.execute(
-            '''
-            SELECT
-                s.id_sesion,
-                s.edicion_id,
-                s.fecha,
-                s.hora_inicio,
-                s.hora_fin,
-                s.estado,
-                s.token_asistencia,
-                ra.id_registro AS asistencia_id,
-                ra.fecha_marcado,
-                ra.hora_marcado
-            FROM sesiones_curso s
-            LEFT JOIN registro_asistencia ra
-                ON ra.id_sesion = s.id_sesion AND ra.numero_empleado = ?
-            WHERE s.edicion_id = ?
-            ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
-            ''',
-            (numero_empleado, edicion_id),
-        ).fetchall()
         conn.close()
 
         ahora = datetime.now()
@@ -543,7 +585,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
             'sesiones_futuras': sesiones_futuras,
             'jornada_docente': jornada_docente,
         }
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo cargar el detalle del curso', 'status_code': 500}
 
 
@@ -559,15 +601,17 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
 
     try:
         conn = get_db_connection()
-        sesion = conn.execute(
-            '''
-            SELECT id_sesion, edicion_id, estado, token_asistencia
-            FROM sesiones_curso
-            WHERE id_sesion = ?
-            LIMIT 1
-            ''',
-            (id_sesion_int,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id_sesion, edicion_id, estado, token_asistencia
+                FROM sesiones_curso
+                WHERE id_sesion = %s
+                LIMIT 1
+                ''',
+                (id_sesion_int,),
+            )
+            sesion = cur.fetchone()
         if not sesion:
             conn.close()
             return {'ok': False, 'error': 'Sesión no encontrada', 'status_code': 404}
@@ -580,16 +624,18 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
             conn.close()
             return {'ok': False, 'error': 'Token de asistencia inválido', 'status_code': 403}
 
-        matricula_docente = conn.execute(
-            '''
-            SELECT aprobado
-            FROM matriculas
-            WHERE numero_empleado = ? AND edicion_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-            ''',
-            (numero_empleado, sesion['edicion_id']),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT aprobado
+                FROM matriculas
+                WHERE numero_empleado = %s AND edicion_id = %s
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                (numero_empleado, sesion['edicion_id']),
+            )
+            matricula_docente = cur.fetchone()
         if not matricula_docente:
             conn.close()
             return {'ok': False, 'error': 'No tienes matrícula en este curso', 'status_code': 403}
@@ -602,16 +648,18 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
                 'status_code': 409,
             }
 
-        historial_ultimo = conn.execute(
-            '''
-            SELECT estado_codigo
-            FROM matricula_historial
-            WHERE numero_empleado = ? AND edicion_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-            ''',
-            (numero_empleado, sesion['edicion_id']),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT estado_codigo
+                FROM matricula_historial
+                WHERE numero_empleado = %s AND edicion_id = %s
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                (numero_empleado, sesion['edicion_id']),
+            )
+            historial_ultimo = cur.fetchone()
 
         estado_historial = (historial_ultimo['estado_codigo'] or '').strip().upper() if historial_ultimo else ''
         if estado_historial in {'APROBADA', 'NO_APROBADA', 'ABANDONO', 'CANCELADA'}:
@@ -622,37 +670,40 @@ def marcar_asistencia_docente(numero_empleado, id_sesion, token_asistencia):
                 'status_code': 409,
             }
 
-        existe_asistencia = conn.execute(
-            '''
-            SELECT 1
-            FROM registro_asistencia
-            WHERE id_sesion = ? AND numero_empleado = ?
-            LIMIT 1
-            ''',
-            (id_sesion_int, numero_empleado),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT 1
+                FROM registro_asistencia
+                WHERE id_sesion = %s AND numero_empleado = %s
+                LIMIT 1
+                ''',
+                (id_sesion_int, numero_empleado),
+            )
+            existe_asistencia = cur.fetchone()
         if existe_asistencia:
             conn.close()
             return {'ok': False, 'error': 'Ya registraste asistencia para esta sesión', 'status_code': 409}
 
         ahora = datetime.now()
-        conn.execute(
-            '''
-            INSERT INTO registro_asistencia (id_sesion, numero_empleado, fecha_marcado, hora_marcado)
-            VALUES (?, ?, ?, ?)
-            ''',
-            (
-                id_sesion_int,
-                numero_empleado,
-                ahora.strftime('%Y-%m-%d'),
-                ahora.strftime('%H:%M:%S'),
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                INSERT INTO registro_asistencia (id_sesion, numero_empleado, fecha_marcado, hora_marcado)
+                VALUES (%s, %s, %s, %s)
+                ''',
+                (
+                    id_sesion_int,
+                    numero_empleado,
+                    ahora.strftime('%Y-%m-%d'),
+                    ahora.strftime('%H:%M:%S'),
+                ),
+            )
         conn.commit()
         conn.close()
 
         return {'ok': True, 'mensaje': 'Asistencia registrada correctamente'}
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         return {'ok': False, 'error': 'Asistencia duplicada', 'status_code': 409}
-    except sqlite3.Error:
+    except psycopg2.Error:
         return {'ok': False, 'error': 'No se pudo registrar la asistencia', 'status_code': 500}

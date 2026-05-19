@@ -11,8 +11,19 @@ from services import validacion_service
 
 def _tabla_tiene_columna(conn, tabla: str, columna: str) -> bool:
     try:
-        filas = conn.execute(f'PRAGMA table_info({tabla})').fetchall()
-        return any((fila['name'] == columna) for fila in (filas or []))
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = %s
+                  AND column_name = %s
+                LIMIT 1
+                ''',
+                (tabla, columna),
+            )
+            return bool(cur.fetchone())
     except Exception:
         return False
 
@@ -95,14 +106,16 @@ def _horas_default_por_tipo(tipo_accion):
 
 
 def _calcular_datos_sesiones(conn, edicion_id):
-    filas = conn.execute(
-        '''
-        SELECT fecha, hora_inicio, hora_fin
-        FROM sesiones_curso
-        WHERE edicion_id = ?
-        ''',
-        (edicion_id,),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            SELECT fecha, hora_inicio, hora_fin
+            FROM sesiones_curso
+            WHERE edicion_id = %s
+            ''',
+            (edicion_id,),
+        )
+        filas = cur.fetchall()
 
     if not filas:
         return None
@@ -193,30 +206,54 @@ def registrar_plantilla(
 
     conn = get_db_connection()
     try:
-        columnas_plantillas = {row['name'] for row in conn.execute('PRAGMA table_info(plantillas_certificados)').fetchall()}
-        
-        campos = ['direccion_codigo', 'nombre_plantilla', 'tipo_documento', 'texto_certificado', 'firmante_nombre', 'firmante_cargo']
-        valores = [direccion_codigo, nombre_plantilla, tipo_documento, texto_certificado, firmante_nombre, firmante_cargo]
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = %s
+                ''',
+                ('plantillas_certificados',),
+            )
+            columnas_plantillas = {row['column_name'] for row in cur.fetchall()}
 
-        if 'ruta_firma_img' in columnas_plantillas:
-            campos.append('ruta_firma_img')
-            valores.append('')
-        
-        if 'ruta_fondo_img' in columnas_plantillas:
-            campos.append('ruta_fondo_img')
-            valores.append('')
+            campos = [
+                'direccion_codigo',
+                'nombre_plantilla',
+                'tipo_documento',
+                'texto_certificado',
+                'firmante_nombre',
+                'firmante_cargo',
+            ]
+            valores = [
+                direccion_codigo,
+                nombre_plantilla,
+                tipo_documento,
+                texto_certificado,
+                firmante_nombre,
+                firmante_cargo,
+            ]
 
-        placeholders = ', '.join(['?'] * len(valores))
-        campos_str = ', '.join(campos)
+            if 'ruta_firma_img' in columnas_plantillas:
+                campos.append('ruta_firma_img')
+                valores.append('')
 
-        conn.execute(
-            f'''
-            INSERT INTO plantillas_certificados
-            ({campos_str})
-            VALUES ({placeholders})
-            ''',
-            tuple(valores)
-        )
+            if 'ruta_fondo_img' in columnas_plantillas:
+                campos.append('ruta_fondo_img')
+                valores.append('')
+
+            placeholders = ', '.join(['%s'] * len(valores))
+            campos_str = ', '.join(campos)
+
+            cur.execute(
+                f'''
+                INSERT INTO plantillas_certificados
+                ({campos_str})
+                VALUES ({placeholders})
+                ''',
+                tuple(valores),
+            )
         conn.commit()
     finally:
         conn.close()
@@ -239,22 +276,46 @@ def actualizar_plantilla(
         from datetime import datetime
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
-        columnas_plantillas = {row['name'] for row in conn.execute('PRAGMA table_info(plantillas_certificados)').fetchall()}
-        
-        campos_set = ['direccion_codigo = ?', 'nombre_plantilla = ?', 'tipo_documento = ?', 'texto_certificado = ?', 'firmante_nombre = ?', 'firmante_cargo = ?']
-        valores = [direccion_codigo, nombre_plantilla, tipo_documento, texto_certificado, firmante_nombre, firmante_cargo]
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = %s
+                ''',
+                ('plantillas_certificados',),
+            )
+            columnas_plantillas = {row['column_name'] for row in cur.fetchall()}
 
-        valores.append(id_plantilla)
-        campos_str = ', '.join(campos_set)
+            campos_set = [
+                'direccion_codigo = %s',
+                'nombre_plantilla = %s',
+                'tipo_documento = %s',
+                'texto_certificado = %s',
+                'firmante_nombre = %s',
+                'firmante_cargo = %s',
+            ]
+            valores = [
+                direccion_codigo,
+                nombre_plantilla,
+                tipo_documento,
+                texto_certificado,
+                firmante_nombre,
+                firmante_cargo,
+            ]
 
-        conn.execute(
-            f'''
-            UPDATE plantillas_certificados
-            SET {campos_str}
-            WHERE id = ?
-            ''',
-            tuple(valores)
-        )
+            valores.append(id_plantilla)
+            campos_str = ', '.join(campos_set)
+
+            cur.execute(
+                f'''
+                UPDATE plantillas_certificados
+                SET {campos_str}
+                WHERE id = %s
+                ''',
+                tuple(valores),
+            )
             
         conn.commit()
     finally:
@@ -263,9 +324,10 @@ def actualizar_plantilla(
 def eliminar_plantilla(id_plantilla):
     conn = get_db_connection()
     try:
-        conn.execute('UPDATE plantillas_certificados SET activo = 0 WHERE id = ?', (id_plantilla,))
+        with conn.cursor() as cur:
+            cur.execute('UPDATE plantillas_certificados SET activo = 0 WHERE id = %s', (id_plantilla,))
         # Opcional: Podríamos también setear id_plantilla_certificado a NULL en catalogo_acciones
-        # conn.execute('UPDATE catalogo_acciones SET id_plantilla_certificado = NULL WHERE id_plantilla_certificado = ?', (id_plantilla,))
+        # conn.execute('UPDATE catalogo_acciones SET id_plantilla_certificado = NULL WHERE id_plantilla_certificado = %s', (id_plantilla,))
         conn.commit()
     finally:
         conn.close()
@@ -273,26 +335,28 @@ def eliminar_plantilla(id_plantilla):
 def obtener_plantillas_por_direccion(direccion_codigo):
     conn = get_db_connection()
     try:
-        plantillas = conn.execute(
-            '''
-            SELECT
-                p.id,
-                p.direccion_codigo,
-                p.nombre_plantilla,
-                p.tipo_documento,
-                p.texto_certificado,
-                p.firmante_nombre,
-                p.firmante_cargo,
-                p.activo,
-                d.ruta_logo_img,
-                d.ruta_firma_img
-            FROM plantillas_certificados p
-            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
-            WHERE p.direccion_codigo = ? AND p.activo = 1
-            ORDER BY p.id DESC
-            ''',
-            (direccion_codigo,),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT
+                    p.id,
+                    p.direccion_codigo,
+                    p.nombre_plantilla,
+                    p.tipo_documento,
+                    p.texto_certificado,
+                    p.firmante_nombre,
+                    p.firmante_cargo,
+                    p.activo,
+                    d.ruta_logo_img,
+                    d.ruta_firma_img
+                FROM plantillas_certificados p
+                LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+                WHERE p.direccion_codigo = %s AND p.activo = 1
+                ORDER BY p.id DESC
+                ''',
+                (direccion_codigo,),
+            )
+            plantillas = cur.fetchall()
         return [dict(p) for p in plantillas]
     finally:
         conn.close()
@@ -300,25 +364,27 @@ def obtener_plantillas_por_direccion(direccion_codigo):
 def obtener_todas_las_plantillas():
     conn = get_db_connection()
     try:
-        plantillas = conn.execute(
-            '''
-            SELECT
-                p.id,
-                p.direccion_codigo,
-                p.nombre_plantilla,
-                p.tipo_documento,
-                p.texto_certificado,
-                p.firmante_nombre,
-                p.firmante_cargo,
-                p.activo,
-                d.ruta_logo_img,
-                d.ruta_firma_img
-            FROM plantillas_certificados p
-            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
-            WHERE p.activo = 1
-            ORDER BY p.id DESC
-            '''
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT
+                    p.id,
+                    p.direccion_codigo,
+                    p.nombre_plantilla,
+                    p.tipo_documento,
+                    p.texto_certificado,
+                    p.firmante_nombre,
+                    p.firmante_cargo,
+                    p.activo,
+                    d.ruta_logo_img,
+                    d.ruta_firma_img
+                FROM plantillas_certificados p
+                LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+                WHERE p.activo = 1
+                ORDER BY p.id DESC
+                '''
+            )
+            plantillas = cur.fetchall()
         return [dict(p) for p in plantillas]
     finally:
         conn.close()
@@ -326,25 +392,27 @@ def obtener_todas_las_plantillas():
 def obtener_plantilla_por_id(id_plantilla):
     conn = get_db_connection()
     try:
-        plantilla = conn.execute(
-            '''
-            SELECT
-                p.id,
-                p.direccion_codigo,
-                p.nombre_plantilla,
-                p.tipo_documento,
-                p.texto_certificado,
-                p.firmante_nombre,
-                p.firmante_cargo,
-                p.activo,
-                d.ruta_logo_img,
-                d.ruta_firma_img
-            FROM plantillas_certificados p
-            LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
-            WHERE p.id = ? AND p.activo = 1
-            ''',
-            (id_plantilla,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT
+                    p.id,
+                    p.direccion_codigo,
+                    p.nombre_plantilla,
+                    p.tipo_documento,
+                    p.texto_certificado,
+                    p.firmante_nombre,
+                    p.firmante_cargo,
+                    p.activo,
+                    d.ruta_logo_img,
+                    d.ruta_firma_img
+                FROM plantillas_certificados p
+                LEFT JOIN direcciones d ON d.codigo = p.direccion_codigo
+                WHERE p.id = %s AND p.activo = 1
+                ''',
+                (id_plantilla,),
+            )
+            plantilla = cur.fetchone()
         return dict(plantilla) if plantilla else None
     finally:
         conn.close()
@@ -358,10 +426,12 @@ def generar_html_preview_plantilla(plantilla):
     if not ruta_firma_web and contexto.get('direccion_codigo'):
         try:
             conn = get_db_connection()
-            fila = conn.execute(
-                'SELECT ruta_firma_img, ruta_logo_img FROM direcciones WHERE codigo = ? LIMIT 1',
-                (contexto['direccion_codigo'],),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT ruta_firma_img, ruta_logo_img FROM direcciones WHERE codigo = %s LIMIT 1',
+                    (contexto['direccion_codigo'],),
+                )
+                fila = cur.fetchone()
             ruta_firma_web = (fila['ruta_firma_img'] or '').strip() if fila else ''
             if fila and not contexto.get('ruta_logo_img'):
                 contexto['ruta_logo_img'] = (fila['ruta_logo_img'] or '').strip()
@@ -471,9 +541,11 @@ def generar_binario_pdf(matricula_id):
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
             JOIN plantillas_certificados p ON ca.id_plantilla_certificado = p.id
             LEFT JOIN direcciones ddir ON p.direccion_codigo = ddir.codigo
-            WHERE m.id = ? AND m.aprobado = 1
+            WHERE m.id = %s AND m.aprobado = 1
         '''
-        datos = conn.execute(query, (matricula_id,)).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(query, (matricula_id,))
+            datos = cur.fetchone()
         
         if not datos:
             return None
@@ -660,9 +732,11 @@ def obtener_datos_empleado(matricula_id):
             JOIN ediciones_formativas ef ON m.edicion_id = ef.id
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
             JOIN plantillas_certificados p ON ca.id_plantilla_certificado = p.id
-            WHERE m.id = ? AND m.aprobado = 1
+            WHERE m.id = %s AND m.aprobado = 1
         '''
-        datos = conn.execute(query, (matricula_id,)).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(query, (matricula_id,))
+            datos = cur.fetchone()
         
         if not datos:
             return None, None, None

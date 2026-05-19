@@ -22,15 +22,17 @@ from utils import (
 def register_portal_routes(app):
     def autenticar_docente(correo_institucional, numero_empleado):
         conn = get_db_connection()
-        docente = conn.execute(
-            '''
-            SELECT id, numero_empleado, nombre_completo, correo_institucional, activo
-            FROM docentes
-            WHERE numero_empleado = ? AND correo_institucional = ?
-            LIMIT 1
-            ''',
-            (numero_empleado, correo_institucional),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id, numero_empleado, nombre_completo, correo_institucional, activo
+                FROM docentes
+                WHERE numero_empleado = %s AND correo_institucional = %s
+                LIMIT 1
+                ''',
+                (numero_empleado, correo_institucional),
+            )
+            docente = cur.fetchone()
         conn.close()
         return docente
 

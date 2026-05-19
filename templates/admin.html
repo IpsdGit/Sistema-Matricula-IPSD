@@ -1873,7 +1873,7 @@
                     </td>
                     <td class="py-4 px-6">{{ curso['hora'] or '—' }}</td>
                     <td class="py-4 px-6">
-                      Trim. {{ curso['trimestre'] or '—' }} {{ (curso['fecha_inicio'] or '')[:4] or '—' }}
+                      Trim. {{ curso['trimestre'] or '—' }} {{ (curso['fecha_inicio']|string)[:4] if curso['fecha_inicio'] else '—' }}
                     </td>
                     <td class="py-4 px-6 text-center">
                       <span
@@ -3574,7 +3574,7 @@
                     <span class="badge-pill {{ resultado_clase }} text-xs">{{ resultado_texto }}</span>
                   </td>
                   <td style="font-size:.78rem; color:var(--text-muted);">
-                    {{ fila['fecha_matricula'][:16] if fila['fecha_matricula'] else '—' }}
+                    {{ (fila['fecha_matricula']|string)[:16] if fila['fecha_matricula'] else '—' }}
                   </td>
                 </tr>
                 {% else %}
@@ -3603,11 +3603,11 @@
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl pl-[68px]" style="margin:0;">Configura el texto del certificado; la firma se gestiona por dirección.</p>
           </div>
           <div class="flex flex-wrap items-center gap-4">
-            <button type="button" onclick="abrirModal('modal-identidad-direccion')" class="glass-panel border border-secondary/30 text-secondary-fixed-dim hover:bg-secondary-container/20 px-6 py-3 rounded-full flex items-center gap-2 transition-all shadow-sm font-headline-md text-[16px] font-bold">
+            <button type="button" onclick="abrirModal('modal-identidad-direccion')" class="glass-panel border border-secondary/30 text-secondary-fixed-dim hover:bg-secondary-container/20 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-md px-6 py-3 rounded-full flex items-center gap-2 transition-all duration-300 shadow-sm font-headline-md text-[16px] font-bold">
               <span class="material-symbols-outlined" data-icon="branding_watermark">branding_watermark</span>
               Configurar Firma y Logo
             </button>
-            <button type="button" onclick="abrirModal('modal-plantilla')" class="bg-primary text-on-primary hover:bg-primary-fixed-variant px-6 py-3 rounded-full flex items-center gap-2 transition-all shadow-md font-headline-md text-[16px] font-bold">
+            <button type="button" onclick="abrirModal('modal-plantilla')" class="btn-primary-ipsd flex items-center gap-2" style="border-radius:9999px; font-size: 16px; font-weight: bold; padding: 0.75rem 1.75rem;">
               <span class="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
               Nueva Plantilla
             </button>
@@ -4268,12 +4268,12 @@
 <!-- Modal nueva plantilla de certificados -->
 <div class="modal-overlay" id="modal-plantilla">
   <div
-    class="relative z-50 w-full max-w-5xl bg-white/80 backdrop-blur-2xl rounded-[32px] rounded-tl-[16px] shadow-[0_40px_40px_-15px_rgba(0,23,54,0.05)] border border-white/40 overflow-hidden flex flex-col max-h-[921px]">
+    class="relative z-50 w-[96%] max-w-[1160px] bg-white rounded-[24px] rounded-tl-[12px] shadow-[0_40px_80px_-15px_rgba(0,23,54,0.12)] border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[920px]">
     <form action="/admin/certificados/plantilla" method="POST" enctype="multipart/form-data"
-      class="flex flex-col h-full">
+      class="flex flex-col h-full max-h-full overflow-hidden">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="flex items-center justify-between px-8 py-6 border-b border-surface-variant/50 bg-white/50">
+      <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
@@ -4294,45 +4294,41 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {% if es_superadmin %}
           <div class="space-y-2 md:col-span-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Dirección Asignada</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección Asignada</label>
             <div class="relative">
-              <select class="form-select w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none appearance-none pr-10"
+              <select class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="direccion_codigo" required>
                 {% for d in direcciones %}
                 <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
                 {% endfor %}
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
             </div>
           </div>
           {% endif %}
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Nombre de la Plantilla</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la Plantilla</label>
             <input
-              class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+              class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
               placeholder="Ej. Certificado de Participación 2024" type="text" name="nombre_plantilla"
               id="nombre_plantilla" maxlength="150" required>
           </div>
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Tipo de Documento</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de Documento</label>
             <div class="relative">
               <select
-                class="form-select w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none appearance-none pr-10"
+                class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="tipo_documento" id="tipo_documento" required>
                 <option value="">Seleccione el tipo</option>
                 <option value="DIPLOMA">Diploma</option>
                 <option value="CONSTANCIA">Constancia</option>
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-surface-container-low/50 rounded-2xl p-6 border border-white/50">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <label class="font-label-caps text-label-caps text-primary uppercase tracking-wider flex items-center gap-2">
@@ -4342,47 +4338,47 @@
             </div>
             <div class="flex flex-wrap gap-2 mb-4" id="plantilla-pildoras-crear">
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[NOMBRE]')">[NOMBRE]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[CURSO]')">[CURSO]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[MODALIDAD]')">[MODALIDAD]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[HORAS]')">[HORAS]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[CENTRO_UNIVERSITARIO_REGIONAL]')">[CENTRO_UNIVERSITARIO_REGIONAL]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
               <button type="button" title="Para un solo día exacto"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[FECHA]')">[FECHA]</button>
               <button type="button" title="Fecha de aprobacion"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
               <button type="button" title="Ej: Nocturna 18:00-20:00"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('texto_certificado', '[HORARIO]')">[HORARIO]</button>
             </div>
             <textarea
-              class="w-full h-64 bg-white border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:ring-0 px-4 py-4 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none resize-none"
+              class="w-full h-64 bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-4 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none resize-none"
               placeholder="Escriba el cuerpo del certificado. Use las variables de arriba para inyectar datos dinámicos."
               name="texto_certificado" id="texto_certificado" rows="8" required
               oninput="actualizarPreview(this.value, 'crear-preview')"></textarea>
           </div>
           <div class="space-y-4 flex flex-col h-full">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">visibility</span>
               Vista Previa (Texto)
             </label>
             <div
-              class="flex-1 bg-white border border-outline-variant/30 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
-              <div class="absolute inset-4 border-2 border-double border-secondary-fixed-dim/30 pointer-events-none rounded-lg"></div>
+              class="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg"></div>
               <div id="crear-preview" class="text-lg text-on-surface leading-relaxed max-w-md"
                 style="font-family: 'Georgia', serif;">Escribe el texto arriba para ver la vista previa...</div>
             </div>
@@ -4395,16 +4391,16 @@
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Nombre del Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del Firmante</label>
               <input
-                class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+                class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Dr. Juan Perez" type="text" name="firmante_nombre" id="firmante_nombre"
                 maxlength="100" required>
             </div>
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Cargo del Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del Firmante</label>
               <input
-                class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+                class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Director Academico" type="text" name="firmante_cargo" id="firmante_cargo"
                 maxlength="100" required>
             </div>
@@ -4412,12 +4408,12 @@
         </div>
       </div>
 
-      <div class="px-8 py-6 border-t border-surface-variant/50 bg-white/50 flex items-center justify-end gap-4 rounded-b-[32px]">
+      <div class="px-8 py-6 border-t border-slate-100 bg-white flex items-center justify-end gap-4 rounded-b-[24px]">
         <button type="button"
-          class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-primary border border-primary/20 hover:bg-primary-container/10 transition-colors"
+          class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-all"
           onclick="cerrarModal('modal-plantilla')">Cancelar</button>
         <button type="submit"
-          class="px-8 py-3 rounded-full font-body-md text-body-md font-semibold bg-primary text-on-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2">
+          class="btn-primary-ipsd flex items-center gap-2" style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
           <span class="material-symbols-outlined text-[20px]">save</span>
           Guardar Plantilla
         </button>
@@ -4429,12 +4425,12 @@
 <!-- Modal editar plantilla de certificados -->
 <div class="modal-overlay" id="modal-editar-plantilla">
   <div
-    class="relative z-50 w-full max-w-5xl bg-white/80 backdrop-blur-2xl rounded-[32px] rounded-tl-[16px] shadow-[0_40px_40px_-15px_rgba(0,23,54,0.05)] border border-white/40 overflow-hidden flex flex-col max-h-[921px]">
+    class="relative z-50 w-[96%] max-w-[1160px] bg-white rounded-[24px] rounded-tl-[12px] shadow-[0_40px_80px_-15px_rgba(0,23,54,0.12)] border border-slate-100 overflow-hidden flex flex-col h-[90vh] max-h-[920px]">
     <form id="form-editar-plantilla" action="" method="POST" enctype="multipart/form-data"
-      class="flex flex-col h-full">
+      class="flex flex-col h-full max-h-full overflow-hidden">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="flex items-center justify-between px-8 py-6 border-b border-surface-variant/50 bg-white/50">
+      <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
@@ -4455,45 +4451,41 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {% if es_superadmin %}
           <div class="space-y-2 md:col-span-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Dirección Asignada</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección Asignada</label>
             <div class="relative">
-              <select class="form-select w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none appearance-none pr-10"
+              <select class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="direccion_codigo" id="edit-plantilla-direccion" required>
                 {% for d in direcciones %}
                 <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
                 {% endfor %}
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
             </div>
           </div>
           {% endif %}
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Nombre de la Plantilla</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la Plantilla</label>
             <input
-              class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+              class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
               placeholder="Ej. Certificado de Participación 2024" type="text" name="nombre_plantilla"
               id="edit-plantilla-nombre" maxlength="150" required>
           </div>
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Tipo de Documento</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de Documento</label>
             <div class="relative">
               <select
-                class="form-select w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none appearance-none pr-10"
+                class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="tipo_documento" id="edit-plantilla-tipo" required>
                 <option value="">Seleccione el tipo</option>
                 <option value="DIPLOMA">Diploma</option>
                 <option value="CONSTANCIA">Constancia</option>
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-surface-container-low/50 rounded-2xl p-6 border border-white/50">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <label class="font-label-caps text-label-caps text-primary uppercase tracking-wider flex items-center gap-2">
@@ -4503,47 +4495,47 @@
             </div>
             <div class="flex flex-wrap gap-2 mb-4" id="plantilla-pildoras-editar">
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[NOMBRE]')">[NOMBRE]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[CURSO]')">[CURSO]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[MODALIDAD]')">[MODALIDAD]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[HORAS]')">[HORAS]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[CENTRO_UNIVERSITARIO_REGIONAL]')">[CENTRO_UNIVERSITARIO_REGIONAL]</button>
               <button type="button"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_RANGO]')">[FECHA_RANGO]</button>
               <button type="button" title="Para un solo día exacto"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA]')">[FECHA]</button>
               <button type="button" title="Fecha de aprobacion"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[FECHA_APROBACION]')">[FECHA_APROBACION]</button>
               <button type="button" title="Ej: Nocturna 18:00-20:00"
-                class="px-3 py-1.5 rounded-full border border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-colors"
+                class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-label-caps font-label-caps text-slate-600 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all shadow-sm"
                 onclick="insertarEtiqueta('edit-plantilla-texto', '[HORARIO]')">[HORARIO]</button>
             </div>
             <textarea
-              class="w-full h-64 bg-white border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:ring-0 px-4 py-4 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none resize-none"
+              class="w-full h-64 bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-4 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none resize-none"
               placeholder="Escriba el cuerpo del certificado. Use las variables de arriba para inyectar datos dinámicos."
               name="texto_certificado" id="edit-plantilla-texto" rows="8" required
               oninput="actualizarPreview(this.value, 'edit-preview')"></textarea>
           </div>
           <div class="space-y-4 flex flex-col h-full">
-            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">visibility</span>
               Vista Previa (Texto)
             </label>
             <div
-              class="flex-1 bg-white border border-outline-variant/30 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
-              <div class="absolute inset-4 border-2 border-double border-secondary-fixed-dim/30 pointer-events-none rounded-lg"></div>
+              class="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg"></div>
               <div id="edit-preview" class="text-lg text-on-surface leading-relaxed max-w-md"
                 style="font-family: 'Georgia', serif;"></div>
             </div>
@@ -4551,21 +4543,21 @@
         </div>
 
         <div class="space-y-4">
-          <h3 class="font-headline-md text-[20px] font-semibold text-primary border-b border-surface-variant/50 pb-2">
+          <h3 class="font-headline-md text-[20px] font-semibold text-primary border-b border-slate-100 pb-2">
             Información del Firmante
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Nombre del Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del Firmante</label>
               <input
-                class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+                class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Dr. Juan Perez" type="text" name="firmante_nombre" id="edit-plantilla-firmante-nombre"
                 maxlength="100" required>
             </div>
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Cargo del Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del Firmante</label>
               <input
-                class="w-full bg-white/50 border-b-2 border-outline-variant hover:border-primary focus:border-primary focus:bg-white focus:ring-0 px-4 py-3 rounded-t-lg transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-outline"
+                class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Director Academico" type="text" name="firmante_cargo" id="edit-plantilla-firmante-cargo"
                 maxlength="100" required>
             </div>
@@ -4573,12 +4565,12 @@
         </div>
       </div>
 
-      <div class="px-8 py-6 border-t border-surface-variant/50 bg-white/50 flex items-center justify-end gap-4 rounded-b-[32px]">
+      <div class="px-8 py-6 border-t border-slate-100 bg-white flex items-center justify-end gap-4 rounded-b-[24px]">
         <button type="button"
-          class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-primary border border-primary/20 hover:bg-primary-container/10 transition-colors"
+          class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-all"
           onclick="cerrarModal('modal-editar-plantilla')">Cancelar</button>
         <button type="submit"
-          class="px-8 py-3 rounded-full font-body-md text-body-md font-semibold bg-primary text-on-primary hover:bg-primary/90 shadow-md transition-all flex items-center gap-2">
+          class="btn-primary-ipsd flex items-center gap-2" style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
           <span class="material-symbols-outlined text-[20px]">save</span>
           Guardar Cambios
         </button>

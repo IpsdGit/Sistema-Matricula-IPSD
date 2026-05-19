@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime
 from functools import wraps
 
+# pyrefly: ignore [missing-import]
 from flask import abort, redirect, request, session, url_for
 
 from config import (
@@ -83,16 +84,18 @@ def normalizar_direccion(direccion):
 
 
 def obtener_direcciones(conn):
-    return conn.execute('SELECT codigo, nombre FROM direcciones ORDER BY codigo').fetchall()
+    with conn.cursor() as cur:
+        cur.execute('SELECT codigo, nombre FROM direcciones ORDER BY codigo')
+        return cur.fetchall()
 
 
 def direccion_existe(conn, direccion_codigo):
-    return bool(
-        conn.execute(
-            'SELECT 1 FROM direcciones WHERE codigo = ?',
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT 1 FROM direcciones WHERE codigo = %s',
             (direccion_codigo,),
-        ).fetchone()
-    )
+        )
+        return bool(cur.fetchone())
 
 
 def obtener_codigo_modalidad(modalidad):
@@ -128,8 +131,8 @@ def _es_horario_por_definir(horario):
 
 
 def _etiqueta_horario_desde_sesion(jornada, hora_inicio, hora_fin):
-    inicio = (hora_inicio or '').strip()[:5]
-    fin = (hora_fin or '').strip()[:5]
+    inicio = hora_inicio.strftime('%H:%M:%S')[:5] if hasattr(hora_inicio, 'strftime') else (hora_inicio or '').strip()[:5]
+    fin = hora_fin.strftime('%H:%M:%S')[:5] if hasattr(hora_fin, 'strftime') else (hora_fin or '').strip()[:5]
     if not inicio or not fin:
         return None
     return f"{_nombre_jornada_horario(jornada)} {inicio}-{fin}"
@@ -146,10 +149,12 @@ def _etiqueta_horario_desde_edicion(jornada, hora):
 
 
 def obtener_horarios_disponibles_curso(conn, edicion_id):
-    edicion = conn.execute(
-        'SELECT jornada, hora FROM ediciones_formativas WHERE id = ? LIMIT 1',
-        (edicion_id,),
-    ).fetchone()
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT jornada, hora FROM ediciones_formativas WHERE id = %s LIMIT 1',
+            (edicion_id,),
+        )
+        edicion = cur.fetchone()
 
     horarios = []
     if edicion:
@@ -160,16 +165,18 @@ def obtener_horarios_disponibles_curso(conn, edicion_id):
     if horarios:
         return horarios
 
-    sesiones = conn.execute(
-        '''
-        SELECT hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
-        FROM sesiones_curso
-        WHERE edicion_id = ?
-        GROUP BY hora_inicio, hora_fin
-        ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
-        ''',
-        (edicion_id,),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            SELECT hora_inicio, hora_fin, MIN(fecha) AS primera_fecha
+            FROM sesiones_curso
+            WHERE edicion_id = %s
+            GROUP BY hora_inicio, hora_fin
+            ORDER BY primera_fecha ASC, hora_inicio ASC, hora_fin ASC
+            ''',
+            (edicion_id,),
+        )
+        sesiones = cur.fetchall()
 
     jornada = edicion['jornada'] if edicion else None
     horarios_sesiones = []
@@ -189,16 +196,18 @@ def normalizar_nombre_curso(nombre):
 
 
 def obtener_resumen_intentos_por_curso(conn, numero_empleado):
-    filas = conn.execute(
-        '''
-        SELECT ca.nombre, m.aprobado
-        FROM matriculas m
-        JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-        WHERE m.numero_empleado = ?
-        ''',
-        (numero_empleado,),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            SELECT ca.nombre, m.aprobado
+            FROM matriculas m
+            JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            WHERE m.numero_empleado = %s
+            ''',
+            (numero_empleado,),
+        )
+        filas = cur.fetchall()
 
     resumen = {}
     for fila in filas:
@@ -303,10 +312,12 @@ def generar_id_curso(conn, direccion, modalidad):
     codigo_modalidad = obtener_codigo_modalidad(modalidad)
     prefijo = f'{direccion}-{codigo_modalidad}-'
 
-    existentes = conn.execute(
-        'SELECT id FROM catalogo_acciones WHERE id LIKE ?',
-        (f'{prefijo}%',),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT id FROM catalogo_acciones WHERE id LIKE %s',
+            (f'{prefijo}%',),
+        )
+        existentes = cur.fetchall()
 
     ultimo = 0
     patron = re.compile(rf'^{re.escape(prefijo)}(\d{{3}})$')
@@ -333,10 +344,12 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         FROM matriculas m
      JOIN ediciones_formativas ef ON m.edicion_id = ef.id
      JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-        WHERE m.numero_empleado = ?
+        WHERE m.numero_empleado = %s
         ORDER BY m.id DESC
     '''
-    cursos_matriculados = conn.execute(query_matriculados, (numero_empleado,)).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(query_matriculados, (numero_empleado,))
+        cursos_matriculados = cur.fetchall()
     
     # Convertir a dict para poder mutarlo o acceder más fácil
     cursos_matriculados_list = []
@@ -384,11 +397,13 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         FROM ediciones_formativas ef
         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE ef.privacidad = 'Abierta'
-          AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= ?)
+          AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= %s)
                     AND ef.estado = 'Programado'
         ORDER BY ef.fecha_inicio DESC, ef.id DESC
     '''
-    cursos_raw = conn.execute(query_disponibles, (now_str,)).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(query_disponibles, (now_str,))
+        cursos_raw = cur.fetchall()
 
     cursos_disponibles = []
     for c in cursos_raw:
@@ -511,9 +526,13 @@ def _fecha_inicio_legible_desde_partes(anio, mes_nombre, dia):
 def _fecha_desde_iso(fecha_iso):
     if not fecha_iso:
         return None
+    if isinstance(fecha_iso, datetime):
+        return fecha_iso
+    if hasattr(fecha_iso, 'strftime'):
+        return datetime(fecha_iso.year, fecha_iso.month, fecha_iso.day)
     try:
-        return datetime.fromisoformat((fecha_iso or '').strip())
-    except ValueError:
+        return datetime.fromisoformat(str(fecha_iso).strip())
+    except (ValueError, TypeError):
         return None
 
 
@@ -529,49 +548,52 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
     cursos_vinculados_query = '''
         SELECT DISTINCT edicion_id
         FROM matriculas
-        WHERE numero_empleado = ?
+        WHERE numero_empleado = %s
         UNION
         SELECT DISTINCT edicion_id
         FROM matricula_historial
-        WHERE numero_empleado = ?
+        WHERE numero_empleado = %s
     '''
 
     params_vinculados = (numero_empleado, numero_empleado)
 
-    cursos_vinculados = conn.execute(
-        f'''
-        SELECT
-            ef.id,
-            ca.nombre,
-            ca.modalidad,
-            ef.fecha_inicio
-        FROM ediciones_formativas ef
-        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-        JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = ef.id
-        ORDER BY ef.fecha_inicio ASC, ef.id ASC
-        ''',
-        params_vinculados,
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            f'''
+            SELECT
+                ef.id,
+                ca.nombre,
+                ca.modalidad,
+                ef.fecha_inicio
+            FROM ediciones_formativas ef
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = ef.id
+            ORDER BY ef.fecha_inicio ASC, ef.id ASC
+            ''',
+            params_vinculados,
+        )
+        cursos_vinculados = cur.fetchall()
 
-    sesiones_vinculadas = conn.execute(
-        f'''
-        SELECT
-            s.id_sesion,
-            s.edicion_id,
-            s.fecha,
-            s.hora_inicio,
-            s.hora_fin,
-            s.estado,
-            ca.nombre,
-            ca.modalidad
-        FROM sesiones_curso s
-        JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-        JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = s.edicion_id
-        ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
-        ''',
-        params_vinculados,
-    ).fetchall()
+        cur.execute(
+            f'''
+            SELECT
+                s.id_sesion,
+                s.edicion_id,
+                s.fecha,
+                s.hora_inicio,
+                s.hora_fin,
+                s.estado,
+                ca.nombre,
+                ca.modalidad
+            FROM sesiones_curso s
+            JOIN ediciones_formativas ef ON ef.id = s.edicion_id
+            JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+            JOIN ({cursos_vinculados_query}) cv ON cv.edicion_id = s.edicion_id
+            ORDER BY s.fecha ASC, s.hora_inicio ASC, s.id_sesion ASC
+            ''',
+            params_vinculados,
+        )
+        sesiones_vinculadas = cur.fetchall()
 
     def _formatear_fecha_corta(fecha_str, hora_str=None):
         try:
@@ -591,7 +613,11 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
 
     eventos = []
     for sesion in sesiones_vinculadas:
-        fecha_iso = (sesion['fecha'] or '').strip()
+        fecha_val = sesion['fecha']
+        if hasattr(fecha_val, 'strftime'):
+            fecha_iso = fecha_val.strftime('%Y-%m-%d')
+        else:
+            fecha_iso = (fecha_val or '').strip()
         if not fecha_iso:
             continue
 
@@ -674,7 +700,11 @@ def construir_notificaciones_docente(
 
     for fila in historial_todas:
         estado = fila['estado_codigo']
-        fecha = fila['fecha_evento'][:16] if fila['fecha_evento'] else 'Reciente'
+        fecha_val = fila['fecha_evento']
+        if hasattr(fecha_val, 'strftime'):
+            fecha = fecha_val.strftime('%Y-%m-%d %H:%M')
+        else:
+            fecha = (fecha_val or '').strip()[:16] if fecha_val else 'Reciente'
 
         if estado == 'APROBADA':
             agregar(
@@ -831,58 +861,61 @@ def registrar_evento_matricula(
     matricula_id=None,
     detalle='',
 ):
-    conn.execute(
-        '''
-        INSERT INTO matricula_historial (
-            matricula_id, numero_empleado, edicion_id, nombre_accion,
-            estado_codigo, detalle
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            INSERT INTO matricula_historial (
+                matricula_id, numero_empleado, edicion_id, nombre_accion,
+                estado_codigo, detalle
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ''',
+            (
+                matricula_id,
+                numero_empleado,
+                edicion_id,
+                nombre_accion,
+                estado_codigo,
+                detalle,
+            ),
         )
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''',
-        (
-            matricula_id,
-            numero_empleado,
-            edicion_id,
-            nombre_accion,
-            estado_codigo,
-            detalle,
-        ),
-    )
 
 
 def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historial='todas'):
     filtro_historial = normalizar_filtro_historial(filtro_historial)
-    filas_raw = conn.execute(
-        '''
-        SELECT
-            h.id,
-            h.matricula_id,
-            h.edicion_id,
-            h.nombre_accion,
-            h.estado_codigo,
-            h.fecha_evento,
-            c.nombre AS estado_nombre,
-            c.categoria AS estado_categoria,
-            m_act.id AS matricula_activa_id,
-            cap.modalidad AS modalidad_actual,
-            ef.jornada AS jornada_edicion,
-            ef.hora AS hora_edicion
-        FROM matricula_historial h
-        JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
-        LEFT JOIN matriculas m_act ON m_act.id = h.matricula_id
-        LEFT JOIN ediciones_formativas ef ON ef.id = h.edicion_id
-        LEFT JOIN catalogo_acciones cap ON cap.id = ef.catalogo_id
-        JOIN (
-            SELECT COALESCE(matricula_id, -id) AS agrupador, MAX(id) AS max_id
-            FROM matricula_historial
-            WHERE numero_empleado = ?
-            GROUP BY COALESCE(matricula_id, -id)
-        ) ult ON ult.max_id = h.id
-        WHERE h.numero_empleado = ?
-        ORDER BY h.id DESC
-        ''',
-        (numero_empleado, numero_empleado),
-    ).fetchall()
+    with conn.cursor() as cur:
+        cur.execute(
+            '''
+            SELECT
+                h.id,
+                h.matricula_id,
+                h.edicion_id,
+                h.nombre_accion,
+                h.estado_codigo,
+                h.fecha_evento,
+                c.nombre AS estado_nombre,
+                c.categoria AS estado_categoria,
+                m_act.id AS matricula_activa_id,
+                cap.modalidad AS modalidad_actual,
+                ef.jornada AS jornada_edicion,
+                ef.hora AS hora_edicion
+            FROM matricula_historial h
+            JOIN estado_matricula_catalogo c ON c.codigo = h.estado_codigo
+            LEFT JOIN matriculas m_act ON m_act.id = h.matricula_id
+            LEFT JOIN ediciones_formativas ef ON ef.id = h.edicion_id
+            LEFT JOIN catalogo_acciones cap ON cap.id = ef.catalogo_id
+            JOIN (
+                SELECT COALESCE(matricula_id, -id) AS agrupador, MAX(id) AS max_id
+                FROM matricula_historial
+                WHERE numero_empleado = %s
+                GROUP BY COALESCE(matricula_id, -id)
+            ) ult ON ult.max_id = h.id
+            WHERE h.numero_empleado = %s
+            ORDER BY h.id DESC
+            ''',
+            (numero_empleado, numero_empleado),
+        )
+        filas_raw = cur.fetchall()
 
     filas = []
     for fila in filas_raw:

@@ -1,32 +1,13 @@
-import sqlite3
 import os
+import psycopg2
 from werkzeug.security import generate_password_hash
 
-
-def resolver_db_path():
-    env_db_path = os.environ.get('DATABASE_PATH')
-    if env_db_path:
-        return env_db_path
-
-    project_root = os.path.dirname(os.path.dirname(__file__))
-    local_db = os.path.join(project_root, 'matricula.db')
-    pythonanywhere_db = '/home/IPSDUNAH/mysite/matricula.db'
-
-    if os.path.exists(local_db):
-        return local_db
-    if os.path.exists(pythonanywhere_db):
-        return pythonanywhere_db
-    return local_db
-
-
-DB_PATH = resolver_db_path()
-
-#if os.path.exists(DB_PATH):
-#    os.remove(DB_PATH)
+def get_db_connection():
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    return psycopg2.connect(database_url)
 
 def inicializar_bd():
-    conexion = sqlite3.connect(DB_PATH)
-    conexion.execute('PRAGMA foreign_keys = ON')
+    conexion = get_db_connection()
     cursor = conexion.cursor()
 
     cursor.execute('''
@@ -40,12 +21,12 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS docentes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             numero_empleado TEXT UNIQUE NOT NULL,
             nombre_completo TEXT NOT NULL,
-            correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+            correo_institucional TEXT UNIQUE NOT NULL,
             activo INTEGER NOT NULL DEFAULT 1,
-            fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_sincronizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             centro_universitario_regional TEXT NOT NULL DEFAULT ''
         )
     ''')
@@ -54,7 +35,7 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS plantillas_certificados (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             direccion_codigo TEXT NOT NULL,
             nombre_plantilla TEXT NOT NULL, 
             tipo_documento TEXT NOT NULL CHECK(tipo_documento IN ('DIPLOMA', 'CONSTANCIA')),
@@ -64,6 +45,17 @@ def inicializar_bd():
             firmante_cargo TEXT NOT NULL, 
             activo INTEGER DEFAULT 1,
             FOREIGN KEY(direccion_codigo) REFERENCES direcciones(codigo)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
+            codigo TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            horas_minimas INTEGER NOT NULL,
+            horas_maximas INTEGER,
+            semanas_minimas INTEGER NOT NULL,
+            semanas_maximas INTEGER
         )
     ''')
 
@@ -90,13 +82,15 @@ def inicializar_bd():
             etiqueta_edicion TEXT DEFAULT '',
             trimestre TEXT,
             fecha_inicio DATE,
-            fecha_limite_matricula DATETIME,
+            fecha_limite_matricula TIMESTAMP,
             jornada TEXT,
             hora TEXT,
             cupos_maximos INTEGER,
             enlace_acceso TEXT,
             docente_responsable TEXT,
             persona_apoyo TEXT,
+            requisitos TEXT,
+            duracion_horas INTEGER,       
             privacidad TEXT DEFAULT 'Abierta',
             estado TEXT DEFAULT 'En Edicion',
             FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
@@ -104,21 +98,12 @@ def inicializar_bd():
     ''')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_ediciones_catalogo ON ediciones_formativas (catalogo_id)')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tipo_accion_formativa (
-            codigo TEXT PRIMARY KEY,
-            nombre TEXT NOT NULL,
-            horas_minimas INTEGER NOT NULL,
-            horas_maximas INTEGER,
-            semanas_minimas INTEGER NOT NULL,
-            semanas_maximas INTEGER
-        )
-    ''')
     cursor.executemany(
         '''
-        INSERT OR IGNORE INTO tipo_accion_formativa
+        INSERT INTO tipo_accion_formativa
         (codigo, nombre, horas_minimas, horas_maximas, semanas_minimas, semanas_maximas)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (codigo) DO NOTHING
         ''',
         [
             ('CONFERENCIA', 'Conferencia', 1, 16, 1, 4),
@@ -131,10 +116,10 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS matriculas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             numero_empleado TEXT NOT NULL,
             edicion_id TEXT NOT NULL,
-            fecha_matricula DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_matricula TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             aprobado INTEGER,
             fecha_aprobacion TEXT,
             comentario_validacion TEXT,
@@ -144,7 +129,7 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sesiones_curso (
-            id_sesion INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_sesion SERIAL PRIMARY KEY,
             edicion_id TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora_inicio TEXT NOT NULL,
@@ -158,7 +143,7 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS registro_asistencia (
-            id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_registro SERIAL PRIMARY KEY,
             id_sesion INTEGER NOT NULL,
             numero_empleado TEXT NOT NULL,
             fecha_marcado TEXT NOT NULL,
@@ -182,14 +167,14 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS matricula_historial (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             matricula_id INTEGER,
             numero_empleado TEXT NOT NULL,
             edicion_id TEXT NOT NULL,
             nombre_accion TEXT NOT NULL,
             estado_codigo TEXT NOT NULL,
             detalle TEXT,
-            fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (estado_codigo) REFERENCES estado_matricula_catalogo (codigo),
             FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id)
         )
@@ -207,20 +192,21 @@ def inicializar_bd():
     ]
     cursor.executemany(
         '''
-        INSERT OR IGNORE INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO estado_matricula_catalogo (codigo, nombre, categoria, orden)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (codigo) DO NOTHING
         ''',
         estados_catalogo
     )
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS certificados_emitidos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             token_validacion TEXT UNIQUE NOT NULL,
             matricula_id INTEGER NOT NULL,
             numero_empleado TEXT NOT NULL,
             edicion_id TEXT NOT NULL,
-            fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             tipo_documento TEXT NOT NULL,
             veces_validado INTEGER NOT NULL DEFAULT 0,
             activo INTEGER NOT NULL DEFAULT 1,
@@ -233,18 +219,18 @@ def inicializar_bd():
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS historial_chat (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             usuario_tipo TEXT NOT NULL,
             usuario_id TEXT NOT NULL,
             mensaje_usuario TEXT NOT NULL,
             respuesta_modelo TEXT NOT NULL,
-            fecha_evento DATETIME DEFAULT CURRENT_TIMESTAMP
+            fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS admin_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             rol TEXT NOT NULL DEFAULT 'admin',
@@ -258,14 +244,15 @@ def inicializar_bd():
         os.environ.get('ADMIN_PASSWORD', 'IPSD@admin2026')
     )
 
-    existe_superadmin = cursor.execute(
-        'SELECT 1 FROM admin_users WHERE username = ?',
+    cursor.execute(
+        'SELECT 1 FROM admin_users WHERE username = %s',
         (superadmin_username,)
-    ).fetchone()
+    )
+    existe_superadmin = cursor.fetchone()
 
     if not existe_superadmin:
         cursor.execute(
-            'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (?, ?, ?, ?)',
+            'INSERT INTO admin_users (username, password_hash, rol, direccion) VALUES (%s, %s, %s, %s)',
             (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
         )
 

@@ -131,16 +131,18 @@ def _normalize_reply_text(reply):
 def _fetch_recent_history(user_type, user_id, limit=6):
     conn = get_db_connection()
     try:
-        rows = conn.execute(
-            '''
-            SELECT mensaje_usuario, respuesta_modelo, fecha_evento
-            FROM historial_chat
-            WHERE usuario_tipo = ? AND usuario_id = ?
-            ORDER BY id DESC
-            LIMIT ?
-            ''',
-            (user_type, user_id, limit),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT mensaje_usuario, respuesta_modelo, fecha_evento
+                FROM historial_chat
+                WHERE usuario_tipo = %s AND usuario_id = %s
+                ORDER BY id DESC
+                LIMIT %s
+                ''',
+                (user_type, user_id, limit),
+            )
+            rows = cur.fetchall()
         return list(reversed(rows))
     finally:
         conn.close()
@@ -163,13 +165,14 @@ def _build_prompt_with_history(rows, user_message):
 def _save_chat_exchange(user_type, user_id, user_message, model_reply):
     conn = get_db_connection()
     try:
-        conn.execute(
-            '''
-            INSERT INTO historial_chat (usuario_tipo, usuario_id, mensaje_usuario, respuesta_modelo)
-            VALUES (?, ?, ?, ?)
-            ''',
-            (user_type, user_id, user_message, model_reply),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                INSERT INTO historial_chat (usuario_tipo, usuario_id, mensaje_usuario, respuesta_modelo)
+                VALUES (%s, %s, %s, %s)
+                ''',
+                (user_type, user_id, user_message, model_reply),
+            )
         conn.commit()
     finally:
         conn.close()
