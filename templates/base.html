@@ -2,7 +2,7 @@
 <html lang="es">
 <script>
   /* Anti-flash: apply theme before render */
-  (function(){var t=localStorage.getItem('ipsd-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+  (function(){var t=localStorage.getItem('ipsd-theme');if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}})();
 </script>
 
 <head>
@@ -127,7 +127,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+<body class="bg-background dark:bg-primary min-h-screen transition-colors duration-300">
   {% block nav %}{% endblock %}
 
   {% block content %}{% endblock %}

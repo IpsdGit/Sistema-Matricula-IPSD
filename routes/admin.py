@@ -600,7 +600,7 @@ def register_admin_routes(app):
                     'docente_responsable': edicion['docente_responsable'] or '',
                     'persona_apoyo': edicion['persona_apoyo'] or '',
                     'trimestre': edicion['trimestre'] or '',
-                    'cupos_maximos': edicion['cupos_maximos'] if edicion['cupos_maximos'] is not None else 0,
+                    'cupos_maximos': edicion['cupos_maximos'] if edicion['cupos_maximos'] is not None else '',
                     'privacidad': (edicion['privacidad'] or 'Abierta'),
                     'estado': edicion['estado'] or 'En Edicion',
                     'fecha_limite_input': _formatear_datetime_local(edicion['fecha_limite_matricula']),
@@ -809,6 +809,10 @@ def register_admin_routes(app):
             if not isinstance(bloque, dict):
                 return jsonify({'ok': False, 'error': 'Formato de jornada invalido.'}), 400
             dias_semana = bloque.get('dias_semana') or []
+            modo_configuracion = (bloque.get('modo_configuracion') or 'auto').strip().lower()
+            if modo_configuracion not in {'auto', 'manual'}:
+                modo_configuracion = 'auto'
+            fechas_manual = bloque.get('fechas_manual') if isinstance(bloque.get('fechas_manual'), list) else []
             hora_inicio = (bloque.get('hora_inicio') or '').strip()
             hora_fin = (bloque.get('hora_fin') or '').strip()
             jornada = (bloque.get('jornada') or 'UNICA').strip().upper()
@@ -854,8 +858,15 @@ def register_admin_routes(app):
                 except ValueError:
                     return jsonify({'ok': False, 'error': 'Fecha limite invalida.'}), 400
 
-            if not dias_semana or not hora_inicio or not hora_fin:
-                return jsonify({'ok': False, 'error': 'Completa dias y horas para cada jornada.'}), 400
+            if not hora_inicio or not hora_fin:
+                return jsonify({'ok': False, 'error': 'Completa horas para cada jornada.'}), 400
+
+            if modo_configuracion == 'manual':
+                if not fechas_manual:
+                    return jsonify({'ok': False, 'error': 'Selecciona fechas manuales para la jornada.'}), 400
+            else:
+                if not dias_semana:
+                    return jsonify({'ok': False, 'error': 'Completa dias y horas para cada jornada.'}), 400
 
             hora_texto = f"{hora_inicio}-{hora_fin}"
 
@@ -911,6 +922,7 @@ def register_admin_routes(app):
                 dias_semana,
                 [{'hora_inicio': hora_inicio, 'hora_fin': hora_fin}],
                 jornada=jornada,
+                fechas_manual=fechas_manual,
             )
             if not result.get('ok'):
                 return jsonify({'ok': False, 'error': result.get('error') or 'No se pudo generar el calendario.'}), 400

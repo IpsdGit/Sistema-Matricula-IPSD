@@ -881,6 +881,11 @@
 
   function applyTheme(theme) {
     HTML.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      HTML.classList.add('dark');
+    } else {
+      HTML.classList.remove('dark');
+    }
     if (ICON) ICON.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
     if (BTN)  BTN.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
     localStorage.setItem(KEY, theme);

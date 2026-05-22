@@ -648,10 +648,18 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
 
                 cur.execute(
                     '''
-                    SELECT d.codigo, d.nombre, d.ruta_firma_img,
-                           (SELECT COUNT(*) FROM admin_users a WHERE a.direccion = d.codigo AND a.rol = 'admin') as total_admins,
-                           (SELECT COUNT(*) FROM catalogo_acciones ca WHERE ca.direccion_codigo = d.codigo) as total_cursos
+                    SELECT
+                        d.codigo,
+                        d.nombre,
+                        d.ruta_firma_img,
+                        COUNT(DISTINCT a.id) AS total_admins,
+                        COUNT(DISTINCT ca.id) AS total_cursos
                     FROM direcciones d
+                    LEFT JOIN admin_users a
+                        ON a.direccion = d.codigo AND a.rol = 'admin'
+                    LEFT JOIN catalogo_acciones ca
+                        ON ca.direccion_codigo = d.codigo
+                    GROUP BY d.codigo, d.nombre, d.ruta_firma_img
                     ORDER BY d.codigo
                     '''
                 )
@@ -1585,6 +1593,24 @@ def _normalizar_dias_semana(dias_semana):
     return sorted(dias_norm)
 
 
+def _normalizar_fechas_manual(fechas, fecha_inicio_obj=None, fecha_fin_obj=None):
+    if not fechas:
+        return []
+
+    fechas_norm = set()
+    for fecha_raw in fechas:
+        fecha_obj = _normalizar_fecha_iso(fecha_raw)
+        if not fecha_obj:
+            continue
+        if fecha_inicio_obj and fecha_obj < fecha_inicio_obj:
+            continue
+        if fecha_fin_obj and fecha_obj > fecha_fin_obj:
+            continue
+        fechas_norm.add(fecha_obj)
+
+    return sorted(fechas_norm)
+
+
 def _normalizar_bloques_horarios(horas):
     bloques = []
     for bloque in horas or []:
@@ -1858,11 +1884,12 @@ def eliminar_sesion(id_sesion):
         return {'ok': False, 'error': 'No se pudo eliminar la sesión'}
 
 
-def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', edicion=''):
+def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, horas, jornada='UNICA', docente_sesion='', edicion='', fechas_manual=None):
     edicion_id_limpio = (edicion_id or '').strip().upper()
     fecha_inicio_obj = _normalizar_fecha_iso(fecha_inicio)
     fecha_fin_obj = _normalizar_fecha_iso(fecha_fin)
     dias_norm = _normalizar_dias_semana(dias_semana)
+    fechas_manual_norm = _normalizar_fechas_manual(fechas_manual, fecha_inicio_obj, fecha_fin_obj)
     bloques_horarios = _normalizar_bloques_horarios(horas)
 
     if not edicion_id_limpio:
@@ -1871,7 +1898,9 @@ def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, ho
         return {'ok': False, 'error': 'Fechas inválidas'}
     if fecha_inicio_obj > fecha_fin_obj:
         return {'ok': False, 'error': 'La fecha de inicio no puede ser mayor que la fecha de fin'}
-    if not dias_norm:
+    if fechas_manual and not fechas_manual_norm:
+        return {'ok': False, 'error': 'Debes seleccionar fechas manuales validas'}
+    if not fechas_manual_norm and not dias_norm:
         return {'ok': False, 'error': 'Debes seleccionar al menos un día de la semana'}
     if not bloques_horarios:
         return {'ok': False, 'error': 'Debes enviar al menos un bloque horario válido'}
@@ -1891,41 +1920,47 @@ def generar_calendario_base(edicion_id, fecha_inicio, fecha_fin, dias_semana, ho
             return {'ok': False, 'error': 'Curso no encontrado'}
 
         sesiones_creadas = 0
-        fecha_cursor = fecha_inicio_obj
+        fechas_iter = []
 
-        with conn.cursor() as cur:
+        if fechas_manual_norm:
+            fechas_iter = fechas_manual_norm
+        else:
+            fecha_cursor = fecha_inicio_obj
             while fecha_cursor <= fecha_fin_obj:
                 if fecha_cursor.weekday() in dias_norm:
-                    fecha_iso = fecha_cursor.isoformat()
-                    for hora_inicio_norm, hora_fin_norm in bloques_horarios:
-                        cur.execute(
-                            '''
-                            SELECT 1
-                            FROM sesiones_curso
-                            WHERE edicion_id = %s AND fecha = %s AND hora_inicio = %s AND hora_fin = %s
-                            LIMIT 1
-                            ''',
-                            (edicion_id_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm),
-                        )
-                        existe = cur.fetchone()
-                        if existe:
-                            continue
-
-                        cur.execute(
-                            '''
-                            INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
-                            VALUES (%s, %s, %s, %s, 0, NULL)
-                            ''',
-                            (
-                                edicion_id_limpio,
-                                fecha_iso,
-                                hora_inicio_norm,
-                                hora_fin_norm,
-                            ),
-                        )
-                        sesiones_creadas += 1
-
+                    fechas_iter.append(fecha_cursor)
                 fecha_cursor += timedelta(days=1)
+
+        with conn.cursor() as cur:
+            for fecha_cursor in fechas_iter:
+                fecha_iso = fecha_cursor.isoformat()
+                for hora_inicio_norm, hora_fin_norm in bloques_horarios:
+                    cur.execute(
+                        '''
+                        SELECT 1
+                        FROM sesiones_curso
+                        WHERE edicion_id = %s AND fecha = %s AND hora_inicio = %s AND hora_fin = %s
+                        LIMIT 1
+                        ''',
+                        (edicion_id_limpio, fecha_iso, hora_inicio_norm, hora_fin_norm),
+                    )
+                    existe = cur.fetchone()
+                    if existe:
+                        continue
+
+                    cur.execute(
+                        '''
+                        INSERT INTO sesiones_curso (edicion_id, fecha, hora_inicio, hora_fin, estado, token_asistencia)
+                        VALUES (%s, %s, %s, %s, 0, NULL)
+                        ''',
+                        (
+                            edicion_id_limpio,
+                            fecha_iso,
+                            hora_inicio_norm,
+                            hora_fin_norm,
+                        ),
+                    )
+                    sesiones_creadas += 1
 
         hora_texto = None
         if len(bloques_horarios) == 1:
@@ -2037,141 +2072,99 @@ def obtener_reporte_asistencia_curso(id_target):
             total_sesiones_curso += 1
 
         if es_catalogo:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
+            query_matriculas = '''
+                WITH asistencia AS (
                     SELECT
-                        m.id AS matricula_id,
-                        m.numero_empleado,
-                        m.aprobado,
-                        m.comentario_validacion,
-                        d.nombre_completo
-                    FROM matriculas m
-                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
-                    LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                        ra.numero_empleado,
+                        COUNT(*) AS total_asistencias,
+                        MAX(
+                            CASE
+                                WHEN ra.fecha_marcado IS NOT NULL AND ra.fecha_marcado <> ''
+                                     AND ra.hora_marcado IS NOT NULL AND ra.hora_marcado <> ''
+                                THEN ra.fecha_marcado || ' ' || ra.hora_marcado
+                            END
+                        ) AS ultima_marcacion,
+                        ARRAY_AGG(ra.id_sesion) AS sesiones_asistidas
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
                     WHERE ef.catalogo_id = %s
-                    ORDER BY m.id DESC
-                    ''',
-                    (id_limpio,),
+                    GROUP BY ra.numero_empleado
                 )
-                matriculas_raw = cur.fetchall()
+                SELECT DISTINCT ON (m.numero_empleado)
+                    m.id AS matricula_id,
+                    m.numero_empleado,
+                    m.aprobado,
+                    m.comentario_validacion,
+                    d.nombre_completo,
+                    COALESCE(a.total_asistencias, 0) AS total_asistencias,
+                    a.ultima_marcacion,
+                    a.sesiones_asistidas
+                FROM matriculas m
+                JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                LEFT JOIN asistencia a ON a.numero_empleado = m.numero_empleado
+                WHERE ef.catalogo_id = %s
+                ORDER BY m.numero_empleado, m.id DESC
+            '''
+            query_params = (id_limpio, id_limpio)
         else:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
+            query_matriculas = '''
+                WITH asistencia AS (
                     SELECT
-                        m.id AS matricula_id,
-                        m.numero_empleado,
-                        m.aprobado,
-                        m.comentario_validacion,
-                        d.nombre_completo
-                    FROM matriculas m
-                    LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
-                    WHERE m.edicion_id = %s
-                    ORDER BY m.id DESC
-                    ''',
-                    (id_limpio,),
+                        ra.numero_empleado,
+                        COUNT(*) AS total_asistencias,
+                        MAX(
+                            CASE
+                                WHEN ra.fecha_marcado IS NOT NULL AND ra.fecha_marcado <> ''
+                                     AND ra.hora_marcado IS NOT NULL AND ra.hora_marcado <> ''
+                                THEN ra.fecha_marcado || ' ' || ra.hora_marcado
+                            END
+                        ) AS ultima_marcacion,
+                        ARRAY_AGG(ra.id_sesion) AS sesiones_asistidas
+                    FROM registro_asistencia ra
+                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
+                    WHERE s.edicion_id = %s
+                    GROUP BY ra.numero_empleado
                 )
-                matriculas_raw = cur.fetchall()
+                SELECT DISTINCT ON (m.numero_empleado)
+                    m.id AS matricula_id,
+                    m.numero_empleado,
+                    m.aprobado,
+                    m.comentario_validacion,
+                    d.nombre_completo,
+                    COALESCE(a.total_asistencias, 0) AS total_asistencias,
+                    a.ultima_marcacion,
+                    a.sesiones_asistidas
+                FROM matriculas m
+                LEFT JOIN docentes d ON d.numero_empleado = m.numero_empleado
+                LEFT JOIN asistencia a ON a.numero_empleado = m.numero_empleado
+                WHERE m.edicion_id = %s
+                ORDER BY m.numero_empleado, m.id DESC
+            '''
+            query_params = (id_limpio, id_limpio)
+
+        with conn.cursor() as cur:
+            cur.execute(query_matriculas, query_params)
+            matriculas_raw = cur.fetchall()
 
         matriculas_por_docente = {}
         for fila in matriculas_raw:
             numero_empleado = (fila['numero_empleado'] or '').strip()
-            if not numero_empleado or numero_empleado in matriculas_por_docente:
-                continue
-            matriculas_por_docente[numero_empleado] = fila
-
-        asistencia_por_docente = {}
-        if es_catalogo:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
-                    SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
-                    FROM registro_asistencia ra
-                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                    WHERE ef.catalogo_id = %s
-                    GROUP BY ra.numero_empleado
-                    ''',
-                    (id_limpio,),
-                )
-                asistencia_raw = cur.fetchall()
-        else:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
-                    SELECT ra.numero_empleado, COUNT(*) AS total_asistencias
-                    FROM registro_asistencia ra
-                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                    WHERE s.edicion_id = %s
-                    GROUP BY ra.numero_empleado
-                    ''',
-                    (id_limpio,),
-                )
-                asistencia_raw = cur.fetchall()
-        for fila in asistencia_raw:
-            numero_empleado = (fila['numero_empleado'] or '').strip()
-            asistencia_por_docente[numero_empleado] = int(fila['total_asistencias'] or 0)
-
-        if es_catalogo:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
-                    SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
-                    FROM registro_asistencia ra
-                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                    JOIN ediciones_formativas ef ON ef.id = s.edicion_id
-                    WHERE ef.catalogo_id = %s
-                    ''',
-                    (id_limpio,),
-                )
-                asistencia_detalle_raw = cur.fetchall()
-        else:
-            with conn.cursor() as cur:
-                cur.execute(
-                    '''
-                    SELECT ra.numero_empleado, ra.id_sesion, ra.fecha_marcado, ra.hora_marcado
-                    FROM registro_asistencia ra
-                    JOIN sesiones_curso s ON s.id_sesion = ra.id_sesion
-                    WHERE s.edicion_id = %s
-                    ''',
-                    (id_limpio,),
-                )
-                asistencia_detalle_raw = cur.fetchall()
-
-        asistencias_por_docente_sesion = {}
-        ultima_marcacion_por_docente = {}
-        for fila in asistencia_detalle_raw:
-            numero_empleado = (fila['numero_empleado'] or '').strip()
             if not numero_empleado:
                 continue
 
-            try:
-                id_sesion_asistencia = int(fila['id_sesion'])
-            except (TypeError, ValueError):
-                continue
-
-            if numero_empleado not in asistencias_por_docente_sesion:
-                asistencias_por_docente_sesion[numero_empleado] = set()
-            asistencias_por_docente_sesion[numero_empleado].add(id_sesion_asistencia)
-
-            fecha_val = fila['fecha_marcado']
-            fecha_marcado = fecha_val.strftime('%Y-%m-%d') if hasattr(fecha_val, 'strftime') else (fecha_val or '').strip()
-            
-            hora_val = fila['hora_marcado']
-            hora_marcado = hora_val.strftime('%H:%M:%S')[:5] if hasattr(hora_val, 'strftime') else (hora_val or '').strip()[:5]
-            
-            marca_dt = None
-            if fecha_marcado and hora_marcado:
+            sesiones_raw = fila.get('sesiones_asistidas') or []
+            sesiones_asistidas = set()
+            for sesion_id in sesiones_raw:
                 try:
-                    marca_dt = datetime.strptime(f"{fecha_marcado} {hora_marcado}", '%Y-%m-%d %H:%M')
-                except ValueError:
-                    marca_dt = None
+                    sesiones_asistidas.add(int(sesion_id))
+                except (TypeError, ValueError):
+                    continue
 
-            if marca_dt:
-                actual = ultima_marcacion_por_docente.get(numero_empleado)
-                if not actual or marca_dt > actual:
-                    ultima_marcacion_por_docente[numero_empleado] = marca_dt
+            item = dict(fila)
+            item['sesiones_asistidas'] = sesiones_asistidas
+            matriculas_por_docente[numero_empleado] = item
 
         def _formatear_fecha_mes(fecha_iso):
             if not fecha_iso:
@@ -2191,6 +2184,21 @@ def obtener_reporte_asistencia_curso(id_target):
                 return f"{fecha_obj.day:02d}/{mes_nombre}"
             except (ValueError, IndexError):
                 return fecha_limpia
+
+        def _parsear_ultima_marcacion(valor):
+            if not valor:
+                return None
+            if isinstance(valor, datetime):
+                return valor
+            valor_limpio = str(valor).strip()
+            if not valor_limpio:
+                return None
+            for formato in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+                try:
+                    return datetime.strptime(valor_limpio, formato)
+                except ValueError:
+                    continue
+            return None
 
         def _formatear_ultima_marcacion(marca_dt):
             if not marca_dt:
@@ -2212,24 +2220,33 @@ def obtener_reporte_asistencia_curso(id_target):
 
         hora_etiqueta = _etiqueta_horario_edicion(jornada_edicion, curso['hora'])
 
+        # Pre-compilar set de sesiones asistidas para búsqueda O(1)
+        sesiones_asistidas_sets = {}
+        for numero_empleado, fila in matriculas_por_docente.items():
+            sesiones_raw = fila.get('sesiones_asistidas') or []
+            sesiones_set = set()
+            for sesion_id in sesiones_raw:
+                try:
+                    sesiones_set.add(int(sesion_id))
+                except (TypeError, ValueError):
+                    pass
+            sesiones_asistidas_sets[numero_empleado] = sesiones_set
+
         for numero_empleado, fila in matriculas_por_docente.items():
             total_sesiones_jornada = total_sesiones_curso
-            asistencias_docente = asistencia_por_docente.get(numero_empleado, 0)
+            asistencias_docente = int(fila.get('total_asistencias') or 0)
             porcentaje_docente = 0.0
             if total_sesiones_jornada > 0:
                 porcentaje_docente = round((asistencias_docente / total_sesiones_jornada) * 100, 1)
 
-            sesiones_docente = asistencias_por_docente_sesion.get(numero_empleado, set())
+            sesiones_docente = sesiones_asistidas_sets.get(numero_empleado, set())
             mapa_asistencia = []
             fechas_ausentes = []
             for sesion in sesiones_curso_ordenadas:
                 id_sesion = sesion['id_sesion']
-                estado_sesion = int(sesion['estado'] or 0)
-                if id_sesion and id_sesion in sesiones_docente:
+                if id_sesion in sesiones_docente:
                     mapa_asistencia.append({'estado': 'presente'})
-                    continue
-
-                if estado_sesion == 2:
+                elif int(sesion['estado'] or 0) == 2:
                     mapa_asistencia.append({'estado': 'ausente'})
                     fecha_formateada = _formatear_fecha_mes(sesion['fecha'])
                     if fecha_formateada:
@@ -2237,17 +2254,17 @@ def obtener_reporte_asistencia_curso(id_target):
                 else:
                     mapa_asistencia.append({'estado': 'futura'})
 
-            ultima_marcacion = _formatear_ultima_marcacion(ultima_marcacion_por_docente.get(numero_empleado))
+            ultima_marcacion = _formatear_ultima_marcacion(
+                _parsear_ultima_marcacion(fila.get('ultima_marcacion'))
+            )
 
-            estado_matricula = fila['aprobado']
-            if estado_matricula == 1:
-                estado_texto = 'Aprobado'
-            elif estado_matricula == 0:
-                estado_texto = 'No aprobado'
-            elif estado_matricula == 2:
-                estado_texto = 'Abandono'
-            else:
-                estado_texto = 'Pendiente'
+            aprobado = fila['aprobado']
+            estado_texto = (
+                'Aprobado' if aprobado == 1 else
+                'No aprobado' if aprobado == 0 else
+                'Abandono' if aprobado == 2 else
+                'Pendiente'
+            )
 
             grupos[jornada_edicion]['docentes'].append(
                 {

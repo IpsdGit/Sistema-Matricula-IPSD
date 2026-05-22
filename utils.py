@@ -549,13 +549,9 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
         SELECT DISTINCT edicion_id
         FROM matriculas
         WHERE numero_empleado = %s
-        UNION
-        SELECT DISTINCT edicion_id
-        FROM matricula_historial
-        WHERE numero_empleado = %s
     '''
 
-    params_vinculados = (numero_empleado, numero_empleado)
+    params_vinculados = (numero_empleado,)
 
     with conn.cursor() as cur:
         cur.execute(

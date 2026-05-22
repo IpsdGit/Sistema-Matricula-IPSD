@@ -73,6 +73,7 @@ def inicializar_bd():
             FOREIGN KEY (tipo_accion) REFERENCES tipo_accion_formativa (codigo)
         )
     ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_catalogo_acciones_direccion ON catalogo_acciones (direccion_codigo)')
 
     # Ediciones formativas (ejecucion/jornada)
     cursor.execute('''
@@ -126,6 +127,9 @@ def inicializar_bd():
             FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
         )
     ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion ON matriculas (edicion_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_numero ON matriculas (numero_empleado)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion_empleado ON matriculas (edicion_id, numero_empleado)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sesiones_curso (
@@ -139,6 +143,7 @@ def inicializar_bd():
             FOREIGN KEY (edicion_id) REFERENCES ediciones_formativas (id) ON DELETE CASCADE
         )
     ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_edicion ON sesiones_curso (edicion_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sesiones_curso_fecha ON sesiones_curso (edicion_id, fecha, hora_inicio)')
 
     cursor.execute('''

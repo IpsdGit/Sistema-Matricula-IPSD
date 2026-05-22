@@ -4842,3 +4842,87 @@ Inicio: Lunes, 22 de Abril de 2026
 **Versión actual**: 1.17.0 (Migración a PostgreSQL y Pulido UX de Plantillas)  
 **Estado**: Development - Base de datos PostgreSQL integrada con éxito y diseño de modales responsivo refinado.
 
+---
+
+## 📅 Selección Manual de Calendario y Unificación Estética (v1.18.0)
+
+### Cambio 18.1: Implementación de Selección Manual de Días de Clase y Generación Flexible de Calendario
+**Fecha**: Mayo 22, 2026  
+**Archivos afectados**: `routes/admin.py`, `services/admin_service.py`, `templates/admin.html`
+
+**QUÉ**:
+- Introducción del parámetro `modo_configuracion` (`auto` o `manual`) y el campo `fechas_manual` en las solicitudes de creación y edición de jornadas.
+- Adaptación de la lógica de negocio en `generar_calendario_base` para soportar la inserción de sesiones basadas en una lista explícita de fechas seleccionadas por el usuario, omitiendo la iteración cíclica basada en días de la semana.
+- Integración en el frontend de un selector interactivo sobre el calendario que permite a los administradores habilitar y marcar manualmente los días específicos de clases.
+
+**POR QUÉ**:
+- Los usuarios manifestaban dificultades para seleccionar días del calendario que no estuvieran alineados rígidamente con los días de la semana predeterminados.
+- Se requería permitir configuraciones excepcionales o jornadas con fechas asimétricas que no sigan un patrón regular de días de la semana.
+
+**PARA QUÉ**:
+- Habilitar flexibilidad total en la planeación y programación de sesiones de clases, permitiendo seleccionar y deseleccionar fechas específicas directamente en el calendario interactivo.
+
+---
+
+### Cambio 18.2: Unificación Estética en Tablas, Modales y Modos Claro/Oscuro
+**Fecha**: Mayo 22, 2026  
+**Archivos afectados**: `templates/admin.html`, `templates/base.html`, `templates/dashboard.html`
+
+**QUÉ**:
+- Unificación del diseño de las tablas administrativas a través de la clase CSS `.admin-table-container`, aplicando sombras neutras, bordes suaves y fondos desenfocados (`backdrop-filter`) compatibles con los modos claro y oscuro.
+- Eliminación de la línea de división visual en el modo claro, unificando el fondo blanco en todo el panel de administración (`admin-main`, `admin-layout`).
+- Modificaciones en los estilos CSS aplicados a Choices.js en modo oscuro para mejorar la legibilidad y corregir superposiciones de íconos absolutos.
+- Ajuste del script de control de temas en `base.html` y `dashboard.html` para sincronizar la clase global `.dark` con el elemento raíz, asegurando que Tailwind procese los estilos oscuros sin parpadeos visuales al cargar la página.
+- Sincronización del estilo de fuentes con la tipografía oficial UNAH (`Manrope`).
+
+**POR QUÉ**:
+- La interfaz del modo claro presentaba divisiones marcadas e inconsistencias visuales en el fondo y bordes de las secciones.
+- Ciertos modales y tablas (ej. Plantillas PDF) no seguían la misma línea gráfica del sistema ni los mismos esquemas de sombreado y transición.
+- Se requería mantener la consistencia tipográfica y corregir problemas de legibilidad de las listas desplegables en el modo oscuro.
+
+**PARA QUÉ**:
+- Lograr una experiencia estética premium y homogénea en todas las pantallas administrativas y modos de color.
+- Asegurar que los componentes y menús interactivos no presenten recortes ni problemas de visibilidad en resoluciones estándar.
+
+---
+
+### Cambio 18.3: Optimización del Libro de Asistencia y Consultas de Matrícula
+**Fecha**: Mayo 22, 2026  
+**Archivos afectados**: `services/admin_service.py`, `utils.py`, `templates/validador.html`
+
+**QUÉ**:
+- Refactorización de la consulta SQL de reporte de asistencia en `obtener_reporte_asistencia_curso` empleando una única consulta optimizada PostgreSQL con agregación de arreglos (`ARRAY_AGG`) para reducir los accesos a base de datos.
+- Simplificación de la consulta de eventos de calendario docente en `utils.py`, removiendo una unión redundante con `matricula_historial` y corrigiendo la tupla de parámetros vinculados.
+- Cast a string de la fecha de emisión en `validador.html` para evitar excepciones de Jinja2 provocadas por objetos de fecha nativos de PostgreSQL.
+- Creación de índices específicos en PostgreSQL (`idx_catalogo_acciones_direccion`, `idx_matriculas_edicion`, `idx_matriculas_numero`, etc.) en `scripts/setup_bd.py` para optimizar las uniones y búsquedas recurrentes en el portal.
+
+**POR QUÉ**:
+- Las consultas a base de datos generaban sobrecarga innecesaria al realizar consultas cíclicas o redundantes.
+- El validator generaba un error 500 al intentar manipular campos `TIMESTAMP` de PostgreSQL como subcadenas.
+
+**PARA QUÉ**:
+- Mejorar los tiempos de respuesta del servidor y agilizar la visualización de asistencias en cursos grandes.
+- Prevenir caídas del sistema en producción y asegurar la correcta validación de certificados digitales.
+
+---
+
+### Cambio 18.4: Adaptación de Pruebas Unitarias para SQLite Local
+**Fecha**: Mayo 22, 2026  
+**Archivos afectados**: `tests/test_docente_login.py`
+
+**QUÉ**:
+- Modificación del setup del test de login de docentes para interactuar con una base de datos local SQLite (`matricula.db`) en lugar de depender de la conexión PostgreSQL global.
+- Ajuste del esquema de la tabla temporal de docentes a formato SQLite compatible.
+
+**POR QUÉ**:
+- La ejecución de pruebas unitarias locales en entornos aislados o de integración continua no siempre cuenta con una base de datos PostgreSQL activa y con datos pre-cargados.
+
+**PARA QUÉ**:
+- Facilitar el testing automatizado del login de docentes sin dependencias complejas del motor de producción.
+
+---
+
+**Última actualización**: Mayo 22, 2026  
+**Versión actual**: 1.18.0 (Selección Manual de Calendario y Unificación Estética)  
+**Estado**: Development - Funcionalidad de calendario flexible integrada, diseño responsivo unificado en tablas/modales y optimización de base de datos PostgreSQL.
+

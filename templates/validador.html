@@ -299,7 +299,7 @@
 
           <div class="cert-field">
             <label>Fecha de Emisión</label>
-            <span>{{ datos.fecha_emision[:10] if datos.fecha_emision else '—' }}</span>
+            <span>{{ (datos.fecha_emision|string)[:10] if datos.fecha_emision else '—' }}</span>
           </div>
         </div>
 

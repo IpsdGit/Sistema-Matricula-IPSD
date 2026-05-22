@@ -1,11 +1,12 @@
 import os
+import sqlite3
 import unittest
 from unittest.mock import patch
 
 os.environ['SECRET_KEY'] = 'test-secret-key'
 
 from app import app
-from database import get_db_connection
+DB_PATH = 'matricula.db'
 
 
 class DocenteLoginTest(unittest.TestCase):
@@ -15,16 +16,27 @@ class DocenteLoginTest(unittest.TestCase):
 
     def setUp(self):
         self.client = app.test_client()
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM docentes WHERE numero_empleado = %s", ('12345678',))
-            cur.execute(
-                '''
-                INSERT INTO docentes (numero_empleado, nombre_completo, correo_institucional, activo)
-                VALUES (%s, %s, %s, %s)
-                ''',
-                ('12345678', 'Docente Prueba', 'docente.prueba@unah.edu.hn', 1),
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS docentes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero_empleado TEXT UNIQUE NOT NULL,
+                nombre_completo TEXT NOT NULL,
+                correo_institucional TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                activo INTEGER NOT NULL DEFAULT 1,
+                fecha_sincronizacion DATETIME DEFAULT CURRENT_TIMESTAMP
             )
+            '''
+        )
+        conn.execute('DELETE FROM docentes')
+        conn.execute(
+            '''
+            INSERT INTO docentes (numero_empleado, nombre_completo, correo_institucional, activo)
+            VALUES (?, ?, ?, ?)
+            ''',
+            ('12345678', 'Docente Prueba', 'docente.prueba@unah.edu.hn', 1),
+        )
         conn.commit()
         conn.close()
 
