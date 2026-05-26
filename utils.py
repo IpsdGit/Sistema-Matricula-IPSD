@@ -332,6 +332,7 @@ def generar_id_curso(conn, direccion, modalidad):
 def cargar_contexto_dashboard_docente(conn, numero_empleado):
     query_matriculados = '''
      SELECT ef.id AS edicion_id,
+         ca.id AS catalogo_id,
          ca.nombre,
          ca.modalidad,
          ef.trimestre,
@@ -367,6 +368,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
             {
                 'id': fila['edicion_id'],
                 'edicion_id': fila['edicion_id'],
+                'catalogo_id': fila['catalogo_id'],
                 'nombre': fila['nombre'],
                 'trimestre': fila['trimestre'],
                 'fecha_inicio': fila['fecha_inicio'],
@@ -387,6 +389,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     query_disponibles = f'''
         SELECT ef.id AS edicion_id,
+               ca.id AS catalogo_id,
                ca.nombre,
                ca.modalidad,
                ef.trimestre,
@@ -405,7 +408,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         cur.execute(query_disponibles, (now_str,))
         cursos_raw = cur.fetchall()
 
-    cursos_disponibles = []
+    cursos_agrupados = {}
     for c in cursos_raw:
         clave = normalizar_nombre_curso(c['nombre'])
         resumen = resumen_intentos.get(
@@ -428,36 +431,47 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         if bloqueado:
             continue
 
+        fecha_inicio = c['fecha_inicio']
+        clave_grupo = (clave, fecha_inicio)
+
         horarios_disponibles = obtener_horarios_disponibles_curso(conn, c['edicion_id'])
+        edicion_info = {
+            'edicion_id': c['edicion_id'],
+            'jornada': c['jornada'],
+            'hora': c['hora'],
+            'horarios': horarios_disponibles
+        }
 
-        mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
-        modalidad = (c['modalidad'] or '').strip()
-        if modalidad not in {'Virtual', 'Presencial', 'B-Learning'}:
-            modalidad = 'Virtual'
+        if clave_grupo not in cursos_agrupados:
+            mensaje_oportunidades = construir_mensaje_oportunidades(resumen)
+            modalidad = (c['modalidad'] or '').strip()
+            if modalidad not in {'Virtual', 'Presencial', 'B-Learning'}:
+                modalidad = 'Virtual'
 
-        fecha_dt = _fecha_desde_iso(c['fecha_inicio'])
-        anio = str(fecha_dt.year) if fecha_dt else None
-        mes = MESES_ES[fecha_dt.month - 1] if fecha_dt else None
-        dia = str(fecha_dt.day) if fecha_dt else None
+            fecha_dt = _fecha_desde_iso(fecha_inicio)
+            anio = str(fecha_dt.year) if fecha_dt else None
+            mes = MESES_ES[fecha_dt.month - 1] if fecha_dt else None
+            dia = str(fecha_dt.day) if fecha_dt else None
 
-        cursos_disponibles.append(
-            {
+            cursos_agrupados[clave_grupo] = {
                 'id': c['edicion_id'],
-                'edicion_id': c['edicion_id'],
+                'catalogo_id': c['catalogo_id'],
                 'nombre': c['nombre'],
                 'trimestre': c['trimestre'],
-                'fecha_inicio': c['fecha_inicio'],
-            'anio': anio,
-            'mes': mes,
-            'dia': dia,
+                'fecha_inicio': fecha_inicio,
+                'anio': anio,
+                'mes': mes,
+                'dia': dia,
                 'modalidad': modalidad,
                 'modalidad_icono': 'B' if modalidad == 'B-Learning' else ('V' if modalidad == 'Virtual' else 'P'),
-                'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(c['fecha_inicio']),
-                'horarios': horarios_disponibles,
-                'horarios_preview': horarios_disponibles[:2],
+                'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(fecha_inicio),
                 'mensaje_oportunidades': mensaje_oportunidades,
+                'ediciones': [edicion_info]
             }
-        )
+        else:
+            cursos_agrupados[clave_grupo]['ediciones'].append(edicion_info)
+
+    cursos_disponibles = list(cursos_agrupados.values())
 
     avisos_oportunidades = []
     for item in resumen_intentos.values():
@@ -759,12 +773,12 @@ def construir_notificaciones_docente(
         agregar(
             tipo='nueva_oferta',
             titulo='Nueva acción formativa disponible',
-            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['edicion_id']})",
+            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['id']})",
             nivel='info',
             icono='🆕',
             fecha='Disponible ahora',
-            clave=f"oferta-{curso['edicion_id']}",
-            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['edicion_id']}",
+            clave=f"oferta-{curso['id']}",
+            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
             accion_label='Ir a la acción formativa',
         )
     if len(cursos_disponibles) > 4:

@@ -107,20 +107,81 @@
     font-family: 'Manrope', sans-serif;
     background-attachment: fixed;
   }
-
+  
   :root:not(.dark) body {
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
     background-image: none !important;
   }
 
   :root:not(.dark) .admin-main {
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
     background-image: none !important;
   }
 
   :root:not(.dark) .admin-layout {
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
     background-image: none !important;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 23, 54, 0.08);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  }
+  .dark .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-bottom: 2px solid #c4c6d0;
+    transition: all 0.3s ease;
+  }
+  .dark .glass-input {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(196, 198, 208, 0.3);
+    color: #ffffff;
+  }
+
+  .glass-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom-color: #002b5c;
+    box-shadow: 0 4px 12px -2px rgba(0, 43, 92, 0.1);
+    outline: none;
+  }
+  
+  html.dark .glass-input:focus {
+    background: rgba(15, 23, 42, 0.9) !important;
+    border-bottom-color: #3b82f6 !important;
+  }
+
+  .table-row-hover:hover {
+    background-color: rgba(214, 227, 255, 0.2);
+  }
+
+  /* Estilo activo para los links del pillbar */
+  .pillbar-nav .sidebar-link.active {
+    background-color: rgba(0, 23, 54, 0.1) !important;
+    color: #001736 !important;
+    font-weight: 700 !important;
+  }
+
+  .study-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px -8px rgba(0, 43, 92, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .study-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -8px rgba(0, 43, 92, 0.12);
   }
 
   /* Organic Shapes & Metric Cards */
@@ -129,11 +190,11 @@
   }
 
   .glass-panel {
-    background: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(0, 23, 54, 0.08);
-    box-shadow: 0 10px 30px -10px rgba(0, 23, 54, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
   }
 
   .metric-card-bg-1 {
@@ -167,163 +228,27 @@
   }
 
   html.dark .metric-card-bg-1 {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(212, 227, 255, 0.05) 100%);
+    background: linear-gradient(135deg, #1e293b 0%, rgba(148, 163, 184, 0.2) 100%);
+    border-color: rgba(148, 163, 184, 0.25) !important;
+    box-shadow: 0 10px 30px -10px rgba(148, 163, 184, 0.08) !important;
   }
 
   html.dark .metric-card-bg-2 {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(67, 149, 243, 0.05) 100%);
+    background: linear-gradient(135deg, #1e293b 0%, rgba(59, 130, 246, 0.25) 100%);
+    border-color: rgba(59, 130, 246, 0.25) !important;
+    box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.1) !important;
   }
 
   html.dark .metric-card-bg-3 {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(34, 197, 94, 0.05) 100%);
+    background: linear-gradient(135deg, #1e293b 0%, rgba(34, 197, 94, 0.25) 100%);
+    border-color: rgba(34, 197, 94, 0.25) !important;
+    box-shadow: 0 10px 30px -10px rgba(34, 197, 94, 0.1) !important;
   }
 
   html.dark .metric-card-bg-4 {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(255, 199, 44, 0.05) 100%);
-  }
-
-  .glass-card {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 23, 54, 0.08);
-    box-shadow: 0 12px 36px -12px rgba(0, 23, 54, 0.09), 0 1px 3px rgba(0, 0, 0, 0.02);
-  }
-
-  .dark .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  :root:not(.dark) nav.fixed {
-    border-color: rgba(0, 23, 54, 0.1) !important;
-    box-shadow: 0 12px 30px -10px rgba(0, 23, 54, 0.08), 0 1px 4px rgba(0, 0, 0, 0.02) !important;
-  }
-
-  .glass-input {
-    background: rgba(255, 255, 255, 0.5);
-    border: none;
-    border-bottom: 2px solid #c4c6d0;
-    transition: all 0.3s ease;
-  }
-
-  .dark .glass-input {
-    background: rgba(255, 255, 255, 0.1);
-    border-bottom-color: rgba(196, 198, 208, 0.3);
-    color: #ffffff;
-  }
-
-  .glass-input:focus {
-    background: rgba(255, 255, 255, 0.9);
-    border-bottom-color: #002b5c;
-    box-shadow: 0 4px 12px -2px rgba(0, 43, 92, 0.1);
-    outline: none;
-  }
-
-  html.dark .glass-input:focus {
-    background: rgba(15, 23, 42, 0.9) !important;
-    border-bottom-color: #3b82f6 !important;
-  }
-
-  .table-row-hover:hover {
-    background-color: rgba(214, 227, 255, 0.2);
-  }
-
-  /* Contenedor Unificado para Tablas de Administración */
-  .admin-table-container {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
-    border-radius: 16px 16px 32px 32px !important;
-    overflow: hidden !important;
-  }
-
-  .admin-table-container.overflow-visible {
-    overflow: visible !important;
-  }
-
-  html.dark .admin-table-container {
-    background-color: rgba(30, 41, 59, 0.85) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
-  }
-
-  /* Estilo general para las tablas */
-  .admin-table-container table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0;
-  }
-
-  /* Encabezado de la tabla */
-  .admin-table-container thead tr {
-    background-color: rgba(241, 245, 249, 0.6) !important;
-    border-bottom: 1.5px solid rgba(0, 0, 0, 0.08) !important;
-  }
-
-  html.dark .admin-table-container thead tr {
-    background-color: rgba(15, 23, 42, 0.45) !important;
-    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-  }
-
-  .admin-table-container th {
-    padding: 1rem 1.5rem !important;
-    /* py-4 px-6 equivalent */
-    font-weight: 700 !important;
-  }
-
-  /* Filas de la tabla */
-  .admin-table-container tbody tr {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
-    transition: background-color 0.2s ease !important;
-  }
-
-  html.dark .admin-table-container tbody tr {
-    border-bottom-color: rgba(255, 255, 255, 0.04) !important;
-  }
-
-  .admin-table-container tbody tr:last-child {
-    border-bottom: none !important;
-  }
-
-  .admin-table-container td {
-    padding: 1rem 1.5rem !important;
-    /* py-4 px-6 equivalent */
-    vertical-align: middle !important;
-  }
-
-  /* Efecto Hover en las filas */
-  .admin-table-container tbody tr:hover,
-  .admin-table-container .table-row-hover:hover {
-    background-color: rgba(241, 245, 249, 0.8) !important;
-  }
-
-  html.dark .admin-table-container tbody tr:hover,
-  html.dark .admin-table-container .table-row-hover:hover {
-    background-color: rgba(30, 41, 59, 0.6) !important;
-  }
-
-  /* Estilo activo para los links del pillbar */
-  .pillbar-nav .sidebar-link.active {
-    background-color: rgba(0, 23, 54, 0.1) !important;
-    color: #001736 !important;
-    font-weight: 700 !important;
-  }
-
-  .study-card {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px -8px rgba(0, 43, 92, 0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .study-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px -8px rgba(0, 43, 92, 0.12);
+    background: linear-gradient(135deg, #1e293b 0%, rgba(245, 158, 11, 0.25) 100%);
+    border-color: rgba(245, 158, 11, 0.25) !important;
+    box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.1) !important;
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -352,18 +277,25 @@
     background-color: #c4c6d0;
   }
 
+  /* Divisiones nítidas para encabezados de tablas */
+  thead tr {
+    border-bottom: 2px solid rgba(0, 23, 54, 0.12) !important;
+  }
+  html.dark thead tr {
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
   /* --- DARK MODE GLOBAL FIXES --- */
   html.dark body {
     background: #0f172a !important;
     background-image: none !important;
     color: #e2e8f0 !important;
   }
-
+  
   /* Scrollbars */
   html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: rgba(51, 65, 85, 0.8);
   }
-
   html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background-color: rgba(71, 85, 105, 0.8);
   }
@@ -410,7 +342,7 @@
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
     color: #e2e8f0 !important;
   }
-
+  
   /* Text readability */
   html.dark .text-on-surface,
   html.dark .text-on-surface-variant,
@@ -432,11 +364,11 @@
   html.dark .modal-desc {
     color: #e2e8f0 !important;
   }
-
+  
   html.dark .text-primary {
     color: #93c5fd !important;
   }
-
+  
   html.dark .fill-white {
     fill: #0f172a !important;
   }
@@ -479,7 +411,7 @@
   html.dark .group:hover .group-hover\/day\:bg-surface-container-high {
     background-color: rgba(51, 65, 85, 0.55) !important;
   }
-
+  
   html.dark .pillbar-nav .sidebar-link.active {
     background-color: rgba(37, 99, 235, 0.2) !important;
     color: #bfdbfe !important;
@@ -495,14 +427,13 @@
     background-color: rgba(51, 65, 85, 0.6) !important;
     color: #e2e8f0 !important;
   }
-
+  
   html.dark .btn-primary-ipsd {
     background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
     border-color: #3b82f6 !important;
     color: #ffffff !important;
     box-shadow: none !important;
   }
-
   html.dark .btn-danger-ipsd {
     background: linear-gradient(135deg, #b91c1c, #ef4444) !important;
     border-color: #ef4444 !important;
@@ -515,7 +446,7 @@
     box-shadow: none;
   }
 
-
+  
   /* Native Options Dark Mode */
   html.dark option {
     background-color: #1e293b !important;
@@ -557,7 +488,7 @@
   }
 
   html.dark .select-estado-edicion.estado-en-edicion,
-  html.dark .select-estado-edicion.estado-en-edicion+.choices .choices__inner,
+  html.dark .select-estado-edicion.estado-en-edicion + .choices .choices__inner,
   html.dark .choices.estado-en-edicion .choices__inner {
     background-color: rgba(234, 179, 8, 0.18) !important;
     border-color: rgba(234, 179, 8, 0.55) !important;
@@ -565,7 +496,7 @@
   }
 
   html.dark .select-estado-edicion.estado-programado,
-  html.dark .select-estado-edicion.estado-programado+.choices .choices__inner,
+  html.dark .select-estado-edicion.estado-programado + .choices .choices__inner,
   html.dark .choices.estado-programado .choices__inner {
     background-color: rgba(34, 197, 94, 0.18) !important;
     border-color: rgba(34, 197, 94, 0.5) !important;
@@ -573,7 +504,7 @@
   }
 
   html.dark .select-estado-edicion.estado-finalizado,
-  html.dark .select-estado-edicion.estado-finalizado+.choices .choices__inner,
+  html.dark .select-estado-edicion.estado-finalizado + .choices .choices__inner,
   html.dark .choices.estado-finalizado .choices__inner {
     background-color: rgba(148, 163, 184, 0.18) !important;
     border-color: rgba(148, 163, 184, 0.5) !important;
@@ -599,10 +530,9 @@
     background-color: rgba(249, 115, 22, 0.1) !important;
     border-color: rgba(249, 115, 22, 0.35) !important;
   }
-
-  /* Modals, inputs, dropdowns */
-  html.dark input,
-  html.dark select,
+/* Modals, inputs, dropdowns */
+  html.dark input, 
+  html.dark select, 
   html.dark textarea,
   html.dark .form-input,
   html.dark .form-select {
@@ -632,9 +562,9 @@
     border: 1px solid rgba(59, 130, 246, 0.5) !important;
     color: #e2e8f0 !important;
   }
-
-  html.dark input:focus,
-  html.dark select:focus,
+  
+  html.dark input:focus, 
+  html.dark select:focus, 
   html.dark textarea:focus,
   html.dark .form-select:focus {
     border-color: #3b82f6 !important;
@@ -657,9 +587,9 @@
     border-color: rgba(71, 85, 105, 0.55) !important;
   }
 
-  html.dark .divide-outline-variant\/20> :not([hidden])~ :not([hidden]),
-  html.dark .divide-outline-variant\/30> :not([hidden])~ :not([hidden]),
-  html.dark .divide-outline-variant\/50> :not([hidden])~ :not([hidden]) {
+  html.dark .divide-outline-variant\/20 > :not([hidden]) ~ :not([hidden]),
+  html.dark .divide-outline-variant\/30 > :not([hidden]) ~ :not([hidden]),
+  html.dark .divide-outline-variant\/50 > :not([hidden]) ~ :not([hidden]) {
     border-color: rgba(71, 85, 105, 0.45) !important;
   }
 
@@ -724,10 +654,16 @@
     z-index: 9999 !important;
     max-height: 260px !important;
     overflow-y: auto !important;
+    pointer-events: none;
   }
 
   #modal-gestion-calendario .choices__list--dropdown {
     z-index: 9999 !important;
+  }
+
+  html.dark #modal-gestion-calendario .choices__list--dropdown.is-active,
+  html[data-theme="dark"] #modal-gestion-calendario .choices__list--dropdown.is-active {
+    pointer-events: auto;
   }
 
   /* Calendar */
@@ -739,36 +675,30 @@
     border-color: rgba(51, 65, 85, 0.6) !important;
     color: #e2e8f0 !important;
   }
-
+  
   html.dark .calendar-day-cell {
     background-color: rgba(15, 23, 42, 0.6) !important;
     border-color: rgba(51, 65, 85, 0.6) !important;
   }
-
   html.dark .calendar-day-cell:hover {
     background-color: rgba(37, 99, 235, 0.15) !important;
   }
-
   html.dark .calendar-day-number {
     color: #e2e8f0 !important;
   }
 
-  html.dark .calendar-day-pill .jornada-dia:checked+div,
-  html[data-theme="dark"] .calendar-day-pill .jornada-dia:checked+div {
+  html.dark .calendar-day-pill .jornada-dia:checked + div,
+  html[data-theme="dark"] .calendar-day-pill .jornada-dia:checked + div {
     background-color: #60a5fa !important;
     border-color: #60a5fa !important;
     color: #0f172a !important;
     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25) !important;
   }
 
-  html.dark .jornada-jornada+.choices .choices__inner,
-  html.dark .jornada-config-modo+.choices .choices__inner,
-  html.dark .jornada-trimestre+.choices .choices__inner,
-  html.dark .jornada-privacidad+.choices .choices__inner,
-  html[data-theme="dark"] .jornada-jornada+.choices .choices__inner,
-  html[data-theme="dark"] .jornada-config-modo+.choices .choices__inner,
-  html[data-theme="dark"] .jornada-trimestre+.choices .choices__inner,
-  html[data-theme="dark"] .jornada-privacidad+.choices .choices__inner {
+  html.dark .jornada-trimestre + .choices .choices__inner,
+  html.dark .jornada-privacidad + .choices .choices__inner,
+  html[data-theme="dark"] .jornada-trimestre + .choices .choices__inner,
+  html[data-theme="dark"] .jornada-privacidad + .choices .choices__inner {
     background-color: rgba(15, 23, 42, 0.8) !important;
     border-color: rgba(71, 85, 105, 0.8) !important;
     color: #f1f5f9 !important;
@@ -794,11 +724,9 @@
     color: #e2e8f0 !important;
     border-color: rgba(51, 65, 85, 0.6) !important;
   }
-
   html.dark .top-user-dropdown a {
     color: #94a3b8 !important;
   }
-
   html.dark .top-user-dropdown a:hover {
     background-color: rgba(37, 99, 235, 0.15) !important;
     color: #e2e8f0 !important;
@@ -828,8 +756,7 @@
   #modal-gestion-calendario .jornada-block .choices__list--dropdown {
     z-index: 9999 !important;
   }
-</style>
-<style>
+</style><style>
   .admin-screen {
     display: none;
   }
@@ -1000,7 +927,7 @@
   }
 
   .select-estado-edicion.estado-en-edicion,
-  .select-estado-edicion.estado-en-edicion+.choices .choices__inner,
+  .select-estado-edicion.estado-en-edicion + .choices .choices__inner,
   .choices.estado-en-edicion .choices__inner {
     border-color: #fbbf24 !important;
     background: #fffbeb !important;
@@ -1009,7 +936,7 @@
   }
 
   .select-estado-edicion.estado-programado,
-  .select-estado-edicion.estado-programado+.choices .choices__inner,
+  .select-estado-edicion.estado-programado + .choices .choices__inner,
   .choices.estado-programado .choices__inner {
     border-color: #86efac !important;
     background: #ecfdf5 !important;
@@ -1018,7 +945,7 @@
   }
 
   .select-estado-edicion.estado-finalizado,
-  .select-estado-edicion.estado-finalizado+.choices .choices__inner,
+  .select-estado-edicion.estado-finalizado + .choices .choices__inner,
   .choices.estado-finalizado .choices__inner {
     border-color: #e5e7eb !important;
     background: #f3f4f6 !important;
@@ -1618,9 +1545,7 @@
         class="w-9 h-9 rounded-full bg-primary flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-white/20">
         <span class="material-symbols-outlined text-white text-[20px]">school</span>
       </div>
-      <h2
-        class="font-headline-md text-base font-bold text-primary dark:text-primary-fixed leading-tight hidden lg:block"
-        style="margin:0;">UNAH
+      <h2 class="font-headline-md text-base font-bold text-primary dark:text-primary-fixed leading-tight hidden lg:block" style="margin:0;">UNAH
         Admin</h2>
     </div>
 
@@ -1644,12 +1569,12 @@
       <a href="/admin?view=matriculas"
         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
         data-view="matriculas" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">analytics</span> Reportes
+        <span class="material-symbols-outlined text-[18px]">analytics</span> Reportes / Historial
       </a>
       <a href="/admin?view=certificados"
         class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
         data-view="certificados" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Plantillas
+        <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Plantillas PDF
       </a>
       {% if es_superadmin %}
       <a href="/admin?view=usuarios"
@@ -1736,8 +1661,7 @@
             <div>
               <h1 class="font-headline-lg text-3xl font-extrabold text-primary dark:text-primary-fixed tracking-tight"
                 style="margin:0 0 0.25rem 0;">Panel Principal</h1>
-              <p class="font-body-lg text-on-surface-variant dark:text-outline-variant mt-1" style="margin:0;">Resumen
-                ejecutivo e indicadores
+              <p class="font-body-lg text-on-surface-variant dark:text-outline-variant mt-1" style="margin:0;">Resumen ejecutivo e indicadores
                 clave del sistema.</p>
             </div>
             <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
@@ -1825,30 +1749,21 @@
           </div>
 
           <!-- Charts Area -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4 animate-fade-up-2">
-            <!-- Chart Area 1: Line Chart -->
-            <div
-              class="glass-panel organic-card p-8 flex flex-col shadow-sm shadow-primary/5 dark:shadow-none h-[400px]">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 animate-fade-up-2">
+            <!-- Chart 1 -->
+            <div class="study-card p-6 flex flex-col h-[400px]">
               <div class="flex justify-between items-center mb-6">
-                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">
-                  Evolución de Matrículas</h3>
+                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">Evolución de Matrículas
+                </h3>
               </div>
               <div class="flex-1 relative w-full h-full">
                 <canvas id="chartMeses"></canvas>
               </div>
             </div>
-
-            <!-- Chart Area 2: Pro Donut Chart -->
-            <div
-              class="glass-panel organic-card p-8 flex flex-col shadow-sm shadow-primary/5 bg-blue-50/50 dark:bg-slate-800/20 h-[400px]">
+            <!-- Chart 2 -->
+            <div class="study-card p-6 flex flex-col h-[400px]">
               <div class="flex justify-between items-center mb-6">
-                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">
-                  Matrículas por Curso</h3>
-                <button
-                  class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high/50 dark:hover:bg-slate-700/50 text-on-surface-variant dark:text-outline-variant transition-colors"
-                  style="border:none; cursor:pointer; background:none;">
-                  <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                </button>
+                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">Matrículas por Curso</h3>
               </div>
               <div class="flex-1 relative w-full h-full flex items-center justify-center">
                 <canvas id="chartCursos"></canvas>
@@ -1863,11 +1778,9 @@
 
         <div class="mb-8 flex justify-between items-end animate-fade-up-1">
           <div>
-            <h1
-              class="font-headline-lg text-3xl font-extrabold text-primary dark:text-primary-fixed tracking-tight mb-2"
+            <h1 class="font-headline-lg text-3xl font-extrabold text-primary dark:text-primary-fixed tracking-tight mb-2"
               style="margin:0 0 0.5rem 0;">Gestión de Catálogos</h1>
-            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-              Crea, edita y organiza las
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">Crea, edita y organiza las
               acciones formativas de la institución.</p>
           </div>
           <button
@@ -1885,15 +1798,14 @@
 
             <!-- Insight Blob / Notification -->
             <div
-              class="bg-white/80 border border-surface-variant/50 rounded-3xl p-6 relative overflow-hidden backdrop-blur-md shadow-sm">
+              class="bg-white/95 dark:bg-surface-container-lowest/20 rounded-[32px] border border-slate-200/60 dark:border-white/5 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-primary/5 p-6 relative backdrop-blur-md">
               <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
               <div class="flex items-start gap-4 relative z-10">
                 <span class="material-symbols-outlined text-primary dark:text-primary-fixed text-3xl">lightbulb</span>
                 <div>
                   <h3 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed mb-1"
                     style="margin:0 0 0.25rem 0;">Nuevo periodo académico</h3>
-                  <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant mb-3"
-                    style="margin:0 0 0.75rem 0;">
+                  <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant mb-3" style="margin:0 0 0.75rem 0;">
                     Recuerda actualizar las modalidades de los catálogos para el próximo periodo intensivo de verano.
                   </p>
                   <a class="font-label-caps text-label-caps text-primary dark:text-primary-fixed hover:text-primary dark:text-primary-fixed-container transition-colors flex items-center gap-1 uppercase"
@@ -1906,8 +1818,7 @@
 
             <!-- New Catalog Form Card -->
             <div class="bg-white/90 backdrop-blur-xl border border-surface-variant/50 shadow-sm p-8 rounded-3xl">
-              <h3
-                class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed mb-6 flex items-center gap-2"
+              <h3 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed mb-6 flex items-center gap-2"
                 style="margin:0 0 1.5rem 0;">
                 <span class="material-symbols-outlined text-secondary"
                   style="font-variation-settings: 'FILL' 1;">add_box</span>
@@ -1919,8 +1830,7 @@
                 <input type="hidden" name="view" value="cursos">
 
                 <div>
-                  <label
-                    class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase mb-2">Código
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase mb-2">Código
                     (Autogenerado)</label>
                   {% set codigo_preview = (direcciones[0]['codigo'] if direcciones else 'IPSD') if es_superadmin else
                   admin_direccion %}
@@ -1932,9 +1842,7 @@
                 </div>
 
                 <div>
-                  <label
-                    class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Nombre
-                    de la Acción
+                  <label class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Nombre de la Acción
                     Formativa</label>
                   <input
                     class="w-full bg-surface border-b-2 border-primary/30 text-on-surface font-body-md text-body-md px-4 py-3 rounded-t-md focus:border-primary focus:bg-surface-container-lowest transition-all focus:ring-0 outline-none"
@@ -1945,8 +1853,7 @@
 
                 {% if es_superadmin %}
                 <div>
-                  <label
-                    class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Dirección
+                  <label class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Dirección
                     Responsable</label>
                   <div class="relative">
                     <select name="direccion_curso" id="direccion_curso"
@@ -1965,8 +1872,7 @@
                 </div>
                 {% else %}
                 <div>
-                  <label
-                    class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Dirección
+                  <label class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Dirección
                     Responsable</label>
                   <input type="text"
                     class="w-full bg-surface-container-low border-b-2 border-surface-variant text-on-surface-variant dark:text-outline-variant font-body-md text-body-md px-4 py-3 rounded-t-md focus:outline-none cursor-not-allowed"
@@ -1977,8 +1883,7 @@
 
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Modalidad</label>
+                    <label class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Modalidad</label>
                     <div class="relative">
                       <select name="modalidad" id="modalidad"
                         class="form-select w-full bg-surface border-b-2 border-primary/30 text-on-surface font-body-md text-body-md px-4 py-3 rounded-t-md appearance-none focus:border-primary focus:bg-surface-container-lowest transition-all focus:ring-0 outline-none"
@@ -1993,9 +1898,7 @@
                     </div>
                   </div>
                   <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Tipo
-                      de
+                    <label class="block font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase mb-2">Tipo de
                       Acción</label>
                     <div class="relative">
                       <select name="tipo_accion" id="tipo_accion"
@@ -2032,12 +1935,12 @@
 
           <!-- Right Column: Table (7 columns) -->
           <div class="lg:col-span-7">
-            <div class="admin-table-container h-full flex flex-col">
+            <div
+              class="bg-white/95 dark:bg-surface-container-lowest/20 rounded-[32px] border border-slate-200/60 dark:border-white/5 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-primary/5 h-full flex flex-col">
 
               <div
-                class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest/50">
-                <h3
-                  class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed flex items-center gap-2"
+                class="p-6 border-b border-surface-variant/50 flex justify-between items-center bg-surface-container-lowest/50">
+                <h3 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed flex items-center gap-2"
                   style="margin:0;">
                   <span class="material-symbols-outlined text-primary dark:text-primary-fixed/70">list_alt</span>
                   Catálogos Registrados
@@ -2047,15 +1950,13 @@
                 </h3>
               </div>
 
-              <div class="overflow-x-auto flex-grow">
+              <div class="overflow-x-auto flex-grow p-6">
                 <table class="w-full text-left border-collapse">
                   <thead>
-                    <tr>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
+                    <tr class="border-b-2 border-surface-variant">
+                      <th class="pb-3 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                         Código / Nombre</th>
-                      <th
-                        class="pb-3 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
+                      <th class="pb-3 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                         Modalidad</th>
                       <th
                         class="pb-3 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider text-center">
@@ -2079,11 +1980,9 @@
                           <div>
                             <p class="font-bold text-on-surface" style="margin:0;">{{ catalogo['nombre'] }}</p>
                             <div class="flex items-center gap-2 mt-1">
-                              <span class="text-sm text-on-surface-variant dark:text-outline-variant font-medium">{{
-                                catalogo['id'] }}</span>
+                              <span class="text-sm text-on-surface-variant dark:text-outline-variant font-medium">{{ catalogo['id'] }}</span>
                               <span class="w-1 h-1 rounded-full bg-outline-variant"></span>
-                              <span class="text-sm text-on-surface-variant dark:text-outline-variant">{{
-                                (catalogo['tipo_accion'] or
+                              <span class="text-sm text-on-surface-variant dark:text-outline-variant">{{ (catalogo['tipo_accion'] or
                                 'CURSO')|title }}</span>
                             </div>
                           </div>
@@ -2170,12 +2069,10 @@
           <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
             <div class="flex items-center gap-4">
               <div class="w-14 h-14 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-                <span
-                  class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">edit</span>
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">edit</span>
               </div>
               <div>
-                <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-                  style="margin:0;">Editar
+                <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed" style="margin:0;">Editar
                   Catálogo</h2>
               </div>
             </div>
@@ -2191,9 +2088,7 @@
             <input type="hidden" name="catalogo_id" id="edit-cat-id">
 
             <div class="form-group" style="margin-bottom:0;">
-              <label
-                class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nombre
-                de la Acción
+              <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nombre de la Acción
                 Formativa</label>
               <input type="text"
                 class="form-input w-full px-4 py-3 bg-surface-container-low/50 border-b-2 border-outline-variant rounded-t-xl focus:border-primary-container transition-all"
@@ -2202,8 +2097,7 @@
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
               <div class="form-group" style="margin-bottom:0;">
-                <label
-                  class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Modalidad</label>
+                <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Modalidad</label>
                 <div class="relative group">
                   <select class="form-select searchable w-full" name="modalidad" id="edit-cat-modalidad" required>
                     <option value="Virtual">Virtual</option>
@@ -2213,8 +2107,7 @@
                 </div>
               </div>
               <div class="form-group" style="margin-bottom:0;">
-                <label
-                  class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Tipo</label>
+                <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Tipo</label>
                 <div class="relative group">
                   <select class="form-select searchable w-full" name="tipo_accion" id="edit-cat-tipo" required>
                     <option value="CONFERENCIA">Conferencia</option>
@@ -2358,7 +2251,7 @@
               const trimestre = bloque.querySelector('.jornada-trimestre');
               if (trimestre) trimestre.value = 'I';
               const cupos = bloque.querySelector('.jornada-cupos');
-              if (cupos) cupos.value = '';
+              if (cupos) cupos.value = 0;
               const privacidad = bloque.querySelector('.jornada-privacidad');
               if (privacidad) privacidad.value = 'Abierta';
               const fechaLimite = bloque.querySelector('.jornada-fecha-limite');
@@ -2380,11 +2273,6 @@
 
           if (typeof window.recalcularDiasClaseGlobal === 'function') {
             window.recalcularDiasClaseGlobal();
-          }
-
-          const btnSubmit = document.getElementById('btn-submit-calendario');
-          if (btnSubmit) {
-            btnSubmit.textContent = 'Crear Edición';
           }
 
           abrirModal('modal-gestion-calendario');
@@ -2424,23 +2312,19 @@
           <!-- Icon & Header -->
           <div class="flex flex-col gap-4">
             <div class="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-              <span
-                class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[32px]">add_circle</span>
+              <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[32px]">add_circle</span>
             </div>
             <div>
-              <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed mb-2"
-                style="margin:0;">Nueva
+              <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed mb-2" style="margin:0;">Nueva
                 Edición</h2>
-              <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-                Selecciona el Catálogo
+              <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">Selecciona el Catálogo
                 (molde) para el que deseas programar una nueva edición.</p>
             </div>
           </div>
           <!-- Form Area -->
           <div class="pt-4 pb-8">
             <div class="relative group">
-              <label
-                class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Catálogo</label>
+              <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Catálogo</label>
               <div class="relative">
                 <span
                   class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-outline-variant/50 pointer-events-none group-focus-within:text-primary dark:text-primary-fixed transition-colors z-20">menu_book</span>
@@ -2511,10 +2395,8 @@
           <!-- Header Section -->
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
-              <h2 class="font-display-xl text-display-xl text-primary dark:text-primary-fixed mb-2">Ediciones Activas
-              </h2>
-              <p class="font-body-lg text-body-lg text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-                Gestión y monitoreo de
+              <h2 class="font-display-xl text-display-xl text-primary dark:text-primary-fixed mb-2">Ediciones Activas</h2>
+              <p class="font-body-lg text-body-lg text-on-surface-variant dark:text-outline-variant" style="margin:0;">Gestión y monitoreo de
                 cursos en período de matrícula y ejecución.</p>
             </div>
             <button type="button" onclick="abrirModalSeleccionCatalogo()"
@@ -2530,8 +2412,7 @@
             <button
               class="pb-2 px-1 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none"
               style="cursor:pointer;">Todas</button>
-            <button
-              class="pb-2 px-1 font-body-md text-primary dark:text-primary-fixed font-bold border-b-2 border-primary bg-transparent"
+            <button class="pb-2 px-1 font-body-md text-primary dark:text-primary-fixed font-bold border-b-2 border-primary bg-transparent"
               style="cursor:pointer; outline:none;">Activas</button>
             <button
               class="pb-2 px-1 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none"
@@ -2542,11 +2423,12 @@
           </div>
 
           <!-- Data Table Card (Glassmorphism) -->
-          <div class="admin-table-container">
+          <div
+            class="bg-white/95 dark:bg-surface/80 backdrop-blur-2xl rounded-[16px] rounded-bl-[32px] border border-slate-200/60 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-primary/5 overflow-hidden">
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse" style="margin:0;">
                 <thead>
-                  <tr>
+                  <tr class="border-b border-outline-variant/30 bg-surface-container-lowest/50">
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Código</th>
@@ -2579,12 +2461,10 @@
                 <tbody class="font-body-md text-on-surface divide-y divide-outline-variant/20">
                   {% for curso in cursos %}
                   <tr class="hover:bg-surface-container-low/50 transition-colors">
-                    <td class="py-4 px-6 font-headline-md text-[14px] text-primary dark:text-primary-fixed">{{
-                      curso['id'] }}</td>
+                    <td class="py-4 px-6 font-headline-md text-[14px] text-primary dark:text-primary-fixed">{{ curso['id'] }}</td>
                     <td class="py-4 px-6 font-medium">
                       {{ curso['nombre'] }}<br>
-                      <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{ curso['modalidad'] }} ·
-                        {{ (curso['tipo_accion']
+                      <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{ curso['modalidad'] }} · {{ (curso['tipo_accion']
                         or 'CURSO')|title }}</span>
                     </td>
                     <td class="py-4 px-6 text-on-surface-variant dark:text-outline-variant text-sm">
@@ -2596,13 +2476,11 @@
                     </td>
                     <td class="py-4 px-6">
                       {{ curso['jornada'] or '—' }}<br>
-                      <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{
-                        curso.get('etiqueta_edicion') or '—' }}</span>
+                      <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{ curso.get('etiqueta_edicion') or '—' }}</span>
                     </td>
                     <td class="py-4 px-6">{{ curso['hora'] or '—' }}</td>
                     <td class="py-4 px-6">
-                      Trim. {{ curso['trimestre'] or '—' }} {{ (curso['fecha_inicio']|string)[:4] if
-                      curso['fecha_inicio'] else '—' }}
+                      Trim. {{ curso['trimestre'] or '—' }} {{ (curso['fecha_inicio']|string)[:4] if curso['fecha_inicio'] else '—' }}
                     </td>
                     <td class="py-4 px-6 text-center">
                       <span
@@ -2619,8 +2497,7 @@
                       </span>
                     </td>
                     <td class="py-4 px-6 text-right">
-                      <div
-                        class="flex items-center justify-end gap-2 text-on-surface-variant dark:text-outline-variant">
+                      <div class="flex items-center justify-end gap-2 text-on-surface-variant dark:text-outline-variant">
                         <a href="{{ url_for('admin_gestion_sesiones', id_curso=curso['id']) }}"
                           class="p-1.5 hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center text-on-surface-variant dark:text-outline-variant"
                           title="Calendario">
@@ -2652,8 +2529,7 @@
             <!-- Pagination Footer -->
             <div
               class="border-t border-outline-variant/30 bg-surface-container-lowest/30 p-4 flex items-center justify-between">
-              <span class="text-sm text-on-surface-variant dark:text-outline-variant font-body-md">Mostrando ediciones
-                ({{ cursos|length
+              <span class="text-sm text-on-surface-variant dark:text-outline-variant font-body-md">Mostrando ediciones ({{ cursos|length
                 }})</span>
             </div>
           </div>
@@ -2667,14 +2543,11 @@
           style="margin:auto;">
           <div class="flex flex-col items-center justify-center gap-4 text-center">
             <div class="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0 mb-2">
-              <span
-                class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[32px]">qr_code</span>
+              <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[32px]">qr_code</span>
             </div>
-            <h2 id="qr-sesion-admin-title"
-              class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed"
+            <h2 id="qr-sesion-admin-title" class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed"
               style="margin:0;">QR de Asistencia</h2>
-            <p id="qr-sesion-admin-meta"
-              class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant m-0"></p>
+            <p id="qr-sesion-admin-meta" class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant m-0"></p>
             <div
               class="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/30 flex items-center justify-center w-full min-h-[240px]">
               <div id="qr-sesion-admin-canvas" class="flex items-center justify-center"></div>
@@ -2706,12 +2579,10 @@
           <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
             <div class="flex items-center gap-4">
               <div class="w-14 h-14 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-                <span
-                  class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">edit</span>
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">edit</span>
               </div>
               <div>
-                <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-                  style="margin:0;">Editar
+                <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed" style="margin:0;">Editar
                   Edición</h2>
                 <div class="font-body-xs text-on-surface-variant dark:text-outline-variant mt-0.5">
                   <span id="edit-edicion-id-label"
@@ -2955,8 +2826,7 @@
       {% set curso_sesion_config = curso_sesion_config if curso_sesion_config is defined and curso_sesion_config else
       {'fecha_inicio': fecha_hoy, 'fecha_fin': fecha_hoy} %}
       {% set jornadas_config = jornadas_config if jornadas_config is defined and jornadas_config else [] %}
-      {% set estado_edicion_actual = (curso_sesion_detalle['estado'] if curso_sesion_detalle and
-      curso_sesion_detalle.get('estado') else 'En Edicion') %}
+      {% set estado_edicion_actual = (curso_sesion_detalle['estado'] if curso_sesion_detalle and curso_sesion_detalle.get('estado') else 'En Edicion') %}
       <div
         class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 {% if modal_activo %}active{% endif %}"
         id="modal-gestion-calendario" aria-hidden="{{ 'false' if modal_activo else 'true' }}"
@@ -2978,9 +2848,7 @@
                 <span class="material-symbols-outlined text-[32px]">calendar_month</span>
               </div>
               <div>
-                <h2
-                  class="font-headline-lg text-headline-md font-bold text-primary dark:text-primary-fixed tracking-tight"
-                  style="margin:0;">
+                <h2 class="font-headline-lg text-headline-md font-bold text-primary dark:text-primary-fixed tracking-tight" style="margin:0;">
                   Gestión de Calendario</h2>
                 <div id="modal-calendario-context" class="font-body-md text-sm text-outline mt-1">
                   {% if modal_activo and modo_nueva_edicion and catalogo_seleccionado is defined and
@@ -2995,8 +2863,7 @@
                   {% endif %}
                 </div>
                 <div class="font-body-xs text-on-surface-variant dark:text-outline-variant mt-0.5">
-                  Tipo: <strong id="modal-calendario-tipo" class="text-primary dark:text-primary-fixed">{{
-                    curso_sesion_tipo|title if
+                  Tipo: <strong id="modal-calendario-tipo" class="text-primary dark:text-primary-fixed">{{ curso_sesion_tipo|title if
                     modal_activo else 'Curso' }}</strong>
                 </div>
               </div>
@@ -3017,17 +2884,12 @@
               {% endif %}
 
               <div class="flex flex-col items-end gap-1.5">
-                <label
-                  class="font-body-md text-[12px] font-semibold text-on-surface-variant dark:text-outline-variant">Estado
-                  de Edición</label>
+                <label class="font-body-md text-[12px] font-semibold text-on-surface-variant dark:text-outline-variant">Estado de Edición</label>
                 <select id="cal-estado-edicion" name="estado"
                   class="form-select select-estado-edicion w-[220px] px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
-                  <option value="En Edicion" {% if estado_edicion_actual=='En Edicion' %}selected{% endif %}>En Edición
-                  </option>
-                  <option value="Programado" {% if estado_edicion_actual=='Programado' %}selected{% endif %}>Programado
-                  </option>
-                  <option value="Finalizado" {% if estado_edicion_actual=='Finalizado' %}selected{% endif %}>Finalizado
-                  </option>
+                  <option value="En Edicion" {% if estado_edicion_actual == 'En Edicion' %}selected{% endif %}>En Edición</option>
+                  <option value="Programado" {% if estado_edicion_actual == 'Programado' %}selected{% endif %}>Programado</option>
+                  <option value="Finalizado" {% if estado_edicion_actual == 'Finalizado' %}selected{% endif %}>Finalizado</option>
                 </select>
               </div>
             </div>
@@ -3050,14 +2912,11 @@
                   <!-- Global Edicion Details -->
                   <div
                     class="bg-white dark:bg-surface-container-low border border-outline-variant/30 rounded-[24px] p-6 shadow-sm space-y-6 relative hover:shadow-md transition-shadow">
-                    <h3
-                      class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider m-0">
-                      Detalles
+                    <h3 class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider m-0">Detalles
                       Generales de la Edición</h3>
 
                     <div id="bloque-enlace-acceso" style="display:none;">
-                      <label
-                        class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Enlace
+                      <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Enlace
                         de Acceso</label>
                       <input
                         class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -3067,8 +2926,7 @@
 
                     <div>
                       <label
-                        class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Requisitos
-                        de
+                        class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Requisitos de
                         la Edición</label>
                       <textarea
                         class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
@@ -3079,8 +2937,7 @@
                     <div class="grid grid-cols-3 gap-6">
                       <div class="col-span-1">
                         <label
-                          class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Duración
-                          en
+                          class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Duración en
                           Horas</label>
                         <div class="relative group">
                           <span
@@ -3092,8 +2949,7 @@
                         </div>
                       </div>
                       <div class="col-span-1">
-                        <label
-                          class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Fecha
+                        <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Fecha
                           Inicio</label>
                         <div class="relative group">
                           <span
@@ -3105,8 +2961,7 @@
                         </div>
                       </div>
                       <div class="col-span-1">
-                        <label
-                          class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Fecha
+                        <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Fecha
                           Fin</label>
                         <div class="relative group">
                           <span
@@ -3120,8 +2975,7 @@
                     </div>
 
                     <div>
-                      <label
-                        class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Plantilla
+                      <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Plantilla
                         Cert.</label>
                       <div class="relative group">
                         <span
@@ -3131,9 +2985,7 @@
                           name="id_plantilla_certificado" id="cal-plantilla-certificado">
                           <option value="">Seleccione plantilla</option>
                           {% for p in plantillas %}
-                          <option value="{{ p.id }}" {% if curso_sesion_detalle and
-                            curso_sesion_detalle.get('id_plantilla_certificado')==p.id %}selected{% endif %}>{{
-                            p.nombre_plantilla }}</option>
+                            <option value="{{ p.id }}" {% if curso_sesion_detalle and curso_sesion_detalle.get('id_plantilla_certificado') == p.id %}selected{% endif %}>{{ p.nombre_plantilla }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -3146,9 +2998,7 @@
                   <div
                     class="bg-white dark:bg-surface-container-low border border-outline-variant/30 rounded-[28px] p-6 shadow-sm space-y-6 relative hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
-                      <h3
-                        class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider m-0">
-                        Jornadas
+                      <h3 class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider m-0">Jornadas
                         Programadas</h3>
                       <button type="button" id="btn-agregar-jornada"
                         class="flex items-center gap-2 font-label-caps text-secondary hover:text-secondary-container transition-colors cursor-pointer bg-transparent border-none">
@@ -3332,8 +3182,7 @@
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
                                 class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
-                                type="number" min="0" step="1" value="{{ jornada.get('cupos_maximos', '') }}" required
-                                placeholder="Ej. 30">
+                                type="number" min="0" step="1" value="{{ jornada.get('cupos_maximos', 0) }}" required>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3563,7 +3412,7 @@
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
                                 class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
-                                type="number" min="0" step="1" required placeholder="Ej. 30">
+                                type="number" min="0" step="1" value="0" required>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3581,8 +3430,7 @@
                             </div>
                           </div>
                           <div class="col-span-6">
-                            <label
-                              class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Límite
+                            <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Límite
                               Matrícula</label>
                             <div class="relative group">
                               <span
@@ -3606,9 +3454,9 @@
                     class="px-8 py-3 rounded-full bg-transparent text-secondary border border-secondary font-bold text-sm uppercase hover:bg-secondary/5 transition-all cursor-pointer">
                     Guardar Borrador
                   </button>
-                  <button type="submit" id="btn-submit-calendario"
+                  <button type="submit"
                     class="px-8 py-3 rounded-full bg-primary text-on-primary font-bold text-sm uppercase shadow-md shadow-primary/20 hover:bg-primary-container transition-all hover:scale-[1.02] border-none cursor-pointer">
-                    {% if modo_nueva_edicion %}Crear Edición{% else %}Modificar Edición{% endif %}
+                    {% if modo_nueva_edicion %}Generar Edición{% else %}Modificar Edición{% endif %}
                   </button>
                 </div>
               </form>
@@ -3634,8 +3482,7 @@
                 <div class="grid grid-cols-12 gap-x-4 gap-y-6">
                   <div class="col-span-6">
                     <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Etiqueta
-                      de
+                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Etiqueta de
                       Edición</label>
                     <div class="relative group">
                       <span
@@ -3660,8 +3507,7 @@
 
                   <div class="col-span-6">
                     <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Persona
-                      de
+                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Persona de
                       Apoyo</label>
                     <div class="relative group">
                       <span
@@ -3673,8 +3519,7 @@
                   </div>
 
                   <div class="col-span-5">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Tipo
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Tipo
                       Jornada</label>
                     <div class="relative group">
                       <span
@@ -3690,8 +3535,7 @@
                     </div>
                   </div>
                   <div class="col-span-3">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Hora
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Hora
                       Inicio</label>
                     <div class="relative group">
                       <span
@@ -3702,8 +3546,7 @@
                     </div>
                   </div>
                   <div class="col-span-4">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Hora
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Hora
                       Fin</label>
                     <div class="relative group">
                       <span
@@ -3714,8 +3557,7 @@
                     </div>
                   </div>
                   <div class="col-span-6">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Configuracion
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Configuracion
                       de Sesiones</label>
                     <div class="relative group">
                       <span
@@ -3728,8 +3570,7 @@
                     </div>
                   </div>
                   <div class="col-span-6 jornada-fechas-manuales-block" style="display:none;">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Fechas
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Fechas
                       Manuales</label>
                     <div class="relative group">
                       <span
@@ -3812,7 +3653,7 @@
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                       <input
                         class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
-                        type="number" min="0" step="1" value="" required placeholder="Ej. 30">
+                        type="number" min="0" step="1" value="0" required>
                     </div>
                   </div>
                   <div class="col-span-6">
@@ -3830,8 +3671,7 @@
                     </div>
                   </div>
                   <div class="col-span-6">
-                    <label
-                      class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Límite
+                    <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Límite
                       Matrícula</label>
                     <div class="relative group">
                       <span
@@ -3848,10 +3688,8 @@
             <div class="w-full lg:w-[54%] bg-surface-container-low/20 p-8 flex flex-col h-full overflow-hidden">
               <div class="flex items-center justify-between mb-6 shrink-0">
                 <div>
-                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold m-0">Sesiones
-                    Existentes</h3>
-                  <p class="font-body-md text-sm text-on-surface-variant dark:text-outline-variant m-0 mt-1">Gestione
-                    las jornadas previamente
+                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold m-0">Sesiones Existentes</h3>
+                  <p class="font-body-md text-sm text-on-surface-variant dark:text-outline-variant m-0 mt-1">Gestione las jornadas previamente
                     creadas para este catálogo.</p>
                 </div>
                 <div class="relative">
@@ -3890,21 +3728,17 @@
                     <tbody class="font-body-md text-sm text-on-surface divide-y divide-surface-container">
                       {% for sesion in sesiones_curso|default([]) %}
                       <tr class="hover:bg-surface-container-lowest/50 transition-colors group">
-                        <td class="py-4 px-5 font-semibold text-primary dark:text-primary-fixed">#{{ sesion['id_sesion']
-                          }}</td>
+                        <td class="py-4 px-5 font-semibold text-primary dark:text-primary-fixed">#{{ sesion['id_sesion'] }}</td>
                         <td class="py-4 px-5">
                           <div class="text-on-surface">{{ sesion['fecha'] }}</div>
-                          <div
-                            class="text-xs text-on-surface-variant dark:text-outline-variant flex items-center gap-1 mt-0.5">
-                            <span class="material-symbols-outlined text-[14px]">schedule</span> {{ sesion['hora_inicio']
-                            }}
+                          <div class="text-xs text-on-surface-variant dark:text-outline-variant flex items-center gap-1 mt-0.5"><span
+                              class="material-symbols-outlined text-[14px]">schedule</span> {{ sesion['hora_inicio'] }}
                             - {{ sesion['hora_fin'] }}</div>
                         </td>
                         <td class="py-4 px-5">
                           <div class="font-medium text-on-surface">{{ sesion['jornada'] or 'UNICA' }}{% if
                             sesion['etiqueta_edicion'] %} - {{ sesion['etiqueta_edicion'] }}{% endif %}</div>
-                          <div class="text-xs text-on-surface-variant dark:text-outline-variant">{{
-                            sesion['docente_responsable'] or '—' }}</div>
+                          <div class="text-xs text-on-surface-variant dark:text-outline-variant">{{ sesion['docente_responsable'] or '—' }}</div>
                         </td>
                         <td class="py-4 px-5">
                           {% if sesion['estado'] == 1 %}
@@ -3992,8 +3826,7 @@
                       </tr>
                       {% else %}
                       <tr>
-                        <td colspan="5"
-                          class="py-12 text-center text-on-surface-variant dark:text-outline-variant font-body-md"
+                        <td colspan="5" class="py-12 text-center text-on-surface-variant dark:text-outline-variant font-body-md"
                           style="padding:1.6rem;">
                           Aún no hay sesiones creadas para esta edición.
                         </td>
@@ -4095,275 +3928,212 @@
       <section id="section-usuarios" class="admin-screen" data-screen="usuarios" style="padding-top:1rem;">
         <div class="max-w-7xl mx-auto space-y-6">
           <div class="mb-2 flex items-end justify-between animate-fade-up-3">
-            <div>
-              <h1
-                class="font-headline-lg text-3xl font-extrabold text-primary dark:text-primary-fixed tracking-tight mb-2"
-                style="margin:0 0 0.5rem 0;">Gestión de Usuarios Administrativos</h1>
-              <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-                Administración de accesos y direcciones académicas.</p>
+          <div>
+            <h1 class="font-headline-lg text-3xl font-extrabold text-primary dark:text-primary-fixed tracking-tight mb-2" style="margin:0 0 0.5rem 0;">Gestión de Usuarios Administrativos</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">Administración de accesos y direcciones académicas.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up-4">
+          <!-- Left Column: Forms (5 cols) -->
+          <div class="lg:col-span-5 flex flex-col gap-6">
+            <!-- Card: Crear Administrador -->
+            <div class="glass-card rounded-3xl p-6 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary-container"></div>
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
+                  <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person_add</span>
+                </div>
+                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">Crear Administrador por Dirección</h3>
+              </div>
+              <form action="/admin/crear_admin" method="POST" class="space-y-4">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="usuarios">
+                <div>
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">USUARIO</label>
+                  <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface" name="username" required maxlength="30" placeholder="Ej. admin_ipsd" type="text" />
+                </div>
+                <div>
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">CONTRASEÑA TEMPORAL</label>
+                  <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface" name="password" required minlength="8" placeholder="Mínimo 8 caracteres" type="password" />
+                </div>
+                <div>
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">DIRECCIÓN</label>
+                  <div class="relative">
+                    <select class="form-select searchable w-full" name="direccion" id="direccion_admin" required>
+                      {% for d in direcciones %}
+                      <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <button class="w-full py-3 px-6 rounded-full bg-primary text-white font-body-md text-body-md font-bold hover:bg-primary-container transition-colors shadow-md flex justify-center items-center gap-2 mt-4" type="submit">
+                  <span>Crear Usuario Admin</span>
+                  <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Card: Crear Dirección -->
+            <div class="glass-card rounded-3xl p-6 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary-container to-primary"></div>
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+                  <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">domain_add</span>
+                </div>
+                <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">Crear Dirección</h3>
+              </div>
+              <form action="/admin/crear_direccion" method="POST" class="space-y-4">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="usuarios">
+                <div>
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">CÓDIGO</label>
+                  <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface" name="codigo" required maxlength="12" style="text-transform:uppercase;" placeholder="EJ. DEGT" type="text"/>
+                </div>
+                <div>
+                  <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">NOMBRE DE DIRECCIÓN</label>
+                  <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface" name="nombre" required maxlength="80" placeholder="Ej. Dirección de Educación General" type="text"/>
+                </div>
+                <button class="w-full py-3 px-6 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface font-body-md text-body-md font-bold hover:bg-primary-fixed/50 hover:border-primary/30 transition-all flex justify-center items-center gap-2 mt-4" type="submit">
+                  <span>Crear Dirección</span>
+                </button>
+              </form>
             </div>
           </div>
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up-4">
-            <!-- Left Column: Forms (5 cols) -->
-            <div class="lg:col-span-5 flex flex-col gap-6">
-              <!-- Card: Crear Administrador -->
-              <div class="glass-card rounded-3xl p-6 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary-container">
-                </div>
-                <div class="flex items-center gap-3 mb-6">
-                  <div
-                    class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person_add</span>
-                  </div>
-                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">
-                    Crear Administrador por Dirección</h3>
-                </div>
-                <form action="/admin/crear_admin" method="POST" class="space-y-4">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="view" value="usuarios">
-                  <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">USUARIO</label>
-                    <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface"
-                      name="username" required maxlength="30" placeholder="Ej. admin_ipsd" type="text" />
-                  </div>
-                  <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">CONTRASEÑA
-                      TEMPORAL</label>
-                    <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface"
-                      name="password" required minlength="8" placeholder="Mínimo 8 caracteres" type="password" />
-                  </div>
-                  <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">DIRECCIÓN</label>
-                    <div class="relative">
-                      <select class="form-select searchable w-full" name="direccion" id="direccion_admin" required>
-                        {% for d in direcciones %}
-                        <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                  </div>
-                  <button
-                    class="w-full py-3 px-6 rounded-full bg-primary text-white font-body-md text-body-md font-bold hover:bg-primary-container transition-colors shadow-md flex justify-center items-center gap-2 mt-4"
-                    type="submit">
-                    <span>Crear Usuario Admin</span>
-                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                  </button>
-                </form>
-              </div>
 
-              <!-- Card: Crear Dirección -->
-              <div class="glass-card rounded-3xl p-6 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary-container to-primary">
+          <!-- Right Column: Tables (7 cols) -->
+          <div class="lg:col-span-7 flex flex-col gap-6">
+            <!-- Table: Usuarios Administrativos -->
+            <div class="glass-card rounded-3xl overflow-hidden flex flex-col h-full max-h-[400px]">
+              <div class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-white/40 dark:bg-white/5">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-variation-settings: 'FILL' 1;">group</span>
+                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold">Usuarios Administrativos</h3>
                 </div>
-                <div class="flex items-center gap-3 mb-6">
-                  <div
-                    class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">domain_add</span>
-                  </div>
-                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold" style="margin:0;">
-                    Crear Dirección</h3>
-                </div>
-                <form action="/admin/crear_direccion" method="POST" class="space-y-4">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="view" value="usuarios">
-                  <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">CÓDIGO</label>
-                    <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface"
-                      name="codigo" required maxlength="12" style="text-transform:uppercase;" placeholder="EJ. DEGT"
-                      type="text" />
-                  </div>
-                  <div>
-                    <label
-                      class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2">NOMBRE
-                      DE DIRECCIÓN</label>
-                    <input class="w-full glass-input rounded-xl px-4 py-2.5 font-body-md text-body-md text-on-surface"
-                      name="nombre" required maxlength="80" placeholder="Ej. Dirección de Educación General"
-                      type="text" />
-                  </div>
-                  <button
-                    class="w-full py-3 px-6 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface font-body-md text-body-md font-bold hover:bg-primary-fixed/50 hover:border-primary/30 transition-all flex justify-center items-center gap-2 mt-4"
-                    type="submit">
-                    <span>Crear Dirección</span>
-                  </button>
-                </form>
+                <span class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-body-md text-sm font-bold text-on-surface">{{ usuarios_admin|length }}</span>
               </div>
-            </div>
-
-            <!-- Right Column: Tables (7 cols) -->
-            <div class="lg:col-span-7 flex flex-col gap-6">
-              <!-- Table: Usuarios Administrativos -->
-              <div class="admin-table-container flex flex-col h-full max-h-[400px]">
-                <div
-                  class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest/50">
-                  <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary dark:text-primary-fixed"
-                      style="font-variation-settings: 'FILL' 1;">group</span>
-                    <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold"
-                      style="margin:0;">Usuarios Administrativos</h3>
-                  </div>
-                  <span
-                    class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-body-md text-sm font-bold text-on-surface">{{
-                    usuarios_admin|length }}</span>
-                </div>
-                <div class="overflow-x-auto">
-                  <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr>
-                        <th class="py-2.5 px-4 font-bold">USUARIO</th>
-                        <th class="py-2.5 px-4 font-bold">ROL</th>
-                        <th class="py-2.5 px-4 font-bold">DIRECCIÓN</th>
-                        <th class="py-2.5 px-4 font-bold text-right">ACCIONES</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% for u in usuarios_admin %}
-                      <tr class="border-b border-outline-variant/10 table-row-hover transition-colors group">
-                        <td class="py-2.5 px-4 font-body-md text-body-md text-on-surface font-semibold">{{ u['username']
-                          }}</td>
-                        <td class="py-2.5 px-4">
-                          <span
-                            class="inline-flex items-center px-3 py-1 rounded-full {% if u['rol'] == 'superadmin' %}bg-primary-fixed text-on-primary-fixed{% else %}bg-secondary-container/20 text-secondary{% endif %} text-xs font-bold tracking-wider">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-outline-variant/30 text-on-surface-variant dark:text-outline-variant font-label-caps text-label-caps">
+                      <th class="py-2.5 px-4 font-bold">USUARIO</th>
+                      <th class="py-2.5 px-4 font-bold">ROL</th>
+                      <th class="py-2.5 px-4 font-bold">DIRECCIÓN</th>
+                      <th class="py-2.5 px-4 font-bold text-right">ACCIONES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for u in usuarios_admin %}
+                    <tr class="border-b border-outline-variant/10 table-row-hover transition-colors group">
+                      <td class="py-2.5 px-4 font-body-md text-body-md text-on-surface font-semibold">{{ u['username'] }}</td>
+                      <td class="py-2.5 px-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full {% if u['rol'] == 'superadmin' %}bg-primary-fixed text-on-primary-fixed{% else %}bg-secondary-container/20 text-secondary{% endif %} text-xs font-bold tracking-wider">
                             {{ u['rol']|upper }}
-                          </span>
-                        </td>
-                        <td
-                          class="py-2.5 px-4 font-body-md text-body-md text-on-surface-variant dark:text-outline-variant">
-                          {{ u['direccion'] }}</td>
-                        <td class="py-2.5 px-4 text-right">
-                          <div class="flex justify-end gap-2">
-                            {% if u['rol'] == 'superadmin' %}
-                            <span
-                              class="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 text-primary dark:text-primary-fixed bg-primary/5 text-xs font-bold">
+                        </span>
+                      </td>
+                      <td class="py-2.5 px-4 font-body-md text-body-md text-on-surface-variant dark:text-outline-variant">{{ u['direccion'] }}</td>
+                      <td class="py-2.5 px-4 text-right">
+                        <div class="flex justify-end gap-2">
+                          {% if u['rol'] == 'superadmin' %}
+                          <span class="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 text-primary dark:text-primary-fixed bg-primary/5 text-xs font-bold">
                               PROTEGIDO
-                            </span>
-                            {% else %}
-                            <div
-                              class="flex justify-end gap-2 opacity-100 xl:opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button type="button"
-                                class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-usuario"
-                                title="Editar usuario" data-username="{{ u['username'] }}"
-                                data-direccion="{{ u['direccion'] }}" data-rol="{{ u['rol'] }}">
+                          </span>
+                          {% else %}
+                          <div class="flex justify-end gap-2 opacity-100 xl:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-usuario" title="Editar usuario" data-username="{{ u['username'] }}" data-direccion="{{ u['direccion'] }}" data-rol="{{ u['rol'] }}">
                                 <span class="material-symbols-outlined text-[18px]">edit</span>
                               </button>
-                              <form action="/admin/eliminar_admin" method="POST"
-                                onsubmit="return confirm('¿Eliminar este usuario admin?');" style="margin:0;">
+                              <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');" style="margin:0;">
                                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="view" value="usuarios">
                                 <input type="hidden" name="username" value="{{ u['username'] }}">
-                                <button type="submit"
-                                  class="w-8 h-8 rounded-full bg-slate-100 hover:bg-error-container/50 text-slate-600 hover:text-error flex items-center justify-center transition-colors border-none cursor-pointer"
-                                  title="Eliminar usuario">
+                                <button type="submit" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-error-container/50 text-slate-600 hover:text-error flex items-center justify-center transition-colors border-none cursor-pointer" title="Eliminar usuario">
                                   <span class="material-symbols-outlined text-[18px]">delete</span>
                                 </button>
                               </form>
-                            </div>
-                            {% endif %}
                           </div>
-                        </td>
-                      </tr>
-                      {% else %}
-                      <tr>
-                        <td colspan="4"
-                          class="py-6 px-6 text-center text-on-surface-variant dark:text-outline-variant font-body-md">
-                          Sin usuarios registrados.</td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                </div>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                      <td colspan="4" class="py-6 px-6 text-center text-on-surface-variant dark:text-outline-variant font-body-md">Sin usuarios registrados.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
+            </div>
 
-              <!-- Table: Catálogo de Direcciones -->
-              <div class="admin-table-container flex flex-col h-full flex-grow">
-                <div
-                  class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest/50">
-                  <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-secondary-container"
-                      style="font-variation-settings: 'FILL' 1;">account_balance</span>
-                    <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold"
-                      style="margin:0;">Catálogo de Direcciones</h3>
-                  </div>
-                  <span
-                    class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-body-md text-sm font-bold text-on-surface">{{
-                    direcciones_gestion|length }}</span>
+            <!-- Table: Catálogo de Direcciones -->
+            <div class="glass-card rounded-3xl overflow-hidden flex flex-col h-full flex-grow">
+              <div class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-white/40 dark:bg-white/5">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-secondary-container" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+                  <h3 class="font-headline-md text-lg text-primary dark:text-primary-fixed font-bold">Catálogo de Direcciones</h3>
                 </div>
-                <div class="overflow-x-auto">
-                  <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr>
-                        <th class="py-2.5 px-4 font-bold">CÓDIGO</th>
-                        <th class="py-2.5 px-4 font-bold">NOMBRE</th>
-                        <th class="py-2.5 px-4 font-bold">USO</th>
-                        <th class="py-2.5 px-4 font-bold">FIRMA / LOGO</th>
-                        <th class="py-2.5 px-4 font-bold text-right">ACCIONES</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% for d in direcciones_gestion %}
-                      <tr class="border-b border-outline-variant/10 table-row-hover transition-colors group">
-                        <td class="py-3 px-4 font-body-md text-body-md font-bold text-primary dark:text-primary-fixed">
-                          {{ d['codigo'] }}</td>
-                        <td class="py-3 px-4 font-body-md text-body-md text-on-surface max-w-[200px] leading-tight">{{
-                          d['nombre'] }}</td>
-                        <td class="py-3 px-4 font-body-md text-sm text-on-surface-variant dark:text-outline-variant">
-                          <div>Admins: {{ d['total_admins'] }}</div>
-                          <div>Cursos: {{ d['total_cursos'] }}</div>
-                        </td>
-                        <td class="py-3 px-4 font-body-md text-sm">
-                          {% if d['ruta_firma_img'] %}
-                          <a class="text-on-tertiary-container hover:underline block mb-1"
-                            href="{{ d['ruta_firma_img'] }}" target="_blank">Ver firma</a>
-                          {% else %}
-                          <span class="text-outline block mb-1">Sin firma</span>
-                          {% endif %}
-
-                          {% if d['ruta_logo_img'] %}
-                          <a class="text-on-tertiary-container hover:underline block" href="{{ d['ruta_logo_img'] }}"
-                            target="_blank">Ver logo</a>
-                          {% else %}
-                          <span class="text-outline block">Sin logo</span>
-                          {% endif %}
-                        </td>
-                        <td class="py-3 px-4 text-right">
-                          <div
-                            class="flex justify-end gap-2 opacity-100 xl:opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button type="button"
-                              class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-direccion"
-                              title="Editar dirección" data-codigo="{{ d['codigo'] }}" data-nombre="{{ d['nombre'] }}">
-                              <span class="material-symbols-outlined text-[18px]">edit</span>
+                <span class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-body-md text-sm font-bold text-on-surface">{{ direcciones_gestion|length }}</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-outline-variant/30 text-on-surface-variant dark:text-outline-variant font-label-caps text-label-caps">
+                      <th class="py-2.5 px-4 font-bold">CÓDIGO</th>
+                      <th class="py-2.5 px-4 font-bold">NOMBRE</th>
+                      <th class="py-2.5 px-4 font-bold">USO</th>
+                      <th class="py-2.5 px-4 font-bold">FIRMA / LOGO</th>
+                      <th class="py-2.5 px-4 font-bold text-right">ACCIONES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for d in direcciones_gestion %}
+                    <tr class="border-b border-outline-variant/10 table-row-hover transition-colors group">
+                      <td class="py-3 px-4 font-body-md text-body-md font-bold text-primary dark:text-primary-fixed">{{ d['codigo'] }}</td>
+                      <td class="py-3 px-4 font-body-md text-body-md text-on-surface max-w-[200px] leading-tight">{{ d['nombre'] }}</td>
+                      <td class="py-3 px-4 font-body-md text-sm text-on-surface-variant dark:text-outline-variant">
+                        <div>Admins: {{ d['total_admins'] }}</div>
+                        <div>Cursos: {{ d['total_cursos'] }}</div>
+                      </td>
+                      <td class="py-3 px-4 font-body-md text-sm">
+                        {% if d['ruta_firma_img'] %}
+                        <a class="text-on-tertiary-container hover:underline block mb-1" href="{{ d['ruta_firma_img'] }}" target="_blank">Ver firma</a>
+                        {% else %}
+                        <span class="text-outline block mb-1">Sin firma</span>
+                        {% endif %}
+                        
+                        {% if d['ruta_logo_img'] %}
+                        <a class="text-on-tertiary-container hover:underline block" href="{{ d['ruta_logo_img'] }}" target="_blank">Ver logo</a>
+                        {% else %}
+                        <span class="text-outline block">Sin logo</span>
+                        {% endif %}
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <div class="flex justify-end gap-2 opacity-100 xl:opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-direccion" title="Editar dirección" data-codigo="{{ d['codigo'] }}" data-nombre="{{ d['nombre'] }}">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                          <form action="/admin/eliminar_direccion" method="POST" style="margin:0;" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="view" value="usuarios">
+                            <input type="hidden" name="codigo" value="{{ d['codigo'] }}">
+                            <button type="submit" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-error-container/50 text-slate-600 hover:text-error flex items-center justify-center transition-colors border-none cursor-pointer" title="{% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}No se puede eliminar: tiene datos asociados{% else %}Eliminar dirección{% endif %}" {% if d['total_admins']> 0 or d['total_cursos'] > 0 %}disabled{% endif %}>
+                              <span class="material-symbols-outlined text-[18px]">delete</span>
                             </button>
-                            <form action="/admin/eliminar_direccion" method="POST" style="margin:0;"
-                              onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="view" value="usuarios">
-                              <input type="hidden" name="codigo" value="{{ d['codigo'] }}">
-                              <button type="submit"
-                                class="w-8 h-8 rounded-full bg-slate-100 hover:bg-error-container/50 text-slate-600 hover:text-error flex items-center justify-center transition-colors border-none cursor-pointer"
-                                title="{% if d['total_admins'] > 0 or d['total_cursos'] > 0 %}No se puede eliminar: tiene datos asociados{% else %}Eliminar dirección{% endif %}"
-                                {% if d['total_admins']> 0 or d['total_cursos'] > 0 %}disabled{% endif %}>
-                                <span class="material-symbols-outlined text-[18px]">delete</span>
-                              </button>
-                            </form>
-                          </div>
-                        </td>
-                      </tr>
-                      {% else %}
-                      <tr>
-                        <td colspan="5"
-                          class="py-6 px-6 text-center text-on-surface-variant dark:text-outline-variant font-body-md">
-                          Sin direcciones registradas.</td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                </div>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                      <td colspan="5" class="py-6 px-6 text-center text-on-surface-variant dark:text-outline-variant font-body-md">Sin direcciones registradas.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </section>
       {% endif %}
@@ -4511,25 +4281,19 @@
           <div>
             <div class="flex items-center gap-3 mb-2">
               <div class="bg-primary/10 p-3 rounded-xl border border-primary/20 backdrop-blur-md">
-                <span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[32px]"
-                  data-icon="workspace_premium" data-weight="fill">workspace_premium</span>
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[32px]" data-icon="workspace_premium" data-weight="fill">workspace_premium</span>
               </div>
-              <h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed" style="margin:0;">
-                Plantillas de Certificados</h1>
+              <h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed" style="margin:0;">Plantillas de Certificados</h1>
             </div>
-            <p class="font-body-lg text-body-lg text-on-surface-variant dark:text-outline-variant max-w-2xl pl-[68px]"
-              style="margin:0;">Configura el texto del certificado; la firma se gestiona por dirección.</p>
+            <p class="font-body-lg text-body-lg text-on-surface-variant dark:text-outline-variant max-w-2xl pl-[68px]" style="margin:0;">Configura el texto del certificado; la firma se gestiona por dirección.</p>
           </div>
           <div class="flex flex-wrap items-center gap-4">
-            <button type="button" onclick="abrirModal('modal-identidad-direccion')"
-              class="glass-panel border border-secondary/30 text-secondary-fixed-dim hover:bg-secondary-container/20 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-md px-6 py-3 rounded-full flex items-center gap-2 transition-all duration-300 shadow-sm font-headline-md text-[16px] font-bold">
-              <span class="material-symbols-outlined" data-icon="branding_watermark">branding_watermark</span>
+            <button type="button" onclick="abrirModal('modal-identidad-direccion')" class="bg-white/50 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-primary dark:text-primary-fixed hover:bg-slate-100 dark:hover:bg-white/10 hover:-translate-y-0.5 px-6 py-2.5 rounded-full flex items-center gap-2 transition-all duration-300 shadow-sm font-body-md font-bold" style="border-style: solid; cursor:pointer;">
+              <span class="material-symbols-outlined text-[20px]" data-icon="branding_watermark">branding_watermark</span>
               Configurar Firma y Logo
             </button>
-            <button type="button" onclick="abrirModal('modal-plantilla')"
-              class="btn-primary-ipsd flex items-center gap-2"
-              style="border-radius:9999px; font-size: 16px; font-weight: bold; padding: 0.75rem 1.75rem;">
-              <span class="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
+            <button type="button" onclick="abrirModal('modal-plantilla')" class="bg-primary hover:bg-primary-container text-white rounded-full py-2.5 px-6 font-body-md font-bold transition-all shadow-md shadow-primary/20 flex items-center gap-2" style="border:none; cursor:pointer;">
+              <span class="material-symbols-outlined text-[20px]" data-icon="add_photo_alternate">add_photo_alternate</span>
               Nueva Plantilla
             </button>
           </div>
@@ -4537,32 +4301,18 @@
 
         <div class="grid grid-cols-12 gap-gutter">
           <div class="col-span-12">
-            <div class="admin-table-container">
+            <div class="glass-panel border border-white/40 rounded-t-[16px] rounded-b-[32px] shadow-[0_40px_40px_-15px_rgba(0,23,54,0.05)] overflow-hidden p-8">
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse m-0">
                   <thead>
-                    <tr>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        ID</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        Dirección</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        Nombre Plantilla</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        Tipo</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        Firma Dirección</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                        Firmante</th>
-                      <th
-                        class="font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider text-right">
-                        Acciones</th>
+                    <tr class="border-b border-outline-variant/30">
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">ID</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">Dirección</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">Nombre Plantilla</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">Tipo</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">Firma Dirección</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">Firmante</th>
+                      <th class="py-4 px-4 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-outline-variant/20 border-t-0">
@@ -4570,61 +4320,43 @@
                     <tr class="hover:bg-surface-container-lowest/50 transition-colors group">
                       <td class="py-4 px-4 font-body-md text-body-md text-on-surface font-semibold">{{ p.id }}</td>
                       <td class="py-4 px-4">
-                        <span
-                          class="inline-flex items-center px-3 py-1 rounded-full bg-primary-container text-on-primary-container font-label-caps text-label-caps">{{
-                          p.direccion_codigo }}</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary-container text-on-primary-container font-label-caps text-label-caps">{{ p.direccion_codigo }}</span>
                       </td>
-                      <td class="py-4 px-4 font-body-md text-body-md text-on-surface font-medium">{{ p.nombre_plantilla
-                        }}</td>
+                      <td class="py-4 px-4 font-body-md text-body-md text-on-surface font-medium">{{ p.nombre_plantilla }}</td>
                       <td class="py-4 px-4">
                         {% if p.tipo_documento == 'CONSTANCIA' %}
-                        <span
-                          class="inline-flex items-center px-3 py-1 rounded-full bg-surface-tint/10 text-surface-tint border border-surface-tint/30 font-label-caps text-label-caps">CONSTANCIA</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-surface-tint/10 text-surface-tint border border-surface-tint/30 font-label-caps text-label-caps">CONSTANCIA</span>
                         {% else %}
-                        <span
-                          class="inline-flex items-center px-3 py-1 rounded-full bg-tertiary-container/20 text-tertiary-container border border-tertiary-container/30 font-label-caps text-label-caps">DIPLOMA</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-tertiary-container/20 text-tertiary-container border border-tertiary-container/30 font-label-caps text-label-caps">DIPLOMA</span>
                         {% endif %}
                       </td>
                       <td class="py-4 px-4">
                         <div class="flex flex-col gap-1">
                           {% if p.ruta_firma_img %}
-                          <a class="text-tertiary-container hover:text-on-tertiary-fixed-variant text-sm font-semibold underline decoration-tertiary-container/30 underline-offset-2"
-                            href="{{ p.ruta_firma_img }}" target="_blank">Ver Firma Dirección</a>
+                          <a class="text-tertiary-container hover:text-on-tertiary-fixed-variant text-sm font-semibold underline decoration-tertiary-container/30 underline-offset-2" href="{{ p.ruta_firma_img }}" target="_blank">Ver Firma Dirección</a>
                           {% endif %}
                           {% if p.ruta_logo_img %}
-                          <a class="text-tertiary-container hover:text-on-tertiary-fixed-variant text-sm font-semibold underline decoration-tertiary-container/30 underline-offset-2"
-                            href="{{ p.ruta_logo_img }}" target="_blank">Ver Logo</a>
+                          <a class="text-tertiary-container hover:text-on-tertiary-fixed-variant text-sm font-semibold underline decoration-tertiary-container/30 underline-offset-2" href="{{ p.ruta_logo_img }}" target="_blank">Ver Logo</a>
                           {% endif %}
                         </div>
                       </td>
-                      <td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant dark:text-outline-variant">
-                        {{ p.firmante_nombre }}<br><small>{{ p.firmante_cargo }}</small></td>
+                      <td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant dark:text-outline-variant">{{ p.firmante_nombre }}<br><small>{{ p.firmante_cargo }}</small></td>
                       <td class="py-4 px-4 text-right">
-                        <div
-                          class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <a href="/admin/certificados/plantilla/preview/{{ p.id }}" target="_blank"
-                            class="p-2 text-tertiary-container hover:bg-tertiary-container/10 rounded-lg transition-colors inline-block"
-                            title="Ver Detalles">
+                        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <a href="/admin/certificados/plantilla/preview/{{ p.id }}" target="_blank" class="p-2 text-tertiary-container hover:bg-tertiary-container/10 rounded-lg transition-colors inline-block" title="Ver Detalles">
                             <span class="material-symbols-outlined" data-icon="visibility">visibility</span>
                           </a>
-                          <button type="button"
-                            class="p-2 text-primary dark:text-primary-fixed hover:bg-primary/10 rounded-lg transition-colors border-none cursor-pointer"
-                            title="Editar" data-id="{{ p.id }}" data-direccion="{{ (p.direccion_codigo or '')|e }}"
-                            data-nombre="{{ (p.nombre_plantilla or '')|e }}"
-                            data-tipo="{{ (p.tipo_documento or '')|e }}"
-                            data-firmante="{{ (p.firmante_nombre or '')|e }}"
-                            data-cargo="{{ (p.firmante_cargo or '')|e }}"
+                          <button type="button" class="p-2 text-primary dark:text-primary-fixed hover:bg-primary/10 rounded-lg transition-colors border-none cursor-pointer" title="Editar"
+                            data-id="{{ p.id }}" data-direccion="{{ (p.direccion_codigo or '')|e }}"
+                            data-nombre="{{ (p.nombre_plantilla or '')|e }}" data-tipo="{{ (p.tipo_documento or '')|e }}"
+                            data-firmante="{{ (p.firmante_nombre or '')|e }}" data-cargo="{{ (p.firmante_cargo or '')|e }}"
                             data-texto="{{ (p.texto_certificado or '')|e }}" data-logo="{{ (p.ruta_logo_img or '')|e }}"
                             onclick="abrirModalEditarPlantilla(this)">
                             <span class="material-symbols-outlined" data-icon="edit">edit</span>
                           </button>
-                          <form action="/admin/certificados/plantilla/eliminar/{{ p.id }}" method="POST"
-                            class="inline-block m-0"
-                            onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla?');">
+                          <form action="/admin/certificados/plantilla/eliminar/{{ p.id }}" method="POST" class="inline-block m-0" onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla?');">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit"
-                              class="p-2 text-error hover:bg-error/10 rounded-lg transition-colors border-none cursor-pointer"
-                              title="Eliminar">
+                            <button type="submit" class="p-2 text-error hover:bg-error/10 rounded-lg transition-colors border-none cursor-pointer" title="Eliminar">
                               <span class="material-symbols-outlined" data-icon="delete">delete</span>
                             </button>
                           </form>
@@ -4633,8 +4365,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                      <td colspan="7" style="text-align:center; color:var(--text-muted); padding:3rem;"
-                        class="font-body-md">
+                      <td colspan="7" style="text-align:center; color:var(--text-muted); padding:3rem;" class="font-body-md">
                         No hay plantillas registradas. Usa el botón "Nueva Plantilla" para comenzar.
                       </td>
                     </tr>
@@ -4663,11 +4394,9 @@
             class="p-6 md:p-8 border-b border-surface-variant flex justify-between items-start gap-6 bg-surface-container-lowest/50 shrink-0">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
-                <span
-                  class="material-symbols-outlined text-primary dark:text-primary-fixed text-[32px] bg-primary/10 p-2 rounded-xl"
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[32px] bg-primary/10 p-2 rounded-xl"
                   data-icon="school" data-weight="fill" style="font-variation-settings: 'FILL' 1;">school</span>
-                <h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed m-0">Libro
-                  de Calificaciones</h1>
+                <h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed m-0">Libro de Calificaciones</h1>
               </div>
               <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant max-w-3xl m-0 mt-3">
                 Curso: <span class="font-bold text-on-surface">{{ curso_reporte['id'] }}</span> · {{
@@ -4703,10 +4432,12 @@
             </div>
 
             <!-- Main Data Table Container -->
-            <div class="admin-table-container overflow-visible pb-24">
+            <div
+              class="bg-white/95 dark:bg-surface-container-lowest rounded-2xl border border-slate-200/60 dark:border-outline-variant/20 overflow-visible pb-24 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-primary/5">
               <table class="w-full text-left border-collapse min-w-[1000px] m-0">
                 <thead>
-                  <tr class="text-on-surface-variant dark:text-outline-variant font-label-caps text-label-caps">
+                  <tr
+                    class="bg-gray-50 text-on-surface-variant dark:text-outline-variant font-label-caps text-label-caps border-b border-outline-variant/30">
                     <th class="p-4 pl-6 font-bold tracking-widest text-[#747780]">EMPLEADO / DOCENTE</th>
                     <th class="p-4 font-bold tracking-widest text-[#747780]">JORNADA</th>
                     <th class="p-4 font-bold tracking-widest text-[#747780]">ASISTENCIA</th>
@@ -4754,8 +4485,7 @@
                       <div class="flex flex-col mt-1">
                         <span class="font-headline-md text-headline-md !text-[15px] text-on-surface font-extrabold">{{
                           docente['asistencias'] }} / {{ docente['sesiones_programadas'] }}</span>
-                        <span
-                          class="font-body-md text-[12px] text-on-surface-variant dark:text-outline-variant mt-1 leading-snug">
+                        <span class="font-body-md text-[12px] text-on-surface-variant dark:text-outline-variant mt-1 leading-snug">
                           {% if docente['ultima_marcacion'] %}
                           Última: {{ docente['ultima_marcacion'] }}
                           {% elif docente['fechas_ausentes'] and docente['fechas_ausentes']|length > 0 %}
@@ -4838,8 +4568,7 @@
                   {% endfor %}
                   {% if total_filas.total == 0 %}
                   <tr>
-                    <td colspan="7"
-                      class="text-center text-on-surface-variant dark:text-outline-variant p-10 w-full font-body-md">
+                    <td colspan="7" class="text-center text-on-surface-variant dark:text-outline-variant p-10 w-full font-body-md">
                       Aún no hay participantes en esta edición.
                     </td>
                   </tr>
@@ -4913,8 +4642,7 @@
 <div class="modal-overlay" id="modal-editar-direccion" aria-hidden="true"
   onclick="if(event.target.id === 'modal-editar-direccion') cerrarModal('modal-editar-direccion')">
   <!-- Modal Wrapper (Glassmorphism) -->
-  <div
-    class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+  <div class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
     style="margin:auto;">
 
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -4923,8 +4651,7 @@
           <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">edit</span>
         </div>
         <div>
-          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-            style="margin:0;">Editar Dirección</h2>
+          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed" style="margin:0;">Editar Dirección</h2>
         </div>
       </div>
       <button type="button"
@@ -4940,18 +4667,14 @@
       <input type="hidden" name="codigo_actual" id="edit-codigo-actual">
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Código
-          (Siglas)</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Código (Siglas)</label>
         <input type="text"
           class="form-input w-full px-4 py-3 bg-surface-container-low/50 border-b-2 border-outline-variant rounded-t-xl focus:border-primary-container transition-all"
           id="edit-codigo-nuevo" name="codigo_nuevo" maxlength="12" required style="text-transform:uppercase;">
       </div>
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nombre
-          de la Dirección</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nombre de la Dirección</label>
         <input type="text"
           class="form-input w-full px-4 py-3 bg-surface-container-low/50 border-b-2 border-outline-variant rounded-t-xl focus:border-primary-container transition-all"
           id="edit-nombre-nuevo" name="nombre_nuevo" maxlength="80" required>
@@ -4974,19 +4697,16 @@
 <div class="modal-overlay" id="modal-editar-usuario" aria-hidden="true"
   onclick="if(event.target.id === 'modal-editar-usuario') cerrarModal('modal-editar-usuario')">
   <!-- Modal Wrapper (Glassmorphism) -->
-  <div
-    class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+  <div class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
     style="margin:auto;">
 
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
       <div class="flex items-center gap-4">
         <div class="w-14 h-14 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-          <span
-            class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">shield_person</span>
+          <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">shield_person</span>
         </div>
         <div>
-          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-            style="margin:0;">Editar Usuario Admin</h2>
+          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed" style="margin:0;">Editar Usuario Admin</h2>
         </div>
       </div>
       <button type="button"
@@ -5002,24 +4722,21 @@
       <input type="hidden" name="username" id="edit-admin-username">
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Usuario</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Usuario</label>
         <input type="text"
           class="form-input w-full px-4 py-3 bg-slate-100/50 border-b-2 border-outline-variant/40 rounded-t-xl text-slate-500 cursor-not-allowed outline-none"
           id="edit-admin-username-text" readonly>
       </div>
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Rol</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Rol</label>
         <input type="text"
           class="form-input w-full px-4 py-3 bg-slate-100/50 border-b-2 border-outline-variant/40 rounded-t-xl text-slate-500 cursor-not-allowed outline-none"
           id="edit-admin-rol" readonly>
       </div>
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Dirección</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Dirección</label>
         <div class="relative group">
           <select class="form-select searchable w-full" name="direccion" id="edit-admin-direccion" required>
             {% for d in direcciones %}
@@ -5030,9 +4747,7 @@
       </div>
 
       <div class="form-group" style="margin-bottom:0;">
-        <label
-          class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nueva
-          contraseña (opcional)</label>
+        <label class="block font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant mb-2 ml-1">Nueva contraseña (opcional)</label>
         <input type="password"
           class="form-input w-full px-4 py-3 bg-surface-container-low/50 border-b-2 border-outline-variant rounded-t-xl focus:border-primary-container transition-all"
           name="new_password" id="edit-admin-password" minlength="8" placeholder="Mínimo 8 caracteres">
@@ -5155,12 +4870,10 @@
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
       <div class="flex items-center gap-4">
         <div class="w-14 h-14 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-          <span
-            class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">calendar_month</span>
+          <span class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">calendar_month</span>
         </div>
         <div>
-          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-            style="margin:0;">Editar Sesión</h2>
+          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed" style="margin:0;">Editar Sesión</h2>
         </div>
       </div>
       <button type="button"
@@ -5176,8 +4889,7 @@
       <input type="hidden" name="id_sesion" id="edit-sesion-id-sesion">
 
       <div>
-        <label
-          class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Fecha</label>
+        <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Fecha</label>
         <input type="date"
           class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
           id="edit-sesion-fecha" name="fecha" required>
@@ -5185,15 +4897,13 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora
-            inicio</label>
+          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora inicio</label>
           <input type="time"
             class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-inicio" name="hora_inicio" required>
         </div>
         <div>
-          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora
-            fin</label>
+          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora fin</label>
           <input type="time"
             class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-fin" name="hora_fin" required>
@@ -5202,8 +4912,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label
-            class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Jornada</label>
+          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Jornada</label>
           <select
             class="form-select w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-8"
             id="edit-sesion-jornada" name="jornada">
@@ -5214,15 +4923,13 @@
           </select>
         </div>
         <div>
-          <label
-            class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Docente</label>
+          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Docente</label>
           <input type="text"
             class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-docente" name="docente_sesion" maxlength="120" placeholder="Responsable">
         </div>
         <div>
-          <label
-            class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Edición</label>
+          <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Edición</label>
           <input type="text"
             class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-edicion" name="edicion" maxlength="20" placeholder="G1">
@@ -5244,86 +4951,48 @@
   </div>
 </div>
 <!-- Modal configurar identidad visual -->
-<div class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10"
-  id="modal-identidad-direccion" aria-hidden="true">
-  <!-- Modal Wrapper (Glassmorphism) -->
-  <div
-    class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-xl p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
-    style="margin:auto;">
-
-    <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
-      <div class="flex items-center gap-4">
-        <div class="w-14 h-14 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
-          <span
-            class="material-symbols-outlined text-primary dark:text-primary-fixed-container text-[28px]">branding_watermark</span>
-        </div>
-        <div>
-          <h2 class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-primary-fixed"
-            style="margin:0;">Identidad Visual</h2>
-          <span class="text-xs text-on-surface-variant dark:text-outline-variant">Firma y Logo de Dirección</span>
-        </div>
-      </div>
-      <button type="button"
-        class="w-10 h-10 rounded-full bg-surface-container-high/50 hover:bg-surface-container-highest flex items-center justify-center transition-colors border-none cursor-pointer text-on-surface-variant dark:text-outline-variant"
-        onclick="cerrarModal('modal-identidad-direccion')">
-        <span class="material-symbols-outlined text-[20px]">close</span>
-      </button>
-    </div>
-
+<div class="modal-overlay" id="modal-identidad-direccion">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-icon"><span class="material-symbols-outlined"
+        style="vertical-align: middle; font-size: inherit;">branding_watermark</span></div>
+    <div class="modal-title">Configurar Identidad Visual (Firma y Logo)</div>
     <form action="/admin/certificados/identidad" method="POST" enctype="multipart/form-data"
-      class="flex flex-col gap-5">
+      style="display:grid; gap:.75rem;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <div>
-        <label
-          class="block text-[13px] font-semibold text-on-surface-variant dark:text-outline-variant uppercase tracking-wider mb-1.5">Dirección</label>
+        <label class="form-label" style="font-size:.8rem;">Dirección</label>
         {% if es_superadmin %}
-        <select
-          class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-          name="direccion_codigo" required>
+        <select class="form-select" name="direccion_codigo" required>
           {% for d in direcciones %}
           <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
           {% endfor %}
         </select>
         {% else %}
-        <input type="text"
-          class="w-full px-4 py-2.5 bg-slate-100/50 dark:bg-slate-800/50 border border-outline-variant/30 rounded-xl font-body-md text-sm text-slate-500 cursor-not-allowed outline-none"
-          value="{{ admin_direccion }}" readonly>
+        <input type="text" class="form-input" value="{{ admin_direccion }}" readonly
+          style="background:#f1f5f9; cursor:not-allowed;">
         <input type="hidden" name="direccion_codigo" value="{{ admin_direccion }}">
         {% endif %}
       </div>
 
       <div>
-        <label
-          class="block text-[13px] font-semibold text-on-surface-variant dark:text-outline-variant uppercase tracking-wider mb-1.5">Firma
-          (PNG)</label>
-        <input type="file"
-          class="w-full px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary dark:file:bg-primary-fixed-dim/20 dark:file:text-primary-fixed file:cursor-pointer hover:file:bg-primary/20 transition-all"
-          name="firma_img" accept=".png">
+        <label class="form-label" style="font-size:.8rem;">Firma (PNG)</label>
+        <input type="file" class="form-input" name="firma_img" accept=".png" style="padding:.4rem;">
       </div>
 
       <div>
-        <label
-          class="block text-[13px] font-semibold text-on-surface-variant dark:text-outline-variant uppercase tracking-wider mb-1.5">Logo
-          Superior (PNG/JPG)</label>
-        <input type="file"
-          class="w-full px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary dark:file:bg-primary-fixed-dim/20 dark:file:text-primary-fixed file:cursor-pointer hover:file:bg-primary/20 transition-all"
-          name="logo_img" accept=".png,.jpg,.jpeg">
+        <label class="form-label" style="font-size:.8rem;">Logo Superior (PNG/JPG)</label>
+        <input type="file" class="form-input" name="logo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
       </div>
 
-      <p class="text-xs text-on-surface-variant dark:text-outline-variant/60 leading-relaxed mt-1">Estos archivos se
-        aplicarán automáticamente a todas las plantillas de tu dirección.</p>
+      <p style="color:var(--text-muted); font-size:.8rem; margin:0; line-height:1.4;">Estos archivos se aplicarán
+        automáticamente a todas las plantillas de tu dirección.</p>
 
-      <div class="border-t border-outline-variant/10 flex justify-end gap-3 pt-4 mt-2">
-        <button type="button"
-          class="px-6 py-2.5 rounded-full bg-surface-container-high/50 text-on-surface-variant dark:text-outline-variant font-bold text-sm uppercase hover:bg-surface-container-highest transition-colors cursor-pointer border-none"
-          onclick="cerrarModal('modal-identidad-direccion')">
-          Cancelar
-        </button>
-        <button type="submit"
-          class="px-6 py-2.5 rounded-full bg-primary text-on-primary font-bold text-sm uppercase shadow-md shadow-primary/20 hover:bg-primary-container transition-all hover:scale-[1.02] border-none cursor-pointer">
-          Guardar Cambios
-        </button>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost"
+          style="color:var(--text-muted); border-color:var(--border); border-radius:var(--radius);"
+          onclick="cerrarModal('modal-identidad-direccion')">Cancelar</button>
+        <button type="submit" class="btn-primary-ipsd" style="justify-content:center;">Guardar Cambios</button>
       </div>
     </form>
   </div>
@@ -5339,15 +5008,12 @@
 
       <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white">
         <div class="flex items-center gap-4">
-          <div
-            class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
+          <div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
           </div>
           <div>
-            <h2 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed" style="margin:0;">Nueva
-              Plantilla de Certificado</h2>
-            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-              Configure los detalles y el formato del documento oficial.</p>
+            <h2 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed" style="margin:0;">Nueva Plantilla de Certificado</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">Configure los detalles y el formato del documento oficial.</p>
           </div>
         </div>
         <button type="button"
@@ -5361,11 +5027,9 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {% if es_superadmin %}
           <div class="space-y-2 md:col-span-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección
-              Asignada</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección Asignada</label>
             <div class="relative">
-              <select
-                class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
+              <select class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="direccion_codigo" required>
                 {% for d in direcciones %}
                 <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
@@ -5376,8 +5040,7 @@
           {% endif %}
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la
-              Plantilla</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la Plantilla</label>
             <input
               class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
               placeholder="Ej. Certificado de Participación 2024" type="text" name="nombre_plantilla"
@@ -5385,8 +5048,7 @@
           </div>
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de
-              Documento</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de Documento</label>
             <div class="relative">
               <select
                 class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
@@ -5399,12 +5061,10 @@
           </div>
         </div>
 
-        <div
-          class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
           <div class="space-y-4">
             <div class="flex items-center justify-between">
-              <label
-                class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-2">
+              <label class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">edit_document</span>
                 Texto del Certificado
               </label>
@@ -5445,15 +5105,13 @@
               oninput="actualizarPreview(this.value, 'crear-preview')"></textarea>
           </div>
           <div class="space-y-4 flex flex-col h-full">
-            <label
-              class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">visibility</span>
               Vista Previa (Texto)
             </label>
             <div
               class="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
-              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg">
-              </div>
+              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg"></div>
               <div id="crear-preview" class="text-lg text-on-surface leading-relaxed max-w-md"
                 style="font-family: 'Georgia', serif;">Escribe el texto arriba para ver la vista previa...</div>
             </div>
@@ -5461,22 +5119,19 @@
         </div>
 
         <div class="space-y-4">
-          <h3
-            class="font-headline-md text-[20px] font-semibold text-primary dark:text-primary-fixed border-b border-surface-variant/50 pb-2">
+          <h3 class="font-headline-md text-[20px] font-semibold text-primary dark:text-primary-fixed border-b border-surface-variant/50 pb-2">
             Información del Firmante
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del
-                Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del Firmante</label>
               <input
                 class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
-                placeholder="Ej. Dr. Juan Perez" type="text" name="firmante_nombre" id="firmante_nombre" maxlength="100"
-                required>
+                placeholder="Ej. Dr. Juan Perez" type="text" name="firmante_nombre" id="firmante_nombre"
+                maxlength="100" required>
             </div>
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del
-                Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del Firmante</label>
               <input
                 class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Director Academico" type="text" name="firmante_cargo" id="firmante_cargo"
@@ -5490,8 +5145,8 @@
         <button type="button"
           class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-all"
           onclick="cerrarModal('modal-plantilla')">Cancelar</button>
-        <button type="submit" class="btn-primary-ipsd flex items-center gap-2"
-          style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
+        <button type="submit"
+          class="btn-primary-ipsd flex items-center gap-2" style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
           <span class="material-symbols-outlined text-[20px]">save</span>
           Guardar Plantilla
         </button>
@@ -5510,15 +5165,12 @@
 
       <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white">
         <div class="flex items-center gap-4">
-          <div
-            class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
+          <div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary dark:text-primary-fixed">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
           </div>
           <div>
-            <h2 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed" style="margin:0;">Editar
-              Plantilla de Certificado</h2>
-            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">
-              Actualice los detalles y el formato del documento oficial.</p>
+            <h2 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed" style="margin:0;">Editar Plantilla de Certificado</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant" style="margin:0;">Actualice los detalles y el formato del documento oficial.</p>
           </div>
         </div>
         <button type="button"
@@ -5532,11 +5184,9 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {% if es_superadmin %}
           <div class="space-y-2 md:col-span-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección
-              Asignada</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Dirección Asignada</label>
             <div class="relative">
-              <select
-                class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
+              <select class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
                 name="direccion_codigo" id="edit-plantilla-direccion" required>
                 {% for d in direcciones %}
                 <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
@@ -5547,8 +5197,7 @@
           {% endif %}
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la
-              Plantilla</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre de la Plantilla</label>
             <input
               class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
               placeholder="Ej. Certificado de Participación 2024" type="text" name="nombre_plantilla"
@@ -5556,8 +5205,7 @@
           </div>
 
           <div class="space-y-2">
-            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de
-              Documento</label>
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Tipo de Documento</label>
             <div class="relative">
               <select
                 class="form-select w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none"
@@ -5570,12 +5218,10 @@
           </div>
         </div>
 
-        <div
-          class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50/40 rounded-2xl p-6 border border-slate-100 shadow-sm">
           <div class="space-y-4">
             <div class="flex items-center justify-between">
-              <label
-                class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-2">
+              <label class="font-label-caps text-label-caps text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">edit_document</span>
                 Texto del Certificado
               </label>
@@ -5616,15 +5262,13 @@
               oninput="actualizarPreview(this.value, 'edit-preview')"></textarea>
           </div>
           <div class="space-y-4 flex flex-col h-full">
-            <label
-              class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">visibility</span>
               Vista Previa (Texto)
             </label>
             <div
               class="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
-              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg">
-              </div>
+              <div class="absolute inset-4 border-2 border-double border-primary/10 pointer-events-none rounded-lg"></div>
               <div id="edit-preview" class="text-lg text-on-surface leading-relaxed max-w-md"
                 style="font-family: 'Georgia', serif;"></div>
             </div>
@@ -5632,26 +5276,23 @@
         </div>
 
         <div class="space-y-4">
-          <h3
-            class="font-headline-md text-[20px] font-semibold text-primary dark:text-primary-fixed border-b border-slate-100 pb-2">
+          <h3 class="font-headline-md text-[20px] font-semibold text-primary dark:text-primary-fixed border-b border-slate-100 pb-2">
             Información del Firmante
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del
-                Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Nombre del Firmante</label>
               <input
                 class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
                 placeholder="Ej. Dr. Juan Perez" type="text" name="firmante_nombre" id="edit-plantilla-firmante-nombre"
                 maxlength="100" required>
             </div>
             <div class="space-y-2">
-              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del
-                Firmante</label>
+              <label class="font-label-caps text-label-caps text-slate-500 uppercase tracking-wider block">Cargo del Firmante</label>
               <input
                 class="w-full bg-white border border-slate-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 px-4 py-3 rounded-xl transition-all font-body-md text-body-md text-on-surface outline-none placeholder:text-slate-400"
-                placeholder="Ej. Director Academico" type="text" name="firmante_cargo"
-                id="edit-plantilla-firmante-cargo" maxlength="100" required>
+                placeholder="Ej. Director Academico" type="text" name="firmante_cargo" id="edit-plantilla-firmante-cargo"
+                maxlength="100" required>
             </div>
           </div>
         </div>
@@ -5661,8 +5302,8 @@
         <button type="button"
           class="px-6 py-3 rounded-full font-body-md text-body-md font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-all"
           onclick="cerrarModal('modal-editar-plantilla')">Cancelar</button>
-        <button type="submit" class="btn-primary-ipsd flex items-center gap-2"
-          style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
+        <button type="submit"
+          class="btn-primary-ipsd flex items-center gap-2" style="border-radius:9999px; font-weight: bold; padding: 0.75rem 1.75rem;">
           <span class="material-symbols-outlined text-[20px]">save</span>
           Guardar Cambios
         </button>
@@ -7494,6 +7135,11 @@
     const KEY = 'ipsd-theme';
 
     function applyTheme(theme) {
+      // Bloqueo temporal de transiciones para acelerar drásticamente el renderizado
+      const css = document.createElement('style');
+      css.appendChild(document.createTextNode('* { -webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; -ms-transition: none !important; transition: none !important; }'));
+      document.head.appendChild(css);
+
       HTML.setAttribute('data-theme', theme);
       if (theme === 'dark') {
         HTML.classList.add('dark');
@@ -7508,6 +7154,14 @@
         BTN.setAttribute('aria-label', BTN.title);
       }
       localStorage.setItem(KEY, theme);
+
+      // Restaurar transiciones tras forzar un reflow
+      const _ = window.getComputedStyle(css).opacity;
+      setTimeout(() => {
+        if (document.head.contains(css)) {
+          document.head.removeChild(css);
+        }
+      }, 10);
     }
 
     // Aplicar tema guardado o detectar preferencia del sistema
@@ -7559,10 +7213,16 @@
           noChoicesText: 'No hay opciones disponibles'
         });
 
-        // Agregar la clase de ícono al contenedor exterior de Choices
+        element.choicesInstance = choices;
+
+        // Añadir clase si tiene icono para ajustar el padding en CSS
         if (hasIcon) {
           choices.containerOuter.element.classList.add('has-icon');
         }
+
+        // Asegurar que el select original esté absolutamente oculto
+        element.style.display = 'none';
+
         element.dataset.choicesInitialized = 'true';
       } catch (err) {
         console.warn('Error al inicializar Choices.js en:', element, err);
@@ -7609,15 +7269,8 @@
   }
 
   /* Ajuste de padding cuando hay un icono en el grupo */
-  html .choices.has-icon .choices__inner,
-  html.dark .choices.has-icon .choices__inner,
-  html[data-theme="dark"] .choices.has-icon .choices__inner {
+  .choices.has-icon .choices__inner {
     padding-left: 44px !important;
-  }
-
-  .relative.group>.material-symbols-outlined.absolute {
-    z-index: 100 !important;
-    pointer-events: none !important;
   }
 
   .choices.is-focused .choices__inner {
@@ -7647,11 +7300,10 @@
   }
 
   /* Asegurar que los iconos de Material Symbols no se oculten y no interfieran */
-  html .relative.group .material-symbols-outlined.absolute,
-  html.dark .relative.group .material-symbols-outlined.absolute,
-  html[data-theme="dark"] .relative.group .material-symbols-outlined.absolute {
-    z-index: 100 !important;
+  .relative.group .material-symbols-outlined {
+    z-index: 20 !important;
     pointer-events: none !important;
+    color: #747780 !important;
   }
 
   /* Resetear estilos nativos de form-select para evitar duplicados visuales */
@@ -7697,27 +7349,23 @@
   }
 
   /* Dark Mode support for Choices.js */
-  html[data-theme="dark"] .choices__inner,
-  html.dark .choices__inner {
+  html[data-theme="dark"] .choices__inner, html.dark .choices__inner {
     background-color: rgba(15, 23, 42, 0.7) !important;
     border-color: rgba(71, 85, 105, 0.8) !important;
     color: #f1f5f9 !important;
   }
 
-  html[data-theme="dark"] .choices.is-focused .choices__inner,
-  html.dark .choices.is-focused .choices__inner {
+  html[data-theme="dark"] .choices.is-focused .choices__inner, html.dark .choices.is-focused .choices__inner {
     background-color: rgba(15, 23, 42, 0.9) !important;
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 1px #3b82f6 !important;
   }
 
-  html[data-theme="dark"] .choices.is-open .choices__inner,
-  html.dark .choices.is-open .choices__inner {
+  html[data-theme="dark"] .choices.is-open .choices__inner, html.dark .choices.is-open .choices__inner {
     background-color: rgba(15, 23, 42, 0.85) !important;
   }
 
-  html[data-theme="dark"] .choices__list--dropdown,
-  html.dark .choices__list--dropdown {
+  html[data-theme="dark"] .choices__list--dropdown, html.dark .choices__list--dropdown {
     background-color: rgba(30, 41, 59, 0.95) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
@@ -7725,32 +7373,22 @@
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
   }
 
-  html[data-theme="dark"] .choices__list--dropdown .choices__item--selectable,
-  html.dark .choices__list--dropdown .choices__item--selectable {
+  html[data-theme="dark"] .choices__list--dropdown .choices__item--selectable, html.dark .choices__list--dropdown .choices__item--selectable {
     color: #e2e8f0 !important;
   }
 
-  html[data-theme="dark"] .choices__list--dropdown .choices__item--selectable.is-highlighted,
-  html.dark .choices__list--dropdown .choices__item--selectable.is-highlighted {
+  html[data-theme="dark"] .choices__list--dropdown .choices__item--selectable.is-highlighted, html.dark .choices__list--dropdown .choices__item--selectable.is-highlighted {
     background-color: rgba(59, 130, 246, 0.25) !important;
     color: #ffffff !important;
   }
 
-  html[data-theme="dark"] .choices__item--choice,
-  html.dark .choices__item--choice {
+  html[data-theme="dark"] .choices__item--choice, html.dark .choices__item--choice {
     color: #e2e8f0 !important;
   }
 
-  html[data-theme="dark"] .choices__item--choice.is-selected,
-  html.dark .choices__item--choice.is-selected {
+  html[data-theme="dark"] .choices__item--choice.is-selected, html.dark .choices__item--choice.is-selected {
     background-color: rgba(59, 130, 246, 0.35) !important;
     color: #ffffff !important;
-  }
-
-  /* Fix absolute icons being covered by select inputs like Choices.js */
-  .relative.group>.material-symbols-outlined.absolute {
-    z-index: 100 !important;
-    pointer-events: none !important;
   }
 </style>
 {% endblock %}

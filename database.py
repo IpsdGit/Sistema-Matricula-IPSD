@@ -2,6 +2,7 @@ import os
 import re
 import psycopg2
 import psycopg2.extras
+# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash
 
 def get_db_connection():
@@ -87,6 +88,8 @@ def asegurar_migraciones_minimas():
         columnas_docentes = {row['column_name'] for row in cursor.fetchall()}
         if 'centro_universitario_regional' not in columnas_docentes:
             cursor.execute("ALTER TABLE docentes ADD COLUMN centro_universitario_regional TEXT NOT NULL DEFAULT ''")
+        if 'notificaciones_leidas' not in columnas_docentes:
+            cursor.execute("ALTER TABLE docentes ADD COLUMN notificaciones_leidas TEXT NOT NULL DEFAULT '[]'")
 
         cursor.execute('''
             SELECT DISTINCT direccion

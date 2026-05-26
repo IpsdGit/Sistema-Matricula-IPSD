@@ -4,6 +4,56 @@
 
 {% block extra_head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Choices.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<style>
+  /* Styling Choices.js for portal/dashboard theme compatibility */
+  .portal-catalog-grid .choices {
+    margin-bottom: 0;
+    font-family: inherit;
+  }
+
+  .portal-catalog-grid .choices__inner {
+    border-radius: 0.5rem !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    background-color: var(--bg-card, #ffffff) !important;
+    color: var(--text, #0f172a) !important;
+    padding: 0.35rem 0.75rem !important;
+    min-height: auto !important;
+    font-size: 0.85rem !important;
+  }
+
+  .dark .portal-catalog-grid .choices__inner {
+    border-color: var(--border-dark, #334155) !important;
+    background-color: var(--bg-dark-2, #1e293b) !important;
+    color: var(--text-light, #cbd5e1) !important;
+  }
+
+  .portal-catalog-grid .choices__list--dropdown {
+    border-radius: 0.5rem !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    background-color: var(--bg-card, #ffffff) !important;
+    color: var(--text, #0f172a) !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+    z-index: 50 !important;
+  }
+
+  .dark .portal-catalog-grid .choices__list--dropdown {
+    border-color: var(--border-dark, #334155) !important;
+    background-color: var(--bg-dark-2, #1e293b) !important;
+    color: var(--text-light, #cbd5e1) !important;
+  }
+
+  .portal-catalog-grid .choices__list--dropdown .choices__item--selectable.is-highlighted {
+    background-color: var(--primary, #2563eb) !important;
+    color: #ffffff !important;
+  }
+
+  .portal-catalog-grid .choices__list--dropdown .choices__item {
+    font-size: 0.85rem !important;
+    padding: 0.45rem 0.75rem !important;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -60,8 +110,10 @@
       </div>
 
       <div class="portal-topbar-actions">
-        <button type="button" id="theme-toggle" class="portal-alert-btn" aria-label="Cambiar tema" title="Modo oscuro/claro">
-          <span class="material-symbols-outlined" id="theme-toggle-icon" style="vertical-align:middle;font-size:1rem;">dark_mode</span>
+        <button type="button" id="theme-toggle" class="portal-alert-btn" aria-label="Cambiar tema"
+          title="Modo oscuro/claro">
+          <span class="material-symbols-outlined" id="theme-toggle-icon"
+            style="vertical-align:middle;font-size:1rem;">dark_mode</span>
         </button>
         <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas"
           class="portal-alert-btn {% if seccion_activa == 'notificaciones' %}active{% endif %}"
@@ -79,7 +131,8 @@
               <span class="portal-user-name">{{ nombre_docente or 'Docente' }}</span>
               <span class="portal-user-id">Empleado: {{ empleado }}</span>
             </span>
-            <span class="portal-user-caret"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">expand_more</span></span>
+            <span class="portal-user-caret"><span class="material-symbols-outlined"
+                style="vertical-align: middle; font-size: inherit;">expand_more</span></span>
           </button>
           <div class="portal-user-dropdown" id="portal-user-dropdown">
             <a href="/logout_docente">Cerrar sesión</a>
@@ -111,11 +164,21 @@
       {% if matricula_feedback %}
       <div class="portal-toast-overlay" id="portal-toast-overlay">
         <article class="portal-toast-card" role="status" aria-live="polite">
+          {% if matricula_feedback['tipo'] == 'warning' %}
+          <div class="portal-toast-icon" style="background: #fef3c7; color: #92400e; font-size: 1.15rem;"
+            aria-hidden="true">⚠️</div>
+          {% elif matricula_feedback['tipo'] == 'danger' %}
+          <div class="portal-toast-icon" style="background: #fee2e2; color: #991b1b; font-size: 1.15rem;"
+            aria-hidden="true">🚫</div>
+          {% else %}
           <div class="portal-toast-icon" aria-hidden="true">OK</div>
+          {% endif %}
           <div class="portal-toast-content">
             <h4>{{ matricula_feedback['titulo'] }}</h4>
             <p>{{ matricula_feedback['mensaje'] }}</p>
+            {% if matricula_feedback['horario'] and matricula_feedback['horario'] != 'N/A' %}
             <p class="portal-toast-meta">Jornada: {{ matricula_feedback['horario'] }}</p>
+            {% endif %}
           </div>
           <button type="button" class="portal-toast-close" id="portal-toast-close" aria-label="Cerrar aviso">×</button>
         </article>
@@ -149,11 +212,14 @@
             {% for item in notificaciones %}
             {% set nivel_class = 'success' if item['nivel'] == 'success' else ('warning' if item['nivel'] == 'warning'
             else 'info') %}
-            {% set categoria_label = 'Inscripción • Acción Formativa' if item['nivel'] == 'success' else ('Asistencia • Recordatorio' if item['nivel'] == 'warning' else 'Oferta Académica • Nueva') %}
+            {% set categoria_label = 'Inscripción • Acción Formativa' if item['nivel'] == 'success' else ('Asistencia •
+            Recordatorio' if item['nivel'] == 'warning' else 'Oferta Académica • Nueva') %}
             {% set leida_class = 'notificacion-card--leida' if item['leida'] else '' %}
-            {% set icon_class = 'ui-icon-success' if item['nivel'] == 'success' else ('ui-icon-warning' if item['nivel'] == 'warning' else 'ui-icon-info') %}
+            {% set icon_class = 'ui-icon-success' if item['nivel'] == 'success' else ('ui-icon-warning' if item['nivel']
+            == 'warning' else 'ui-icon-info') %}
 
-            <div class="notificacion-card glass-surface study-card p-4 p-md-5 {{ leida_class }} notificacion-card--{{ nivel_class }}">
+            <div
+              class="notificacion-card glass-surface study-card p-4 p-md-5 {{ leida_class }} notificacion-card--{{ nivel_class }}">
               <div class="card-blob" aria-hidden="true"></div>
               <div class="notificacion-card-content">
                 <div class="notificacion-icon-wrap">
@@ -182,7 +248,8 @@
             {% endfor %}
             {% else %}
             <div class="glass-surface study-card p-5 text-center">
-              <span class="ui-icon ui-icon-info" style="font-size: 3rem; opacity: .2; margin-bottom: 1rem; display: block;"></span>
+              <span class="ui-icon ui-icon-info"
+                style="font-size: 3rem; opacity: .2; margin-bottom: 1rem; display: block;"></span>
               <p class="text-muted">No hay notificaciones disponibles para este filtro.</p>
             </div>
             {% endif %}
@@ -236,7 +303,8 @@
               <div class="historial-glass-footer">
                 <div class="historial-glass-date">
                   <span class="historial-glass-date-label">Fecha del evento</span>
-                  <span class="historial-glass-date-value">{{ (item0['fecha_evento']|string)[:10] if item0['fecha_evento'] else
+                  <span class="historial-glass-date-value">{{ (item0['fecha_evento']|string)[:10] if
+                    item0['fecha_evento'] else
                     'Sin fecha' }}</span>
                 </div>
                 <span class="historial-arrow-icon">→</span>
@@ -263,7 +331,8 @@
             </a>
 
             <div class="historial-glass-card historial-glass-card--dark" style="flex:1;">
-              <span class="historial-summary-label"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Resumen de Actividades</span>
+              <span class="historial-summary-label"><span class="material-symbols-outlined"
+                  style="vertical-align: middle; font-size: inherit;">bar_chart</span> Resumen de Actividades</span>
               <div class="historial-summary-stats">
                 <div class="historial-summary-stat">
                   <span class="historial-summary-num">{{ total }}</span>
@@ -341,7 +410,8 @@
                   </div>
                   <div>
                     <p class="historial-list-name">{{ accion['nombre_accion'] }}</p>
-                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ (accion['fecha_evento']|string)[:10] if
+                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ (accion['fecha_evento']|string)[:10]
+                      if
                       accion['fecha_evento'] else 'Sin fecha' }}</p>
                   </div>
                 </div>
@@ -378,8 +448,12 @@
           <div class="card-body" style="padding:1rem 1.1rem;">
             <div class="doc-cal-toolbar">
               <div class="doc-cal-nav">
-                <button type="button" class="doc-cal-nav-btn" id="doc-cal-prev" aria-label="Anterior"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">chevron_left</span></button>
-                <button type="button" class="doc-cal-nav-btn" id="doc-cal-next" aria-label="Siguiente"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">chevron_right</span></button>
+                <button type="button" class="doc-cal-nav-btn" id="doc-cal-prev" aria-label="Anterior"><span
+                    class="material-symbols-outlined"
+                    style="vertical-align: middle; font-size: inherit;">chevron_left</span></button>
+                <button type="button" class="doc-cal-nav-btn" id="doc-cal-next" aria-label="Siguiente"><span
+                    class="material-symbols-outlined"
+                    style="vertical-align: middle; font-size: inherit;">chevron_right</span></button>
                 <button type="button" class="doc-cal-today-btn" id="doc-cal-today">Hoy</button>
               </div>
 
@@ -460,7 +534,7 @@
                     {% else %}
                     <span class="enroll-status-badge enroll-status-badge--pending">En Curso</span>
                     {% endif %}
-                    <span class="enroll-card-num">#{{ curso['edicion_id'] or curso['id'] }}</span>
+                    <span class="enroll-card-num">{{ curso['catalogo_id'] }}</span>
                   </div>
                   <h3 class="enroll-card-title">{{ curso['nombre'] }}</h3>
                   <p class="enroll-card-meta">{{ curso['horario_elegido'] or 'Horario por confirmar' }}</p>
@@ -509,7 +583,8 @@
                   <span class="proximas-item-num">{{ evento.dia_mes }}</span>
                 </div>
                 <div class="proximas-item-info">
-                  <span class="proximas-item-type">{% if evento.tipo_evento == 'sesion' %}Sesión{% else %}Inicio{% endif %}</span>
+                  <span class="proximas-item-type">{% if evento.tipo_evento == 'sesion' %}Sesión{% else %}Inicio{% endif
+                    %}</span>
                   <span class="proximas-item-name">{{ evento.nombre_curso }}</span>
                 </div>
                 <span class="proximas-item-arrow">→</span>
@@ -546,7 +621,7 @@
               </span>
             </div>
             <div class="curso-body">
-              <div class="curso-id">{{ curso['edicion_id'] or curso['id'] }}</div>
+              <div class="curso-id">{{ curso['catalogo_id'] }}</div>
               <div class="curso-title">{{ curso['nombre'] }}</div>
               <div class="curso-period">{{ curso['mes'] }} {{ curso['anio'] }} · Trim. {{ curso['trimestre'] }}</div>
               <div class="curso-date-block">
@@ -565,12 +640,24 @@
                 <form action="/matricular" method="POST" class="matricula-form" style="margin:0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="numero_empleado" value="{{ empleado }}">
-                  <input type="hidden" name="edicion_id" value="{{ curso['edicion_id'] or curso['id'] }}">
                   <div class="form-group" style="margin-bottom:.8rem;">
-                    <label class="curso-jornada-label">Horario</label>
+                    <label class="curso-jornada-label">Jornadas disponibles</label>
+                    {% if curso['ediciones']|length == 1 %}
+                    <input type="hidden" name="edicion_id" value="{{ curso['ediciones'][0]['edicion_id'] }}">
                     <p class="curso-jornada-preview">
-                      {{ curso['horarios'][0] if curso['horarios'] else 'Horario por confirmar' }}
+                      {{ curso['ediciones'][0]['horarios'][0] if curso['ediciones'][0]['horarios'] else 'Horario por
+                      confirmar' }}
                     </p>
+                    {% else %}
+                    <select name="edicion_id" class="form-select w-full"
+                      style="padding: 0.45rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background-color: var(--bg-surface); color: var(--text-main); font-size: 0.85rem; margin-top: 0.25rem; font-family: inherit;">
+                      {% for ed in curso['ediciones'] %}
+                      <option value="{{ ed['edicion_id'] }}">
+                        {{ ed['horarios'][0] if ed['horarios'] else (ed['jornada']|capitalize) ~ ' (Por confirmar)' }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    {% endif %}
                   </div>
                   <button type="submit" class="btn-primary-ipsd w-full"
                     style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
@@ -593,7 +680,8 @@
         {% else %}
         <div class="alert-ipsd success" style="max-width:560px;">
           <span class="ui-icon ui-icon-success" aria-hidden="true"></span>
-          <span><strong>Sin acciones formativas habilitadas por ahora.</strong> Vuelve a revisar en próximos periodos.</span>
+          <span><strong>Sin acciones formativas habilitadas por ahora.</strong> Vuelve a revisar en próximos
+            periodos.</span>
         </div>
         {% endif %}
 
@@ -629,15 +717,18 @@
         <span class="csd-info-value" id="csd-info-modalidad">—</span>
       </div>
       <div class="csd-info-cell">
-        <span class="csd-info-label"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">school</span> PERIODO</span>
+        <span class="csd-info-label"><span class="material-symbols-outlined"
+            style="vertical-align: middle; font-size: inherit;">school</span> PERIODO</span>
         <span class="csd-info-value" id="csd-info-periodo">—</span>
       </div>
       <div class="csd-info-cell">
-        <span class="csd-info-label"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">timer</span> DURACIÓN</span>
+        <span class="csd-info-label"><span class="material-symbols-outlined"
+            style="vertical-align: middle; font-size: inherit;">timer</span> DURACIÓN</span>
         <span class="csd-info-value" id="csd-info-duracion">—</span>
       </div>
       <div class="csd-info-cell">
-        <span class="csd-info-label"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">schedule</span> JORNADA</span>
+        <span class="csd-info-label"><span class="material-symbols-outlined"
+            style="vertical-align: middle; font-size: inherit;">schedule</span> JORNADA</span>
         <span class="csd-info-value" id="csd-info-jornada">—</span>
       </div>
     </div>
@@ -664,19 +755,23 @@
         <!-- Certificate placeholder -->
         <div class="csd-cert-block" id="csd-cert-container" style="justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: .85rem;">
-            <div class="csd-cert-icon" style="background: rgba(255, 223, 153, .4); color: #775a00;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">military_tech</span></div>
+            <div class="csd-cert-icon" style="background: rgba(255, 223, 153, .4); color: #775a00;"><span
+                class="material-symbols-outlined"
+                style="vertical-align: middle; font-size: inherit;">military_tech</span></div>
             <div>
               <p class="csd-cert-title">Certificado no disponible</p>
               <p class="csd-cert-sub">Se habilita al aprobar</p>
             </div>
           </div>
-          <div class="csd-cert-lock" style="color: #747780; padding-right: 0.5rem;"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span></div>
+          <div class="csd-cert-lock" style="color: #747780; padding-right: 0.5rem;"><span
+              class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">lock</span></div>
         </div>
 
         <div class="csd-cert-block" id="csd-requisitos-container" style="align-items: flex-start; gap: .75rem;">
           <div style="display: flex; align-items: center; gap: .85rem;">
             <div class="csd-cert-icon" style="background: rgba(59, 130, 246, .15); color: #1d4ed8;">
-              <span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">fact_check</span>
+              <span class="material-symbols-outlined"
+                style="vertical-align: middle; font-size: inherit;">fact_check</span>
             </div>
             <div>
               <p class="csd-cert-title">Requisitos para aprobar</p>
@@ -712,24 +807,32 @@
 <!-- ── MODAL: Confirmar cancelación de matrícula ── -->
 <div class="modal-overlay" id="enroll-cancel-confirm-modal" aria-hidden="true" role="dialog" aria-modal="true"
   aria-labelledby="cancel-confirm-title">
-  <div class="modal-box cancel-confirm-box">
-    <div class="cancel-confirm-icon-wrap" aria-hidden="true">
-      <span class="cancel-confirm-icon-inner"><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">warning</span></span>
+  <div class="modal-box">
+    <div class="modal-icon"
+      style="color: var(--danger, #ba1a1a); display: flex; justify-content: center; align-items: center; background: rgba(186, 26, 26, 0.1); width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 1.25rem;">
+      <span class="material-symbols-outlined"
+        style="font-size: 2.2rem; display: inline-flex; align-items: center; justify-content: center; height: 100%;">warning</span>
     </div>
-    <h3 class="cancel-confirm-heading" id="cancel-confirm-title">Cancelar Inscripción</h3>
-    <p class="cancel-confirm-desc">
+    <h3 class="modal-title" id="cancel-confirm-title"
+      style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">Cancelar Inscripción</h3>
+    <p class="modal-desc" style="margin-bottom: 0.75rem;">
       ¿Confirmas que deseas cancelar tu inscripción en<br>
-      <strong id="cancel-confirm-course-name"></strong>?
+      <strong id="cancel-confirm-course-name" style="color: var(--text); font-weight: 700;"></strong>?
     </p>
-    <p class="cancel-confirm-note">
-      Esta acción es reversible: puedes volver a inscribirte si hay cupos disponibles.
+    <p class="modal-desc"
+      style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.08); color: var(--text-muted); border-radius: 0.5rem; padding: 0.6rem 0.85rem; margin-bottom: 1.5rem; line-height: 1.4; border: 1px solid rgba(59, 130, 246, 0.15); text-align: left; display: flex; align-items: flex-start; gap: 0.4rem;">
+      <span class="material-symbols-outlined"
+        style="font-size: 1.1rem; flex-shrink: 0; color: var(--primary, #2563eb); margin-top: 2px;">info</span>
+      <span>Esta acción es reversible: puedes volver a inscribirte si hay cupos disponibles.</span>
     </p>
-    <div class="cancel-confirm-actions">
+    <div class="modal-actions" style="display: flex; gap: 0.75rem;">
       <button type="button" class="btn-ghost cancel-confirm-dismiss"
+        style="flex: 1; justify-content: center; border-radius: var(--radius); padding: 0.6rem 1rem; font-weight: 500; font-size: 0.875rem;"
         onclick="cerrarModal('enroll-cancel-confirm-modal')">
-        Mantener inscripción
+        Mantener
       </button>
-      <button type="button" class="cancel-confirm-submit">
+      <button type="button" class="btn-danger-ipsd cancel-confirm-submit"
+        style="flex: 1; justify-content: center; border-radius: var(--radius); padding: 0.6rem 1rem; font-weight: 500; font-size: 0.875rem;">
         Sí, cancelar
       </button>
     </div>
@@ -872,39 +975,58 @@
 </script>
 
 <script>
-/* ── DARK MODE TOGGLE (portal docente) ── */
-(function () {
-  const HTML = document.documentElement;
-  const ICON = document.getElementById('theme-toggle-icon');
-  const BTN  = document.getElementById('theme-toggle');
-  const KEY  = 'ipsd-theme';
+  /* ── DARK MODE TOGGLE (portal docente) ── */
+  (function () {
+    const HTML = document.documentElement;
+    const ICON = document.getElementById('theme-toggle-icon');
+    const BTN = document.getElementById('theme-toggle');
+    const KEY = 'ipsd-theme';
 
-  function applyTheme(theme) {
-    HTML.setAttribute('data-theme', theme);
-    if (theme === 'dark') {
-      HTML.classList.add('dark');
-    } else {
-      HTML.classList.remove('dark');
+    function applyTheme(theme) {
+      HTML.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        HTML.classList.add('dark');
+      } else {
+        HTML.classList.remove('dark');
+      }
+      if (ICON) ICON.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      if (BTN) BTN.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+      localStorage.setItem(KEY, theme);
     }
-    if (ICON) ICON.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
-    if (BTN)  BTN.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
-    localStorage.setItem(KEY, theme);
-  }
 
-  const saved = localStorage.getItem(KEY);
-  if (saved) {
-    applyTheme(saved);
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    applyTheme('dark');
-  } else {
-    applyTheme('light');
-  }
+    const saved = localStorage.getItem(KEY);
+    if (saved) {
+      applyTheme(saved);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      applyTheme('dark');
+    } else {
+      applyTheme('light');
+    }
 
-  if (BTN) {
-    BTN.addEventListener('click', function () {
-      applyTheme((HTML.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark');
+    if (BTN) {
+      BTN.addEventListener('click', function () {
+        applyTheme((HTML.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark');
+      });
+    }
+  })();
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Choices.js JS -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var selectElements = document.querySelectorAll('.portal-catalog-grid select');
+    selectElements.forEach(function (el) {
+      new Choices(el, {
+        searchEnabled: false,
+        itemSelectText: '',
+        shouldSort: false,
+        noChoicesText: 'No hay opciones disponibles',
+        noResultsText: 'No se encontraron resultados'
+      });
     });
-  }
-})();
+  });
 </script>
 {% endblock %}

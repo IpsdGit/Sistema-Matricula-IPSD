@@ -54,6 +54,7 @@
   --bg-dark-3:      #334155;
 
   --text:           #0f172a;
+  --text-primary:   #0f172a;
   --text-muted:     #64748b;
   --text-light:     #cbd5e1;
 
@@ -4546,6 +4547,7 @@ html[data-theme="dark"] {
   --bg-dark-2:      #0f172a;
   --bg-dark-3:      #1e293b;
   --text:           #e2e8f0;
+  --text-primary:   #e2e8f0;
   --text-muted:     #94a3b8;
   --text-light:     #475569;
   --border:         #334155;
@@ -5202,3 +5204,36 @@ html[data-theme="dark"] .btn-ghost {
   filter: brightness(1.05);
   color: #001b3e;
 }
+
+/* --- DARK MODE OVERRIDES FOR PORTAL ACCIONES FORMATIVAS & CANCEL MODAL --- */
+html[data-theme="dark"] .portal-current-enrollments .card-header h5,
+html[data-theme="dark"] .portal-current-enrollments .card-header .ui-icon {
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .portal-current-enrollments .card-header span[style] {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .enroll-card-num {
+  color: #93c5fd !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .enroll-cancel-btn {
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+html[data-theme="dark"] .enroll-cancel-btn:hover {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
+}
+
+html[data-theme="dark"] .enroll-status-badge--pending  { background: rgba(30, 58, 138, 0.35) !important; color: #93c5fd !important; }
+html[data-theme="dark"] .enroll-status-badge--approved { background: rgba(6, 95, 70, 0.35) !important; color: #a7f3d0 !important; }
+html[data-theme="dark"] .enroll-status-badge--failed   { background: rgba(159, 18, 57, 0.35) !important; color: #fecdd3; }
+html[data-theme="dark"] .enroll-status-badge--abandon  { background: rgba(154, 52, 18, 0.35) !important; color: #fed7aa; }
+

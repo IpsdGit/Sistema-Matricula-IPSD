@@ -4926,3 +4926,61 @@ Inicio: Lunes, 22 de Abril de 2026
 **Versión actual**: 1.18.0 (Selección Manual de Calendario y Unificación Estética)  
 **Estado**: Development - Funcionalidad de calendario flexible integrada, diseño responsivo unificado en tablas/modales y optimización de base de datos PostgreSQL.
 
+---
+
+## 🎨 Rediseño del Portal de Profesores, Agrupación de Ediciones y Pulido Estético (v1.19.0)
+
+### Cambio 19.1: Rediseño visual premium del portal de acceso (login)
+**Fecha**: Mayo 26, 2026  
+**Archivos afectados**: `templates/index.html`, `templates/admin_login.html`, `static/style.css`
+
+**QUÉ**:
+- Rediseño de la landing page y formulario de login utilizando un tema oscuro y claro refinado con degradados radiales institucionales y efectos de desenfoque de fondo (`backdrop-filter`).
+- Reestructuración de la sección explicativa "¿Cómo funciona?" a un formato moderno de Bento Grid con bordes de baja opacidad.
+- Sincronización completa de colores y clases con la tipografía oficial `Manrope`.
+
+**POR QUÉ**:
+- El portal de acceso para docentes y administradores presentaba un diseño plano y anticuado con contrastes deficientes que no reflejaba la nueva identidad premium del sistema de matrículas.
+
+**PARA QUÉ**:
+- Lograr una primera impresión de alto nivel ("WOW factor") al ingresar al portal de matrícula, con legibilidad óptima de campos y una guía instructiva intuitiva para los docentes.
+
+---
+
+### Cambio 19.2: Agrupación inteligente de ediciones por catálogo en el portal de docentes
+**Fecha**: Mayo 26, 2026  
+**Archivos afectados**: `utils.py`, `templates/dashboard.html`
+
+**QUÉ**:
+- Modificación del backend (`cargar_contexto_dashboard_docente`) para agrupar las jornadas disponibles de un mismo catálogo formativo que inicien en la misma fecha bajo una única estructura (`clave_grupo = (clave, fecha_inicio)`).
+- Rediseño del frontend en `templates/dashboard.html` para renderizar una única tarjeta por curso, permitiendo al docente seleccionar la jornada deseada mediante un selector dinámico antes de matricularse.
+
+**POR QUÉ**:
+- Cuando un catálogo de cursos tenía múltiples ediciones (jornadas matutina, vespertina, nocturna, etc.), la interfaz mostraba múltiples tarjetas duplicadas idénticas para el mismo curso, saturando el tablero visual de los docentes.
+
+**PARA QUÉ**:
+- Despejar visualmente el panel de capacitaciones disponibles para los profesores, permitiéndoles comparar y elegir de manera directa la jornada de su conveniencia desde una única tarjeta.
+
+---
+
+### Cambio 19.3: Estilización y contraste en tablas y sección de certificados de la administración
+**Fecha**: Mayo 26, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- Adición de un borde inferior de 2px de espesor (`thead tr`) con colores ajustados a la opacidad tanto del modo claro (`rgba(0, 23, 54, 0.12)`) como del modo oscuro (`rgba(255, 255, 255, 0.15)`) con prioridad de sobrescritura (`!important`).
+- Rediseño de los botones de certificados ("Configurar Firma y Logo" y "Nueva Plantilla") para acoplarlos visualmente al resto del panel administrativo, utilizando gradientes suaves, fondos traslúcidos y evitando colores saturados.
+
+**POR QUÉ**:
+- Los encabezados de las tablas carecían de división visual con el contenido subyacente, lo que dificultaba la lectura rápida de datos tabulares.
+- Los botones de certificados desentonaban con la línea gráfica del resto del panel, mostrando saturación de colores y bordes inconsistentes.
+
+**PARA QUÉ**:
+- Proporcionar una jerarquía visual nítida en los reportes tabulados de matrículas, ediciones y catálogos, y unificar el diseño de los botones de certificados en los dos modos de color.
+
+---
+
+**Última actualización**: Mayo 26, 2026  
+**Versión actual**: 1.19.0 (Rediseño del Portal de Profesores, Agrupación de Ediciones y Pulido Estético)  
+**Estado**: Development - Portal de acceso modernizado, visualización consolidada de ofertas académicas y detalles estéticos del administrador unificados.
+

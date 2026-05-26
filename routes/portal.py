@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from flask import abort, jsonify, redirect, render_template, request, session, url_for
 
 from database import get_db_connection
@@ -119,7 +120,18 @@ def register_portal_routes(app):
         seccion_activa = normalizar_seccion_dashboard(request.values.get('seccion', 'disponibles'))
         filtro_historial = normalizar_filtro_historial(request.values.get('filtro_historial', 'todas'))
         filtro_notificacion = normalizar_filtro_notificacion(request.values.get('filtro_notificacion', 'todas'))
-        ids_notificaciones_leidas = session.get('docente_notificaciones_leidas', [])
+        import json
+        ids_notificaciones_leidas = []
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT notificaciones_leidas FROM docentes WHERE numero_empleado = %s", (numero_empleado,))
+            row = cur.fetchone()
+            if row and row['notificaciones_leidas']:
+                try:
+                    ids_notificaciones_leidas = json.loads(row['notificaciones_leidas'])
+                except Exception:
+                    ids_notificaciones_leidas = []
+        conn.close()
 
         resultado = load_dashboard_context(
             numero_empleado,
@@ -135,13 +147,19 @@ def register_portal_routes(app):
             notifs_todas = resultado['contexto'].get('notificaciones_todas', [])
             if notifs_todas:
                 ids_actuales = [n['id'] for n in notifs_todas]
-                leidas = set(session.get('docente_notificaciones_leidas', []))
+                leidas = set(ids_notificaciones_leidas)
                 
                 # Check if there are new unread notifications
                 if not leidas.issuperset(ids_actuales):
                     leidas.update(ids_actuales)
-                    session['docente_notificaciones_leidas'] = sorted(leidas)
-                    session.modified = True
+                    conn = get_db_connection()
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "UPDATE docentes SET notificaciones_leidas = %s WHERE numero_empleado = %s",
+                            (json.dumps(sorted(list(leidas))), numero_empleado)
+                        )
+                        conn.commit()
+                    conn.close()
                     
             # Always update the context in-place so it reflects immediately
             for n in notifs_todas:
@@ -216,13 +234,15 @@ def register_portal_routes(app):
                 abort(404)
             return render_template('index.html', error=resultado['error'])
 
-        return render_template(
-            'matricula_cancelada.html',
-            empleado=resultado['empleado'],
-            nombre_curso=resultado['nombre_accion'],
-            id_curso=resultado['edicion_id'],
-            edicion_id=resultado['edicion_id'],
-        )
+        session['matricula_feedback'] = {
+            'tipo': 'warning',
+            'titulo': 'Inscripción Cancelada',
+            'mensaje': f"Cancelaste tu matrícula en {resultado['nombre_accion']} ({resultado['edicion_id']}).",
+            'curso': resultado['nombre_accion'],
+            'codigo': resultado['edicion_id'],
+            'horario': 'N/A',
+        }
+        return redirect(url_for('dashboard', seccion='disponibles'))
 
     @app.route('/api/curso_detalle/<id_curso>', methods=['GET'])
     def api_curso_detalle(id_curso):

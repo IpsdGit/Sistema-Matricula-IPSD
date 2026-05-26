@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Badge ID
     const badgeId = document.getElementById('csd-badge-id');
-    if (badgeId) badgeId.textContent = curso.id || '—';
+    if (badgeId) badgeId.textContent = curso.catalogo_id || curso.id || '—';
 
     // Badge status
     const badgeStatus = document.getElementById('csd-badge-status');

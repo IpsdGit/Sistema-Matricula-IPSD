@@ -1,88 +1,201 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="es">
 
-{% block title %}IPSD – Login Administrador{% endblock %}
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>UNAH - Panel de Administración</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+        rel="stylesheet" />
 
-{% block content %}
-<div class="admin-login-bg">
-  <div class="admin-login-card animate-fade-up">
-    <div style="text-align:center; margin-bottom:2rem;">
-      <div style="width:72px; height:72px; background:linear-gradient(135deg,#7c3aed,#2563eb); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 1rem; box-shadow:0 8px 24px rgba(124,58,237,.4);">
-        🔐
-      </div>
-      <h2 style="color:#fff; margin:0 0 .3rem; font-size:1.4rem;">Panel de Administración</h2>
-      <p style="color:#64748b; margin:0; font-size:.875rem;">Acceso restringido – IPSD UNAH</p>
-    </div>
+    <script>
+        /* Anti-flash & theme loading logic */
+        (function () {
+            var t = localStorage.getItem('ipsd-theme');
+            if (t) {
+                document.documentElement.setAttribute('data-theme', t);
+                if (t === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } else {
+                // Default to dark as requested by design
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
 
-    {% if error %}
-    <div class="alert-ipsd danger" style="margin-bottom:1.2rem;">
-      <span><span class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">block</span></span>
-      <span>{{ error }}</span>
-    </div>
-    {% endif %}
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#002B5C", // UNAH Deep Blue
+                        "background-light": "#f3f4f6",
+                        "background-dark": "#0B1120", // Deep dark background
+                        "card-dark": "#1E293B",
+                        "unah-gold": "#C69C6D"
+                    },
+                    fontFamily: {
+                        display: ["Manrope", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem", // ROUND_EIGHT equivalent
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
 
-    <form action="/login_admin" method="POST" id="admin-login-form">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
 
-      <div class="form-group">
-        <label class="form-label" for="username">Usuario</label>
-        <input
-          type="text"
-          class="form-input"
-          id="username"
-          name="username"
-          placeholder="Nombre de usuario"
-          autocomplete="username"
-          required
-        >
-      </div>
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
 
-      <div class="form-group">
-        <label class="form-label" for="password">Contraseña</label>
-        <div style="position:relative;">
-          <input
-            type="password"
-            class="form-input"
-            id="password"
-            name="password"
-            placeholder="••••••••••"
-            autocomplete="current-password"
-            required
-            style="padding-right:2.8rem;"
-          >
-          <button type="button" id="toggle-pwd" onclick="togglePassword()"
-            style="position:absolute; right:.9rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#64748b; font-size:1rem; padding:0; transition:color .2s;"
-            title="Mostrar/ocultar contraseña">
-            👁️
-          </button>
+        .gradient-bg {
+            background: radial-gradient(circle at 10% 20%, rgba(0, 43, 92, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(198, 156, 109, 0.1) 0%, transparent 40%),
+                #f3f4f6;
+        }
+
+        .dark .gradient-bg {
+            background: radial-gradient(circle at 10% 20%, rgba(0, 43, 92, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(198, 156, 109, 0.15) 0%, transparent 40%),
+                #0B1120;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen flex flex-col justify-center items-center gradient-bg relative overflow-hidden transition-colors duration-300">
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div
+            class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary rounded-full mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-40 animate-pulse">
         </div>
-      </div>
-
-      <button type="submit" class="btn-primary-ipsd w-full" id="login-btn"
-        style="justify-content:center; width:100%; background:linear-gradient(135deg,#7c3aed,#2563eb); box-shadow:0 4px 14px rgba(124,58,237,.4); margin-top:.5rem;">
-        Ingresar al Panel
-      </button>
-    </form>
-
-    <div style="margin-top:1.5rem; text-align:center;">
-      <a href="/" style="color:#475569; font-size:.8rem; text-decoration:none; transition:color .2s;"
-         onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#475569'">
-        ← Volver al Portal Docente
-      </a>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-unah-gold rounded-full mix-blend-screen filter blur-[100px] opacity-10 dark:opacity-20 animate-pulse"
+            style="animation-delay: 2s;"></div>
     </div>
-  </div>
-</div>
 
-<script>
-function togglePassword() {
-  const field = document.getElementById('password');
-  const btn   = document.getElementById('toggle-pwd');
-  if (field.type === 'password') {
-    field.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    field.type = 'password';
-    btn.textContent = '👁️';
-  }
-}
-</script>
-{% endblock %}
+    <main class="w-full max-w-[380px] px-6 z-10">
+        <div class="glass-panel rounded-2xl p-6 md:p-8 w-full relative">
+            <div class="text-center mb-6">
+                <div
+                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-700 shadow-lg shadow-primary/30 mb-4">
+                    <span class="material-symbols-outlined text-white text-2xl">admin_panel_settings</span>
+                </div>
+                <h1 class="text-lg md:text-xl font-bold mb-1 tracking-tight">Panel de Administración</h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Acceso restringido - VRA UNAH</p>
+            </div>
+
+            {% if error %}
+            <div
+                class="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 text-red-800 dark:text-red-300 text-xs flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">block</span>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="/login_admin" method="POST" id="admin-login-form" class="space-y-4">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div>
+                    <label
+                        class="block text-[10px] font-bold tracking-wider text-gray-700 dark:text-gray-300 uppercase mb-1.5 ml-0.5"
+                        for="username">Usuario</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">person</span>
+                        </div>
+                        <input
+                            class="block w-full pl-9 pr-3 py-2.5 border-0 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 text-xs sm:text-sm"
+                            id="username" name="username" placeholder="Nombre de usuario" autocomplete="username"
+                            type="text" required />
+                    </div>
+                </div>
+
+                <div>
+                    <label
+                        class="block text-[10px] font-bold tracking-wider text-gray-700 dark:text-gray-300 uppercase mb-1.5 ml-0.5"
+                        for="password">Contraseña</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-gray-400 text-sm">lock</span>
+                        </div>
+                        <input
+                            class="block w-full pl-9 pr-9 py-2.5 border-0 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 text-xs sm:text-sm"
+                            id="password" name="password" placeholder="••••••••••" autocomplete="current-password"
+                            type="password" required />
+                        <button
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-primary transition-colors focus:outline-none"
+                            type="button" id="toggle-pwd" onclick="togglePassword()">
+                            <span class="material-symbols-outlined text-sm">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button
+                    class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-semibold text-white bg-primary hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark transition-all duration-200 relative overflow-hidden group"
+                    type="submit" id="login-btn">
+                    <span class="relative z-10 flex items-center gap-2">
+                        Ingresar al Panel
+                        <span
+                            class="material-symbols-outlined text-xs transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    </span>
+                    <div
+                        class="absolute inset-0 h-full w-full bg-gradient-to-r from-blue-600 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    </div>
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <a class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    href="/">
+                    <span class="material-symbols-outlined text-xs">arrow_back</span>
+                    Volver al Portal Docente
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-8 text-center text-xs text-gray-500 dark:text-gray-500 z-10">
+        <p>© 2026 Universidad Nacional Autónoma de Honduras.</p>
+        <p class="mt-1">Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        function togglePassword() {
+            const field = document.getElementById('password');
+            const btnIcon = document.querySelector('#toggle-pwd span');
+            if (field.type === 'password') {
+                field.type = 'text';
+                btnIcon.textContent = 'visibility_off';
+            } else {
+                field.type = 'password';
+                btnIcon.textContent = 'visibility';
+            }
+        }
+    </script>
+</body>
+
+</html>

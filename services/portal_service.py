@@ -406,6 +406,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
                 '''
                 SELECT
                     ef.id,
+                    ca.id AS catalogo_id,
                     ef.trimestre,
                     ef.fecha_inicio,
                     ef.jornada,
@@ -556,6 +557,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
             'ok': True,
             'curso': {
                 'id': curso['id'],
+                'catalogo_id': curso['catalogo_id'],
                 'nombre': curso['nombre'],
                 'anio': anio,
                 'trimestre': curso['trimestre'],
