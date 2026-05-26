@@ -42,3 +42,6 @@ Thumbs.db
 # Caché
 .cache/
 *.cache
+
+# Archivos de AWS
+*.pem
