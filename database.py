@@ -13,6 +13,29 @@ load_dotenv()
 
 _pool = None
 
+class PooledConnectionWrapper:
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def close(self):
+        if self._pool is not None and self._conn is not None:
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
+            self._pool.putconn(self._conn)
+            self._conn = None
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def __enter__(self):
+        return self._conn.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._conn.__exit__(exc_type, exc_val, exc_tb)
+
 def get_db_connection():
     global _pool
     database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
@@ -24,17 +47,7 @@ def get_db_connection():
             cursor_factory=psycopg2.extras.DictCursor
         )
     conn = _pool.getconn()
-    
-    def close_wrapper():
-        if _pool is not None:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            _pool.putconn(conn)
-            
-    conn.close = close_wrapper
-    return conn
+    return PooledConnectionWrapper(_pool, conn)
 
 def asegurar_migraciones_minimas():
     """Evita fallos en despliegues donde aún no se ha corrido setup_bd.py."""
