@@ -2886,7 +2886,7 @@
               <div class="flex flex-col items-end gap-1.5">
                 <label class="font-body-md text-[12px] font-semibold text-on-surface-variant dark:text-outline-variant">Estado de Edición</label>
                 <select id="cal-estado-edicion" name="estado"
-                  class="form-select select-estado-edicion w-[220px] px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                  class="form-select select-estado-edicion w-[220px] px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
                   <option value="En Edicion" {% if estado_edicion_actual == 'En Edicion' %}selected{% endif %}>En Edición</option>
                   <option value="Programado" {% if estado_edicion_actual == 'Programado' %}selected{% endif %}>Programado</option>
                   <option value="Finalizado" {% if estado_edicion_actual == 'Finalizado' %}selected{% endif %}>Finalizado</option>
@@ -2919,7 +2919,7 @@
                       <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Enlace
                         de Acceso</label>
                       <input
-                        class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                         type="url" name="enlace_virtual" id="enlace_virtual_cal" placeholder="https://zoom.us/j/..."
                         value="{{ (curso_sesion_detalle['enlace_acceso'] if curso_sesion_detalle else '') or '' }}">
                     </div>
@@ -2929,7 +2929,7 @@
                         class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Requisitos de
                         la Edición</label>
                       <textarea
-                        class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
+                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
                         name="requisitos" id="cal-requisitos" rows="2"
                         placeholder="Especifique requisitos previos...">{{ (curso_sesion_detalle.get('requisitos') if curso_sesion_detalle and curso_sesion_detalle.get('requisitos') else '') }}</textarea>
                     </div>
@@ -2943,7 +2943,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">timer</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="number" name="duracion_horas" id="cal-duracion-horas" min="1" max="999"
                             value="{{ curso_sesion_detalle.get('duracion_horas') if curso_sesion_detalle and curso_sesion_detalle.get('duracion_horas') else '' }}">
                         </div>
@@ -2955,7 +2955,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_today</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="date" name="fecha_inicio" id="fecha_inicio_cal"
                             value="{{ curso_sesion_config['fecha_inicio'] }}" min="{{ fecha_hoy }}" required>
                         </div>
@@ -2967,7 +2967,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="date" name="fecha_fin" id="fecha_fin_cal"
                             value="{{ curso_sesion_config['fecha_fin'] }}" min="{{ fecha_hoy }}" required>
                         </div>
@@ -2981,7 +2981,7 @@
                         <span
                           class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">workspace_premium</span>
                         <select
-                          class="form-select w-full pl-10 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
+                          class="form-select w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
                           name="id_plantilla_certificado" id="cal-plantilla-certificado">
                           <option value="">Seleccione plantilla</option>
                           {% for p in plantillas %}
@@ -3011,7 +3011,7 @@
                       {% if jornadas_config and jornadas_config|length > 0 %}
                       {% for jornada in jornadas_config %}
                       <div
-                        class="jornada-block bg-surface-container-lowest border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 hover:shadow-md transition-all duration-300"
+                        class="jornada-block bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 hover:shadow-md transition-all duration-300"
                         data-edicion-id="{{ jornada.get('edicion_id', '') }}">
                         <div class="flex justify-between items-center mb-4">
                           <span
@@ -3034,7 +3034,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                                 type="text" maxlength="20" value="{{ jornada.get('etiqueta_edicion', '') }}" required>
                             </div>
                           </div>
@@ -3046,7 +3046,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                                 type="text" maxlength="120" value="{{ jornada.get('docente_responsable', '') }}"
                                 required>
                             </div>
@@ -3060,7 +3060,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                                 type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)"
                                 value="{{ jornada.get('persona_apoyo', '') }}">
                             </div>
@@ -3074,7 +3074,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
                               <select
-                                class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="UNICA" {% if jornada.get('jornada')=='UNICA' %}selected{% endif %}>Única
                                 </option>
@@ -3095,7 +3095,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                                 type="time" value="{{ jornada.get('hora_inicio', '') }}" required>
                             </div>
                           </div>
@@ -3107,7 +3107,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                                 type="time" value="{{ jornada.get('hora_fin', '') }}" required>
                             </div>
                           </div>
@@ -3119,7 +3119,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
                               <select
-                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                                 <option value="auto" selected>Automatica</option>
                                 <option value="manual">Manual</option>
                               </select>
@@ -3133,7 +3133,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                                 type="text" placeholder="Selecciona fechas">
                             </div>
                           </div>
@@ -3162,7 +3162,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
                               <select
-                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="I" {% if jornada.get('trimestre')=='I' %}selected{% endif %}>I</option>
                                 <option value="II" {% if jornada.get('trimestre')=='II' %}selected{% endif %}>II
@@ -3181,7 +3181,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                                 type="number" min="0" step="1" value="{{ jornada.get('cupos_maximos', 0) }}" required>
                             </div>
                           </div>
@@ -3192,7 +3192,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
                               <select
-                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="Abierta" {% if jornada.get('privacidad')=='Abierta' %}selected{% endif
                                   %}>Abierta</option>
@@ -3209,7 +3209,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                                 type="datetime-local" value="{{ jornada.get('fecha_limite_input', '') }}">
                             </div>
                           </div>
@@ -3242,7 +3242,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                                 type="text" maxlength="20" required>
                             </div>
                           </div>
@@ -3254,7 +3254,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                                 type="text" maxlength="120" required>
                             </div>
                           </div>
@@ -3267,7 +3267,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                                 type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)">
                             </div>
                           </div>
@@ -3280,7 +3280,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
                               <select
-                                class="form-select jornada-jornada w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-jornada w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="UNICA">Única</option>
                                 <option value="MATUTINA">Matutina</option>
@@ -3297,7 +3297,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                                 type="time" required>
                             </div>
                           </div>
@@ -3309,7 +3309,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                                 type="time" required>
                             </div>
                           </div>
@@ -3321,7 +3321,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
                               <select
-                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                                 <option value="auto" selected>Automatica</option>
                                 <option value="manual">Manual</option>
                               </select>
@@ -3335,7 +3335,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                                 type="text" placeholder="Selecciona fechas">
                             </div>
                           </div>
@@ -3395,7 +3395,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
                               <select
-                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="I" selected>I</option>
                                 <option value="II">II</option>
@@ -3411,7 +3411,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                                 type="number" min="0" step="1" value="0" required>
                             </div>
                           </div>
@@ -3422,7 +3422,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
                               <select
-                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="Abierta" selected>Abierta</option>
                                 <option value="Cerrada">Cerrada</option>
@@ -3436,7 +3436,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                                 type="datetime-local">
                             </div>
                           </div>
@@ -3488,7 +3488,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                         type="text" maxlength="20" required>
                     </div>
                   </div>
@@ -3500,7 +3500,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                         type="text" maxlength="120" required>
                     </div>
                   </div>
@@ -3513,7 +3513,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                         type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)">
                     </div>
                   </div>
@@ -3525,7 +3525,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
                       <select
-                        class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="UNICA">Única</option>
                         <option value="MATUTINA">Matutina</option>
@@ -3541,7 +3541,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                         type="time" required>
                     </div>
                   </div>
@@ -3552,7 +3552,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                         type="time" required>
                     </div>
                   </div>
@@ -3563,7 +3563,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
                       <select
-                        class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                        class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                         <option value="auto" selected>Automatica</option>
                         <option value="manual">Manual</option>
                       </select>
@@ -3576,7 +3576,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                         type="text" placeholder="Selecciona fechas">
                     </div>
                   </div>
@@ -3636,7 +3636,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
                       <select
-                        class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="I" selected>I</option>
                         <option value="II">II</option>
@@ -3652,7 +3652,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                         type="number" min="0" step="1" value="0" required>
                     </div>
                   </div>
@@ -3663,7 +3663,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
                       <select
-                        class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="Abierta" selected>Abierta</option>
                         <option value="Cerrada">Cerrada</option>
@@ -3677,7 +3677,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                         type="datetime-local">
                     </div>
                   </div>
@@ -3696,7 +3696,7 @@
                   <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline"
                     style="font-size: 20px;">search</span>
                   <input
-                    class="pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-full font-body-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 shadow-sm"
+                    class="pl-10 pr-4 py-2 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-full font-body-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 shadow-sm"
                     placeholder="Buscar sesión..." type="text">
                 </div>
               </div>
@@ -4891,7 +4891,7 @@
       <div>
         <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Fecha</label>
         <input type="date"
-          class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+          class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
           id="edit-sesion-fecha" name="fecha" required>
       </div>
 
@@ -4899,13 +4899,13 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora inicio</label>
           <input type="time"
-            class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-inicio" name="hora_inicio" required>
         </div>
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora fin</label>
           <input type="time"
-            class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-fin" name="hora_fin" required>
         </div>
       </div>
@@ -4914,7 +4914,7 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Jornada</label>
           <select
-            class="form-select w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-8"
+            class="form-select w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-8"
             id="edit-sesion-jornada" name="jornada">
             <option value="UNICA">Única</option>
             <option value="MATUTINA">Matutina</option>
@@ -4925,13 +4925,13 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Docente</label>
           <input type="text"
-            class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-docente" name="docente_sesion" maxlength="120" placeholder="Responsable">
         </div>
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Edición</label>
           <input type="text"
-            class="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-edicion" name="edicion" maxlength="20" placeholder="G1">
         </div>
       </div>
