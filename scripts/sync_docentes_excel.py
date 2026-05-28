@@ -30,7 +30,7 @@ def normalizar_cabecera(cabecera):
     return texto
 
 def validar_numero_empleado(numero):
-    return bool(re.match(r'^\d{4,12}$', numero))
+    return bool(re.match(r'^\d{3,12}$', numero))
 
 def validar_correo(correo):
     return bool(re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', correo))
@@ -142,10 +142,17 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             )
 
         if not numero_empleado or not nombre_completo or not correo_institucional:
+            print(f"[ERROR VALIDACIÓN] Fila {total_filas + 1}: Faltan campos obligatorios. Empleado: '{numero_empleado}', Nombre: '{nombre_completo}', Correo: '{correo_institucional}'")
             errores_validacion += 1
             continue
 
-        if not validar_numero_empleado(numero_empleado) or not validar_correo(correo_institucional):
+        if not validar_numero_empleado(numero_empleado):
+            print(f"[ERROR VALIDACIÓN] Fila {total_filas + 1}: Número de empleado inválido '{numero_empleado}' (Debe ser numérico de 3 a 12 dígitos)")
+            errores_validacion += 1
+            continue
+
+        if not validar_correo(correo_institucional):
+            print(f"[ERROR VALIDACIÓN] Fila {total_filas + 1}: Formato de correo institucional inválido '{correo_institucional}'")
             errores_validacion += 1
             continue
 

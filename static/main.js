@@ -36,7 +36,7 @@
 
   empInput.addEventListener('input', function() {
     const val = this.value.trim();
-    const valido = /^\d{4,12}$/.test(val);
+    const valido = /^\d{3,12}$/.test(val);
     const vacio = val.length === 0;
 
     // Solo dígitos

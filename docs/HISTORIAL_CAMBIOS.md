@@ -4984,3 +4984,58 @@ Inicio: Lunes, 22 de Abril de 2026
 **Versión actual**: 1.19.0 (Rediseño del Portal de Profesores, Agrupación de Ediciones y Pulido Estético)  
 **Estado**: Development - Portal de acceso modernizado, visualización consolidada de ofertas académicas y detalles estéticos del administrador unificados.
 
+---
+
+## ⚡ Optimizaciones de Conectividad, Indexación de Base de Datos y Flexibilidad de Validación (v1.20.0)
+
+### Cambio 20.1: Flexibilización del número de empleado a 3 dígitos mínimo
+**Fecha**: Mayo 28, 2026  
+**Archivos afectados**: `scripts/sync_docentes_excel.py`, `utils.py`, `static/main.js`
+
+**QUÉ**:
+- Modificación del límite de longitud del número de empleado de `{4,12}` a `{3,12}` en los módulos de backend, script de sincronización Excel y archivo de validación Javascript del frontend.
+- Corrección de los mensajes explicativos de error de validación en consola.
+
+**POR QUÉ**:
+- Ciertos docentes legítimos poseen números de empleado de 3 dígitos (por ejemplo, el número `861` de la fila 6 del Excel de prueba), lo que bloqueaba su registro y acceso bajo las reglas anteriores de longitud fija de 4 dígitos.
+
+**PARA QUÉ**:
+- Permitir la correcta sincronización e inicio de sesión de todos los docentes activos sin importar si su número de empleado histórico contiene 3 dígitos, manteniendo la seguridad y consistencia en todas las capas de la aplicación.
+
+---
+
+### Cambio 20.2: Implementación de Connection Pooling en PostgreSQL (psycopg2)
+**Fecha**: Mayo 28, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+- Configuración de un pool de conexiones persistentes con `psycopg2.pool.ThreadedConnectionPool` que mantiene de 2 a 20 conexiones abiertas hacia AWS RDS.
+- Sobrescritura del método `conn.close()` retornado por `get_db_connection` para que devuelva la conexión al pool (realizando un rollback preventivo) en lugar de cerrar el socket de red.
+
+**POR QUÉ**:
+- En producción (AWS EC2 a RDS), abrir y cerrar una conexión TCP/IP en cada consulta web generaba latencia de red recurrente e ineficiencia en el uso de recursos.
+
+**PARA QUÉ**:
+- Disminuir el tiempo de respuesta promedio de las consultas web, reduciendo la carga y latencia de conexión en la base de datos de producción.
+
+---
+
+### Cambio 20.3: Indexación de la tabla de matrículas
+**Fecha**: Mayo 28, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+- Creación automática de índices en la tabla `matriculas` para las columnas `numero_empleado` (`idx_matriculas_numero_empleado`) y `edicion_id` (`idx_matriculas_edicion_id`) durante las migraciones iniciales.
+
+**POR QUÉ**:
+- El dashboard del docente y las comprobaciones del administrador consultan constantemente la tabla de matrículas por empleado o edición, lo que causaba lecturas secuenciales completas (*Sequential Scans*) a medida que crecía el número de registros.
+
+**PARA QUÉ**:
+- Acelerar de forma drástica las consultas de inscripciones y validar el estatus de los alumnos en milisegundos.
+
+---
+
+**Última actualización**: Mayo 28, 2026  
+**Versión actual**: 1.20.0 (Optimizaciones de Conectividad, Indexación de Base de Datos y Flexibilidad de Validación)  
+**Estado**: Production - Desplegado en AWS EC2 + RDS con conexión poolizada, indexado optimizado y validación adaptada para docentes históricos.
+

@@ -2,13 +2,38 @@ import os
 import re
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 # pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash
+# pyrefly: ignore [missing-import]
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
+
+_pool = None
 
 def get_db_connection():
+    global _pool
     database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-    conn = psycopg2.connect(database_url, cursor_factory=psycopg2.extras.DictCursor)
-    # Autocommit is sometimes preferred in simple apps, but we can manage transactions.
+    if _pool is None:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=2,
+            maxconn=20,
+            dsn=database_url,
+            cursor_factory=psycopg2.extras.DictCursor
+        )
+    conn = _pool.getconn()
+    
+    def close_wrapper():
+        if _pool is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            _pool.putconn(conn)
+            
+    conn.close = close_wrapper
     return conn
 
 def asegurar_migraciones_minimas():
@@ -215,6 +240,8 @@ def asegurar_migraciones_minimas():
             )
             '''
         )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_numero_empleado ON matriculas (numero_empleado)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion_id ON matriculas (edicion_id)')
 
         cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'matriculas'")
         columnas_matriculas = {row['column_name'] for row in cursor.fetchall()}

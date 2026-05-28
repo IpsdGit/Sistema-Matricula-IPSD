@@ -52,7 +52,7 @@ def superadmin_requerido(f):
 
 
 def validar_numero_empleado(numero):
-    return numero and re.match(r'^\d{4,12}$', numero.strip())
+    return numero and re.match(r'^\d{3,12}$', numero.strip())
 
 
 def normalizar_correo(correo):
