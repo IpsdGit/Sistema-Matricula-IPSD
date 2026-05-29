@@ -1539,85 +1539,170 @@
   <nav
     class="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-surface-variant/50 z-50 flex items-center justify-between px-3 py-2"
     style="box-sizing: border-box;">
-    <!-- Brand -->
-    <div class="flex items-center gap-3 pl-2">
-      <div
-        class="w-9 h-9 rounded-full bg-primary flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-white/20">
-        <span class="material-symbols-outlined text-white text-[20px]">school</span>
+    <div class="flex items-center justify-between w-full">
+      <!-- Brand -->
+      <div class="flex items-center gap-3 pl-2">
+        <div
+          class="w-9 h-9 rounded-full bg-primary flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-white/20">
+          <span class="material-symbols-outlined text-white text-[20px]">school</span>
+        </div>
+        <h2 class="font-headline-md text-base font-bold text-primary dark:text-primary-fixed leading-tight hidden lg:block" style="margin:0;">UNAH
+          Admin</h2>
+        <button type="button"
+          class="ml-1 p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center block lg:hidden"
+          id="mobile-menu-toggle" aria-label="Abrir menu" aria-expanded="false" style="border:none; cursor:pointer; background:transparent;">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
-      <h2 class="font-headline-md text-base font-bold text-primary dark:text-primary-fixed leading-tight hidden lg:block" style="margin:0;">UNAH
-        Admin</h2>
+
+      <!-- Navigation Links -->
+      <div class="hidden lg:flex flex-1 items-center justify-center gap-1 px-4 overflow-x-auto no-scrollbar pillbar-nav">
+        <a href="/admin?view=dashboard"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="dashboard" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span> Panel Principal
+        </a>
+        <a href="/admin?view=cursos"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="cursos" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">layers</span> Catálogos
+        </a>
+        <a href="/admin?view=ediciones"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="ediciones" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">calendar_month</span> Ediciones
+        </a>
+        <a href="/admin?view=matriculas"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="matriculas" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">analytics</span> Reportes / Historial
+        </a>
+        <a href="/admin?view=certificados"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="certificados" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Plantillas PDF
+        </a>
+        {% if es_superadmin %}
+        <a href="/admin?view=usuarios"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
+          data-view="usuarios" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">shield_person</span> Usuarios
+        </a>
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div class="hidden lg:flex items-center gap-2 pr-1">
+        <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
+          class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
+          title="Exportar CSV" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[20px]">download</span>
+        </a>
+        <button type="button"
+          class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
+          id="theme-toggle" data-theme-toggle-btn aria-label="Cambiar tema" style="border:none; cursor:pointer; background:transparent;">
+          <span class="material-symbols-outlined text-[20px]" id="theme-toggle-icon" data-theme-toggle-icon>dark_mode</span>
+        </button>
+        <div class="h-6 w-px bg-surface-variant mx-1"></div>
+
+        <div class="relative top-user-menu" id="top-user-menu">
+          <button
+            class="flex items-center gap-2 hover:bg-surface-variant/30 p-1 rounded-full pr-3 transition-colors top-user-menu-trigger"
+            id="top-user-menu-trigger" style="border:none; cursor:pointer; background:transparent;">
+            <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">{{
+              (admin_user or 'A')[:1] | upper }}</div>
+            <div class="hidden lg:block text-left">
+              <p class="text-xs font-bold text-on-surface leading-tight" style="margin:0;">{{ admin_user }}</p>
+            </div>
+          </button>
+          <div class="top-user-dropdown" id="top-user-dropdown" style="right:0;">
+            {% if curso_sesiones_id or curso_asistencias_id %}
+            <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}"><span
+                class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Ver
+              asistencias</a>
+            {% endif %}
+            <a href="/logout_admin"><span class="material-symbols-outlined"
+                style="vertical-align: middle; font-size: inherit;">logout</span> Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
     </div>
+  </nav>
 
-    <!-- Navigation Links -->
-    <div class="hidden md:flex flex-1 items-center justify-center gap-1 px-4 overflow-x-auto no-scrollbar pillbar-nav">
-      <a href="/admin?view=dashboard"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="dashboard" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">dashboard</span> Panel Principal
-      </a>
-      <a href="/admin?view=cursos"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="cursos" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">layers</span> Catálogos
-      </a>
-      <a href="/admin?view=ediciones"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="ediciones" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">calendar_month</span> Ediciones
-      </a>
-      <a href="/admin?view=matriculas"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="matriculas" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">analytics</span> Reportes / Historial
-      </a>
-      <a href="/admin?view=certificados"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="certificados" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Plantillas PDF
-      </a>
-      {% if es_superadmin %}
-      <a href="/admin?view=usuarios"
-        class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap"
-        data-view="usuarios" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[18px]">shield_person</span> Usuarios
-      </a>
-      {% endif %}
-    </div>
-
-    <!-- Actions -->
-    <div class="flex items-center gap-2 pr-1">
-      <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
-        class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
-        title="Exportar CSV" style="text-decoration:none;">
-        <span class="material-symbols-outlined text-[20px]">download</span>
-      </a>
-      <button type="button"
-        class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
-        id="theme-toggle" aria-label="Cambiar tema" style="border:none; cursor:pointer; background:transparent;">
-        <span class="material-symbols-outlined text-[20px]" id="theme-toggle-icon">dark_mode</span>
-      </button>
-      <div class="h-6 w-px bg-surface-variant mx-1"></div>
-
-      <div class="relative top-user-menu" id="top-user-menu">
-        <button
-          class="flex items-center gap-2 hover:bg-surface-variant/30 p-1 rounded-full pr-3 transition-colors top-user-menu-trigger"
-          id="top-user-menu-trigger" style="border:none; cursor:pointer; background:transparent;">
+  <nav id="mobile-nav"
+    class="hidden lg:hidden fixed top-[5.5rem] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl bg-white/90 backdrop-blur-md rounded-3xl shadow-sm border border-surface-variant/50 z-40 px-3 py-3"
+    style="box-sizing: border-box;">
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-1">
+        <a href="/admin?view=dashboard"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="dashboard" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span> Panel Principal
+        </a>
+        <a href="/admin?view=cursos"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="cursos" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">layers</span> Catálogos
+        </a>
+        <a href="/admin?view=ediciones"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="ediciones" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">calendar_month</span> Ediciones
+        </a>
+        <a href="/admin?view=matriculas"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="matriculas" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">analytics</span> Reportes / Historial
+        </a>
+        <a href="/admin?view=certificados"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="certificados" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Plantillas PDF
+        </a>
+        {% if es_superadmin %}
+        <a href="/admin?view=usuarios"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          data-view="usuarios" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">shield_person</span> Usuarios
+        </a>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2 px-2">
+        <a href="/exportar?anio={{ filtros.anio or '' }}&trimestre={{ filtros.trimestre or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
+          class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
+          title="Exportar CSV" style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[20px]">download</span>
+        </a>
+        <button type="button"
+          class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
+          data-theme-toggle-btn aria-label="Cambiar tema" style="border:none; cursor:pointer; background:transparent;">
+          <span class="material-symbols-outlined text-[20px]" data-theme-toggle-icon>dark_mode</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-1 px-2">
+        <div class="flex items-center gap-2 py-2">
           <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">{{
             (admin_user or 'A')[:1] | upper }}</div>
-          <div class="hidden lg:block text-left">
+          <div class="text-left">
             <p class="text-xs font-bold text-on-surface leading-tight" style="margin:0;">{{ admin_user }}</p>
           </div>
-        </button>
-        <div class="top-user-dropdown" id="top-user-dropdown" style="right:0;">
-          {% if curso_sesiones_id or curso_asistencias_id %}
-          <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}"><span
-              class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">bar_chart</span> Ver
-            asistencias</a>
-          {% endif %}
-          <a href="/logout_admin"><span class="material-symbols-outlined"
-              style="vertical-align: middle; font-size: inherit;">logout</span> Cerrar sesión</a>
         </div>
+        {% if curso_sesiones_id or curso_asistencias_id %}
+        <a href="{{ url_for('admin_gestion_asistencias', id_curso=(curso_asistencias_id or curso_sesiones_id)) }}"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">bar_chart</span> Ver asistencias
+        </a>
+        {% endif %}
+        <a href="/logout_admin"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">logout</span> Cerrar sesión
+        </a>
       </div>
     </div>
   </nav>
@@ -2063,7 +2148,7 @@
         onclick="cerrarModalEditarCatalogo(event)">
         <!-- Modal Wrapper (Glassmorphism) -->
         <div
-          class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+          class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
           style="margin:auto;">
 
           <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -2307,7 +2392,7 @@
       <div class="modal-overlay" id="modal-seleccion-catalogo" aria-hidden="true">
         <!-- Modal Box -->
         <div
-          class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-8 sm:p-10 flex flex-col gap-6 border border-white/60"
+          class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-8 sm:p-10 flex flex-col gap-6 border border-white/60"
           style="margin:auto;">
           <!-- Icon & Header -->
           <div class="flex flex-col gap-4">
@@ -2539,7 +2624,7 @@
       <!-- ── MODAL: Ver QR ── -->
       <div class="modal-overlay" id="modal-qr-sesion-admin" aria-hidden="true">
         <div
-          class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-md p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+          class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-md p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
           style="margin:auto;">
           <div class="flex flex-col items-center justify-center gap-4 text-center">
             <div class="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0 mb-2">
@@ -2573,7 +2658,7 @@
       <div class="modal-overlay" id="modal-editar-edicion" aria-hidden="true">
         <!-- Modal Wrapper (Glassmorphism) -->
         <div
-          class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-2xl p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+          class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-2xl p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
           style="margin:auto;">
 
           <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -2886,7 +2971,7 @@
               <div class="flex flex-col items-end gap-1.5">
                 <label class="font-body-md text-[12px] font-semibold text-on-surface-variant dark:text-outline-variant">Estado de Edición</label>
                 <select id="cal-estado-edicion" name="estado"
-                  class="form-select select-estado-edicion w-[220px] px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                  class="form-select select-estado-edicion w-[220px] px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
                   <option value="En Edicion" {% if estado_edicion_actual == 'En Edicion' %}selected{% endif %}>En Edición</option>
                   <option value="Programado" {% if estado_edicion_actual == 'Programado' %}selected{% endif %}>Programado</option>
                   <option value="Finalizado" {% if estado_edicion_actual == 'Finalizado' %}selected{% endif %}>Finalizado</option>
@@ -2919,7 +3004,7 @@
                       <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Enlace
                         de Acceso</label>
                       <input
-                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                         type="url" name="enlace_virtual" id="enlace_virtual_cal" placeholder="https://zoom.us/j/..."
                         value="{{ (curso_sesion_detalle['enlace_acceso'] if curso_sesion_detalle else '') or '' }}">
                     </div>
@@ -2929,7 +3014,7 @@
                         class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Requisitos de
                         la Edición</label>
                       <textarea
-                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
+                        class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
                         name="requisitos" id="cal-requisitos" rows="2"
                         placeholder="Especifique requisitos previos...">{{ (curso_sesion_detalle.get('requisitos') if curso_sesion_detalle and curso_sesion_detalle.get('requisitos') else '') }}</textarea>
                     </div>
@@ -2943,7 +3028,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">timer</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="number" name="duracion_horas" id="cal-duracion-horas" min="1" max="999"
                             value="{{ curso_sesion_detalle.get('duracion_horas') if curso_sesion_detalle and curso_sesion_detalle.get('duracion_horas') else '' }}">
                         </div>
@@ -2955,7 +3040,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_today</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="date" name="fecha_inicio" id="fecha_inicio_cal"
                             value="{{ curso_sesion_config['fecha_inicio'] }}" min="{{ fecha_hoy }}" required>
                         </div>
@@ -2967,7 +3052,7 @@
                           <span
                             class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event</span>
                           <input
-                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                            class="w-full pl-10 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             type="date" name="fecha_fin" id="fecha_fin_cal"
                             value="{{ curso_sesion_config['fecha_fin'] }}" min="{{ fecha_hoy }}" required>
                         </div>
@@ -2977,17 +3062,22 @@
                     <div>
                       <label class="block font-body-md text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ">Plantilla
                         Cert.</label>
-                      <div class="relative group">
-                        <span
-                          class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">workspace_premium</span>
+                      <div class="relative w-full group">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span
+                            class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/50 group-focus-within:text-primary dark:text-primary-fixed transition-colors">workspace_premium</span>
+                        </div>
                         <select
-                          class="form-select w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
+                          class="form-select w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
                           name="id_plantilla_certificado" id="cal-plantilla-certificado">
                           <option value="">Seleccione plantilla</option>
                           {% for p in plantillas %}
                             <option value="{{ p.id }}" {% if curso_sesion_detalle and curso_sesion_detalle.get('id_plantilla_certificado') == p.id %}selected{% endif %}>{{ p.nombre_plantilla }}</option>
                           {% endfor %}
                         </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/50">expand_more</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3011,7 +3101,7 @@
                       {% if jornadas_config and jornadas_config|length > 0 %}
                       {% for jornada in jornadas_config %}
                       <div
-                        class="jornada-block bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 hover:shadow-md transition-all duration-300"
+                        class="jornada-block bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 hover:shadow-md transition-all duration-300"
                         data-edicion-id="{{ jornada.get('edicion_id', '') }}">
                         <div class="flex justify-between items-center mb-4">
                           <span
@@ -3034,7 +3124,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                                 type="text" maxlength="20" value="{{ jornada.get('etiqueta_edicion', '') }}" required>
                             </div>
                           </div>
@@ -3046,7 +3136,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                                 type="text" maxlength="120" value="{{ jornada.get('docente_responsable', '') }}"
                                 required>
                             </div>
@@ -3060,7 +3150,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                                 type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)"
                                 value="{{ jornada.get('persona_apoyo', '') }}">
                             </div>
@@ -3070,11 +3160,13 @@
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Tipo
                               Jornada</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                              </div>
                               <select
-                                class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-jornada w-full min-w-[150px] pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="UNICA" {% if jornada.get('jornada')=='UNICA' %}selected{% endif %}>Única
                                 </option>
@@ -3085,6 +3177,9 @@
                                 <option value="NOCTURNA" {% if jornada.get('jornada')=='NOCTURNA' %}selected{% endif %}>
                                   Nocturna</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-3">
@@ -3095,7 +3190,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                                 type="time" value="{{ jornada.get('hora_inicio', '') }}" required>
                             </div>
                           </div>
@@ -3107,7 +3202,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                                 type="time" value="{{ jornada.get('hora_fin', '') }}" required>
                             </div>
                           </div>
@@ -3115,14 +3210,19 @@
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Configuracion
                               de Sesiones</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                              </div>
                               <select
-                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                                class="form-select jornada-config-modo w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                                 <option value="auto" selected>Automatica</option>
                                 <option value="manual">Manual</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6 jornada-fechas-manuales-block" style="display:none;">
@@ -3133,7 +3233,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                                 type="text" placeholder="Selecciona fechas">
                             </div>
                           </div>
@@ -3158,11 +3258,13 @@
                           <div class="col-span-6">
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Trimestre</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                              </div>
                               <select
-                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-trimestre w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="I" {% if jornada.get('trimestre')=='I' %}selected{% endif %}>I</option>
                                 <option value="II" {% if jornada.get('trimestre')=='II' %}selected{% endif %}>II
@@ -3172,6 +3274,9 @@
                                 <option value="IV" {% if jornada.get('trimestre')=='IV' %}selected{% endif %}>IV
                                 </option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3181,24 +3286,29 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                                 type="number" min="0" step="1" value="{{ jornada.get('cupos_maximos', 0) }}" required>
                             </div>
                           </div>
                           <div class="col-span-6">
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Privacidad</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                              </div>
                               <select
-                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-privacidad w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="Abierta" {% if jornada.get('privacidad')=='Abierta' %}selected{% endif
                                   %}>Abierta</option>
                                 <option value="Cerrada" {% if jornada.get('privacidad')=='Cerrada' %}selected{% endif
                                   %}>Cerrada</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3209,7 +3319,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                                 type="datetime-local" value="{{ jornada.get('fecha_limite_input', '') }}">
                             </div>
                           </div>
@@ -3219,7 +3329,7 @@
                       {% else %}
                       <!-- Default Jornada Block -->
                       <div
-                        class="jornada-block bg-white/60 border border-outline-variant/50 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 transition-all duration-300"
+                        class="jornada-block bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 transition-all duration-300"
                         data-edicion-id="">
                         <div class="flex justify-between items-center mb-4">
                           <span
@@ -3242,7 +3352,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                                 type="text" maxlength="20" required>
                             </div>
                           </div>
@@ -3254,7 +3364,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                                 type="text" maxlength="120" required>
                             </div>
                           </div>
@@ -3267,7 +3377,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                                 type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)">
                             </div>
                           </div>
@@ -3276,17 +3386,22 @@
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Tipo
                               Jornada</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                              </div>
                               <select
-                                class="form-select jornada-jornada w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-jornada w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="UNICA">Única</option>
                                 <option value="MATUTINA">Matutina</option>
                                 <option value="VESPERTINA">Vespertina</option>
                                 <option value="NOCTURNA">Nocturna</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-4">
@@ -3297,7 +3412,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                                 type="time" required>
                             </div>
                           </div>
@@ -3309,7 +3424,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                                 type="time" required>
                             </div>
                           </div>
@@ -3317,14 +3432,19 @@
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Configuracion
                               de Sesiones</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                              </div>
                               <select
-                                class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                                class="form-select jornada-config-modo w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                                 <option value="auto" selected>Automatica</option>
                                 <option value="manual">Manual</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6 jornada-fechas-manuales-block" style="display:none;">
@@ -3335,7 +3455,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                                 type="text" placeholder="Selecciona fechas">
                             </div>
                           </div>
@@ -3391,17 +3511,22 @@
                           <div class="col-span-6">
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Trimestre</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                              </div>
                               <select
-                                class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-trimestre w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="I" selected>I</option>
                                 <option value="II">II</option>
                                 <option value="III">III</option>
                                 <option value="IV">IV</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3411,22 +3536,27 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                                 type="number" min="0" step="1" value="0" required>
                             </div>
                           </div>
                           <div class="col-span-6">
                             <label
                               class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Privacidad</label>
-                            <div class="relative group">
-                              <span
-                                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                            <div class="relative w-full group">
+                              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span
+                                  class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                              </div>
                               <select
-                                class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                                class="form-select jornada-privacidad w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                                 required>
                                 <option value="Abierta" selected>Abierta</option>
                                 <option value="Cerrada">Cerrada</option>
                               </select>
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                              </div>
                             </div>
                           </div>
                           <div class="col-span-6">
@@ -3436,7 +3566,7 @@
                               <span
                                 class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                               <input
-                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                                class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                                 type="datetime-local">
                             </div>
                           </div>
@@ -3466,7 +3596,7 @@
             <!-- Template for new Jornadas -->
             <template id="jornada-template">
               <div
-                class="jornada-block bg-white/60 border border-outline-variant/50 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 transition-all duration-300"
+                class="jornada-block bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 rounded-[24px] p-6 relative shadow-sm group hover:border-primary/40 transition-all duration-300"
                 data-edicion-id="">
                 <div class="flex justify-between items-center mb-4">
                   <span
@@ -3488,7 +3618,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">label</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-etiqueta"
                         type="text" maxlength="20" required>
                     </div>
                   </div>
@@ -3500,7 +3630,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">person</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-docente"
                         type="text" maxlength="120" required>
                     </div>
                   </div>
@@ -3513,7 +3643,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">support_agent</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-apoyo"
                         type="text" maxlength="140" placeholder="Ej. Auxiliar Administrativo (Opcional)">
                     </div>
                   </div>
@@ -3521,17 +3651,22 @@
                   <div class="col-span-5">
                     <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Tipo
                       Jornada</label>
-                    <div class="relative group">
-                      <span
-                        class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                    <div class="relative w-full group">
+                      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span
+                          class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">layers</span>
+                      </div>
                       <select
-                        class="form-select jornada-jornada w-full min-w-[150px] pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-jornada w-full min-w-[150px] pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="UNICA">Única</option>
                         <option value="MATUTINA">Matutina</option>
                         <option value="VESPERTINA">Vespertina</option>
                         <option value="NOCTURNA">Nocturna</option>
                       </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-span-3">
@@ -3541,7 +3676,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">access_time</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-inicio"
                         type="time" required>
                     </div>
                   </div>
@@ -3552,21 +3687,26 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">history</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-hora-fin"
                         type="time" required>
                     </div>
                   </div>
                   <div class="col-span-6">
                     <label class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Configuracion
                       de Sesiones</label>
-                    <div class="relative group">
-                      <span
-                        class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                    <div class="relative w-full group">
+                      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span
+                          class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">tune</span>
+                      </div>
                       <select
-                        class="form-select jornada-config-modo w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+                        class="form-select jornada-config-modo w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
                         <option value="auto" selected>Automatica</option>
                         <option value="manual">Manual</option>
                       </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-span-6 jornada-fechas-manuales-block" style="display:none;">
@@ -3576,7 +3716,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">event_available</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fechas-manuales"
                         type="text" placeholder="Selecciona fechas">
                     </div>
                   </div>
@@ -3632,17 +3772,22 @@
                   <div class="col-span-6">
                     <label
                       class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Trimestre</label>
-                    <div class="relative group">
-                      <span
-                        class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                    <div class="relative w-full group">
+                      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span
+                          class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">calendar_view_day</span>
+                      </div>
                       <select
-                        class="form-select jornada-trimestre w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-trimestre w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="I" selected>I</option>
                         <option value="II">II</option>
                         <option value="III">III</option>
                         <option value="IV">IV</option>
                       </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-span-6">
@@ -3652,22 +3797,27 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">group</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-cupos"
                         type="number" min="0" step="1" value="0" required>
                     </div>
                   </div>
                   <div class="col-span-6">
                     <label
                       class="block font-body-md text-[12px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5 ml-1">Privacidad</label>
-                    <div class="relative group">
-                      <span
-                        class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                    <div class="relative w-full group">
+                      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span
+                          class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">lock</span>
+                      </div>
                       <select
-                        class="form-select jornada-privacidad w-full pl-11 pr-8 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+                        class="form-select jornada-privacidad w-full pl-10 pr-8 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
                         required>
                         <option value="Abierta" selected>Abierta</option>
                         <option value="Cerrada">Cerrada</option>
                       </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant dark:text-outline-variant/40">expand_more</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-span-6">
@@ -3677,7 +3827,7 @@
                       <span
                         class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant dark:text-outline-variant/40 group-focus-within:text-primary dark:text-primary-fixed transition-colors">alarm</span>
                       <input
-                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
+                        class="w-full pl-11 pr-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-2xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm jornada-fecha-limite"
                         type="datetime-local">
                     </div>
                   </div>
@@ -3696,7 +3846,7 @@
                   <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline"
                     style="font-size: 20px;">search</span>
                   <input
-                    class="pl-10 pr-4 py-2 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-full font-body-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 shadow-sm"
+                    class="pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-full font-body-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 shadow-sm"
                     placeholder="Buscar sesión..." type="text">
                 </div>
               </div>
@@ -4642,7 +4792,7 @@
 <div class="modal-overlay" id="modal-editar-direccion" aria-hidden="true"
   onclick="if(event.target.id === 'modal-editar-direccion') cerrarModal('modal-editar-direccion')">
   <!-- Modal Wrapper (Glassmorphism) -->
-  <div class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+  <div class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
     style="margin:auto;">
 
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -4697,7 +4847,7 @@
 <div class="modal-overlay" id="modal-editar-usuario" aria-hidden="true"
   onclick="if(event.target.id === 'modal-editar-usuario') cerrarModal('modal-editar-usuario')">
   <!-- Modal Wrapper (Glassmorphism) -->
-  <div class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+  <div class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-lg p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
     style="margin:auto;">
 
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -4864,7 +5014,7 @@
   aria-hidden="true">
   <!-- Modal Wrapper (Glassmorphism) -->
   <div
-    class="relative bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-xl p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
+    class="relative bg-surface-container-lowest dark:bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] shadow-2xl shadow-primary/20 w-full max-w-xl p-6 sm:p-8 flex flex-col gap-6 border border-white/60"
     style="margin:auto;">
 
     <div class="flex items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
@@ -4891,7 +5041,7 @@
       <div>
         <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Fecha</label>
         <input type="date"
-          class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+          class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
           id="edit-sesion-fecha" name="fecha" required>
       </div>
 
@@ -4899,13 +5049,13 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora inicio</label>
           <input type="time"
-            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-inicio" name="hora_inicio" required>
         </div>
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Hora fin</label>
           <input type="time"
-            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-hora-fin" name="hora_fin" required>
         </div>
       </div>
@@ -4914,7 +5064,7 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Jornada</label>
           <select
-            class="form-select w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-8"
+            class="form-select w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-8"
             id="edit-sesion-jornada" name="jornada">
             <option value="UNICA">Única</option>
             <option value="MATUTINA">Matutina</option>
@@ -4925,13 +5075,13 @@
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Docente</label>
           <input type="text"
-            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-docente" name="docente_sesion" maxlength="120" placeholder="Responsable">
         </div>
         <div>
           <label class="block text-[13px] font-medium text-on-surface-variant dark:text-outline-variant mb-1.5">Edición</label>
           <input type="text"
-            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-high border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            class="w-full px-4 py-2.5 bg-surface dark:bg-surface-container-highest border border-outline-variant/30 rounded-xl font-body-md text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             id="edit-sesion-edicion" name="edicion" maxlength="20" placeholder="G1">
         </div>
       </div>
@@ -7130,8 +7280,8 @@
   /* ── DARK MODE TOGGLE (admin) ── */
   (function () {
     const HTML = document.documentElement;
-    const ICON_BTN = document.getElementById('theme-toggle-icon');
-    const BTN = document.getElementById('theme-toggle');
+    const ICON_BTNS = document.querySelectorAll('[data-theme-toggle-icon]');
+    const BTNS = document.querySelectorAll('[data-theme-toggle-btn]');
     const KEY = 'ipsd-theme';
 
     function applyTheme(theme) {
@@ -7146,12 +7296,16 @@
       } else {
         HTML.classList.remove('dark');
       }
-      if (ICON_BTN) {
-        ICON_BTN.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      if (ICON_BTNS.length) {
+        ICON_BTNS.forEach((icon) => {
+          icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+        });
       }
-      if (BTN) {
-        BTN.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
-        BTN.setAttribute('aria-label', BTN.title);
+      if (BTNS.length) {
+        BTNS.forEach((btn) => {
+          btn.title = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+          btn.setAttribute('aria-label', btn.title);
+        });
       }
       localStorage.setItem(KEY, theme);
 
@@ -7175,10 +7329,12 @@
     }
 
     // Toggle al hacer click
-    if (BTN) {
-      BTN.addEventListener('click', function () {
-        const current = HTML.getAttribute('data-theme') || 'light';
-        applyTheme(current === 'dark' ? 'light' : 'dark');
+    if (BTNS.length) {
+      BTNS.forEach((btn) => {
+        btn.addEventListener('click', function () {
+          const current = HTML.getAttribute('data-theme') || 'light';
+          applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
       });
     }
   })();
@@ -7303,7 +7459,6 @@
   .relative.group .material-symbols-outlined {
     z-index: 20 !important;
     pointer-events: none !important;
-    color: #747780 !important;
   }
 
   /* Resetear estilos nativos de form-select para evitar duplicados visuales */
@@ -7316,6 +7471,39 @@
   .form-select.native-select {
     appearance: auto !important;
     background-image: none !important;
+  }
+
+  /* Ajustes específicos del modal de calendario para Choices + selects con iconos */
+  #modal-gestion-calendario .relative.w-full > .absolute {
+    z-index: 80;
+  }
+
+  #modal-gestion-calendario .relative.w-full .material-symbols-outlined {
+    color: #6b7280 !important;
+  }
+
+  html.dark #modal-gestion-calendario .relative.w-full .material-symbols-outlined,
+  html[data-theme="dark"] #modal-gestion-calendario .relative.w-full .material-symbols-outlined {
+    color: rgba(226, 232, 240, 0.7) !important;
+  }
+
+  #modal-gestion-calendario .choices__inner {
+    background-color: #f7f9fb !important;
+    border-color: rgba(196, 198, 208, 0.3) !important;
+    color: #191c1e !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  html.dark #modal-gestion-calendario .choices__inner,
+  html[data-theme="dark"] #modal-gestion-calendario .choices__inner {
+    background-color: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(71, 85, 105, 0.55) !important;
+    color: #e2e8f0 !important;
+  }
+
+  #modal-gestion-calendario .choices.has-icon[data-type*='select-one']:after {
+    display: none !important;
   }
 
   /* Personalización de la flecha (Chevron Moderno) */
@@ -7391,4 +7579,17 @@
     color: #ffffff !important;
   }
 </style>
+<script>
+  (function () {
+    const toggleBtn = document.getElementById('mobile-menu-toggle');
+    const mobileNav = document.getElementById('mobile-nav');
+    if (!toggleBtn || !mobileNav) return;
+
+    toggleBtn.addEventListener('click', function () {
+      mobileNav.classList.toggle('hidden');
+      const expanded = !mobileNav.classList.contains('hidden');
+      toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+  })();
+</script>
 {% endblock %}

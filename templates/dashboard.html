@@ -97,11 +97,20 @@
 
       <nav class="portal-topbar-nav" aria-label="Navegación principal docente">
         <a href="/dashboard?seccion=disponibles"
-          class="portal-topbar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">Inicio</a>
+          class="portal-topbar-link {% if seccion_activa == 'disponibles' %}active{% endif %}">
+          <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+          Inicio
+        </a>
         <a href="/dashboard?seccion=historial&filtro_historial={{ filtro_historial }}"
-          class="portal-topbar-link {% if seccion_activa == 'historial' %}active{% endif %}">Historial</a>
+          class="portal-topbar-link {% if seccion_activa == 'historial' %}active{% endif %}">
+          <span class="material-symbols-outlined" aria-hidden="true">history</span>
+          Historial
+        </a>
         <a href="/dashboard?seccion=calendario"
-          class="portal-topbar-link {% if seccion_activa == 'calendario' %}active{% endif %}">Calendario</a>
+          class="portal-topbar-link {% if seccion_activa == 'calendario' %}active{% endif %}">
+          <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+          Calendario
+        </a>
       </nav>
 
       <div class="portal-topbar-title-wrap insight-blob portal-topbar-mobile-title">
@@ -110,32 +119,36 @@
       </div>
 
       <div class="portal-topbar-actions">
-        <button type="button" id="theme-toggle" class="portal-alert-btn" aria-label="Cambiar tema"
-          title="Modo oscuro/claro">
-          <span class="material-symbols-outlined" id="theme-toggle-icon"
-            style="vertical-align:middle;font-size:1rem;">dark_mode</span>
-        </button>
-        <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas"
-          class="portal-alert-btn {% if seccion_activa == 'notificaciones' %}active{% endif %}"
-          aria-label="Notificaciones" title="Notificaciones">
-          <span class="ui-icon ui-icon-bell" aria-hidden="true"></span>
-          {% if notificaciones_total %}
-          <span class="portal-alert-count">{{ notificaciones_total if notificaciones_total < 100 else '99+' }}</span>
-              {% endif %}
-        </a>
-        <div class="portal-user-menu" id="portal-user-menu">
-          <button type="button" class="portal-user-chip" id="portal-user-menu-trigger" aria-haspopup="true"
-            aria-expanded="false" aria-controls="portal-user-dropdown">
-            <span class="portal-user-avatar">{{ ('Docente')[:1] | upper }}</span>
-            <span class="portal-user-meta">
-              <span class="portal-user-name">{{ nombre_docente or 'Docente' }}</span>
-              <span class="portal-user-id">Empleado: {{ empleado }}</span>
-            </span>
-            <span class="portal-user-caret"><span class="material-symbols-outlined"
-                style="vertical-align: middle; font-size: inherit;">expand_more</span></span>
+        <div class="portal-topbar-actions-left">
+          <button type="button" id="theme-toggle" class="portal-alert-btn" aria-label="Cambiar tema"
+            title="Modo oscuro/claro">
+            <span class="material-symbols-outlined" id="theme-toggle-icon"
+              style="vertical-align:middle;font-size:1rem;">dark_mode</span>
           </button>
-          <div class="portal-user-dropdown" id="portal-user-dropdown">
-            <a href="/logout_docente">Cerrar sesión</a>
+          <a href="/dashboard?seccion=notificaciones&filtro_notificacion=todas"
+            class="portal-alert-btn {% if seccion_activa == 'notificaciones' %}active{% endif %}"
+            aria-label="Notificaciones" title="Notificaciones">
+            <span class="ui-icon ui-icon-bell" aria-hidden="true"></span>
+            {% if notificaciones_total %}
+            <span class="portal-alert-count">{{ notificaciones_total if notificaciones_total < 100 else '99+' }}</span>
+                {% endif %}
+          </a>
+        </div>
+        <div class="portal-topbar-actions-right">
+          <div class="portal-user-menu" id="portal-user-menu">
+            <button type="button" class="portal-user-chip" id="portal-user-menu-trigger" aria-haspopup="true"
+              aria-expanded="false" aria-controls="portal-user-dropdown">
+              <span class="portal-user-avatar">{{ ('Docente')[:1] | upper }}</span>
+              <span class="portal-user-meta">
+                <span class="portal-user-name">{{ nombre_docente or 'Docente' }}</span>
+                <span class="portal-user-id">Empleado: {{ empleado }}</span>
+              </span>
+              <span class="portal-user-caret"><span class="material-symbols-outlined"
+                  style="vertical-align: middle; font-size: inherit;">expand_more</span></span>
+            </button>
+            <div class="portal-user-dropdown" id="portal-user-dropdown">
+              <a href="/logout_docente">Cerrar sesión</a>
+            </div>
           </div>
         </div>
       </div>

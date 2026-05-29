@@ -5035,7 +5035,44 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Mayo 28, 2026  
-**Versión actual**: 1.20.0 (Optimizaciones de Conectividad, Indexación de Base de Datos y Flexibilidad de Validación)  
-**Estado**: Production - Desplegado en AWS EC2 + RDS con conexión poolizada, indexado optimizado y validación adaptada para docentes históricos.
+---
+
+## ⚡ Corrección de Crash de Base de Datos y Refinamiento Estético del Panel de Administración (v1.21.0)
+
+### Cambio 21.1: Solución del error de solo lectura en el pool de conexiones de base de datos
+**Fecha**: Mayo 29, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+- Implementación de la clase `PooledConnectionWrapper` para envolver la conexión nativa de `psycopg2` e interceptar el método `.close()`.
+- Modificación de `get_db_connection()` para que devuelva una instancia de esta clase en lugar del objeto directo de `psycopg2`.
+
+**POR QUÉ**:
+- Intentar monkey-patching directo en la conexión (`conn.close = close_wrapper`) producía un error de atributo de sólo lectura (`AttributeError: 'psycopg2.extensions.connection' object attribute 'close' is read-only`), debido a que los objetos de conexión de `psycopg2` están compilados en C y protegen sus métodos nativos. Esto tiraba el servidor de producción con un error 500.
+
+**PARA QUÉ**:
+- Permitir que las conexiones se liberen y retornen al pool al llamar a `.close()` sin disparar excepciones de Python, estabilizando el sistema en producción.
+
+---
+
+### Cambio 21.2: Refinamiento de contraste cromático y visual de formularios de jornadas
+**Fecha**: Mayo 29, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- Ajuste y separación de las clases de fondo para los contenedores de jornadas (`bg-surface-container-lowest dark:bg-surface-container-low`) y sus campos de entrada (`bg-surface dark:bg-surface-container-highest`).
+- Sincronización del template de duplicación dinámico en Javascript (`<template id="jornada-template">`) para aplicar exactamente la misma lógica de contraste cromático a las jornadas agregadas posteriormente ("Jornada 2", "Jornada 3", etc.).
+- Inclusión del atributo `dark:bg-surface-container-lowest` a los wrappers principales de las ventanas emergentes (modales) para garantizar su correcta visualización.
+
+**POR QUÉ**:
+- Al usar una clase idéntica de fondo en contenedores e inputs, las cajas de texto y sus iconos quedaban camuflados sin relieve, restando legibilidad e impidiendo distinguir los campos de texto e iconos (como el reloj o el usuario) en el modo oscuro.
+
+**PARA QUÉ**:
+- Garantizar que los formularios mantengan un alto contraste, legibilidad excelente de los iconos y homogeneidad en su comportamiento visual tanto en modo claro como en modo oscuro.
+
+---
+
+**Última actualización**: Mayo 29, 2026  
+**Versión actual**: 1.21.0 (Corrección de Crash de Base de Datos y Refinamiento Estético de Administración)  
+**Estado**: Production - Desplegado en AWS EC2 + RDS con conexión poolizada estabilizada mediante wrapper y contraste de UI corregido.
 
