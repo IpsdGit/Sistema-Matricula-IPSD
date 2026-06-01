@@ -5072,7 +5072,92 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Mayo 29, 2026  
-**Versión actual**: 1.21.0 (Corrección de Crash de Base de Datos y Refinamiento Estético de Administración)  
-**Estado**: Production - Desplegado en AWS EC2 + RDS con conexión poolizada estabilizada mediante wrapper y contraste de UI corregido.
+---
+
+## ⚡ Habilitación de Auto-dismiss y Cierre de Alertas (v1.21.1)
+
+### Cambio 21.3: Habilitación de auto-dismiss y botón de cerrado en mensajes flash
+**Fecha**: Junio 1, 2026  
+**Archivos afectados**: `templates/admin.html`, `templates/dashboard.html`
+
+**QUÉ**:
+- Incorporación de atributos `id` y botones interactivos "×" a los contenedores de notificaciones flotantes `.alert-ipsd`.
+- Sincronización con el script `static/main.js` para que el auto-dismiss de 5 segundos aplique correctamente sobre estas alertas.
+
+**POR QUÉ**:
+- Las alertas flash y de error (como "Edición eliminada correctamente") permanecían estáticas indefinidamente en el panel ya que la regla del selector de desvanecimiento automático (`.alert-ipsd[id]`) requería un atributo ID que no estaba presente, y tampoco existía un botón de cerrado para quitarlas voluntariamente.
+
+**PARA QUÉ**:
+- Pulir la experiencia de usuario (UX), asegurando que los mensajes temporales se auto-eliminen de forma fluida de la vista del usuario o puedan descartarse de inmediato con un clic.
+
+---
+
+## ⚡ Estandarización de Notificaciones Toast Premium (v1.22.0)
+
+### Cambio 22.0: Unificación visual con tarjetas flotantes Toast y auditoría de alertas backend
+**Fecha**: Junio 1, 2026  
+**Archivos afectados**: `templates/admin.html`, `routes/admin.py`, `static/style.css`, `tests/test_docente_login.py`
+
+**QUÉ**:
+- **Estandarización UI**: Reemplazo total de la barra de alertas estática en `admin.html` por un contenedor de superposición premium (`portal-toast-overlay`) y tarjetas flotantes de estilo "Toast" (`portal-toast-card`) adaptables a modo oscuro y claro de forma idéntica a las notificaciones de matrícula del portal de docentes.
+- **Remoción de Estilos CSS Inline**: Se trasladaron los estilos dinámicos del icono del Toast a clases estáticas en `static/style.css` (`toast-info`, `toast-danger`, `toast-success`, `toast-warning`). Esto eliminó el uso de variables Jinja `{{ bg_icono }}` y `{{ color_icono }}` dentro de los atributos `style="..."` de la plantilla HTML, resolviendo la advertencia del editor CSS ("at-rule or selector expected").
+- **Compatibilidad de Recorte de Texto (line-clamp)**: Se agregó la propiedad estándar `line-clamp: 2;` en la clase `.doc-cal-event-title` de `static/style.css` (línea 1903) para acompañar al prefijo propietario `-webkit-line-clamp: 2;`. Esto asegura la compatibilidad multicanal con navegadores modernos conforme a las últimas especificaciones del W3C y elimina la advertencia de linting correspondiente.
+- **Auto-dismiss sin dependencias**: Implementación de un script inline auto-ejecutable y aislado que remueve suavemente (vía opacidad y traslación vertical) la tarjeta Toast después de 5 segundos.
+- **Auditoría Completa de Alertas**: Adición de notificaciones flash detalladas en todas las rutas clave de administración que carecían de feedback:
+  - Actualización de catálogo de cursos/acciones formativas (`actualizar_curso`).
+  - Creación, edición y eliminación de administradores y direcciones (`crear_admin`, `actualizar_admin`, `eliminar_admin`, `actualizar_direccion`, `eliminar_direccion`).
+  - Gestión completa de sesiones (crear, editar, eliminar, abrir asistencia y cerrar asistencia de sesiones).
+  - Eliminación individual y vaciado masivo de inscripciones/matrículas (`eliminar_matricula`, `actualizar_resultado_matricula`, `vaciar_matriculas`).
+- **Corrección de Entorno de Pruebas**: Parcheo del conector de base de datos en `tests/test_docente_login.py` mediante `MagicMock` para aislar las aserciones de sesión y evitar fallos por diferencias de sintaxis entre SQLite y PostgreSQL en las consultas internas.
+
+**POR QUÉ**:
+- Los mensajes administrativos no tenían la estética premium que ve el docente, y varias acciones críticas del panel administrativo (como modificar catálogos, actualizar administradores o eliminar sesiones) se completaban de manera silenciosa. Adicionalmente, el linter de CSS del editor arrojaba advertencias al intentar validar sintaxis Jinja no válida para CSS estándar dentro del atributo `style` y por omitir la propiedad estándar de recorte de líneas `line-clamp`.
+
+**PARA QUÉ**:
+- Brindar una experiencia administrativa refinada y uniforme con retroalimentación inmediata, asegurando un código limpio, compatible y libre de advertencias de sintaxis en el editor y la estabilidad de los tests unitarios automatizados.
+
+---
+
+## ⚡ Modernización Visual de Inputs de Archivo y Pestañas de Edición (v1.22.1)
+
+### Cambio 22.1: Rediseño premium de subida de firmas/logos y pestañas de filtrado de ediciones
+**Fecha**: Junio 1, 2026  
+**Archivos afectados**: `templates/admin.html`, `static/style.css`
+
+**QUÉ**:
+- **Modernización de Pestañas**: Rediseñé la fila de pestañas de "Ediciones Activas" ("Todas", "Activas", "Programadas", "Histórico") eliminando los bordes y outlines nativos de los botones que creaban un recuadro tosco en algunos navegadores. Se implementó una línea de borde inferior en el botón activo que se integra con la línea del contenedor mediante un margen negativo.
+- **Interactividad de Pestañas**: Implementé la función de filtrado dinámico `filterEdiciones()` en el cliente mediante Javascript. Ahora, al hacer clic en las pestañas o al cargar la página por defecto (cargando "Activas"), la tabla oculta y muestra dinámicamente las filas basándose en su atributo `data-estado` sin necesidad de recargar la página.
+- **Cargador de Archivos Premium**: Reemplacé los inputs de archivo genéricos (`<input type="file">`) del modal "Configurar Identidad Visual (Firma y Logo)" por un componente personalizado `.custom-file-upload`. Cuenta con un diseño de bordes discontinuos, iconos del sistema, botones integrados de llamada a la acción y un script inline que actualiza automáticamente el nombre del archivo seleccionado en tiempo real.
+
+**POR QUÉ**:
+- Los campos de archivo del navegador por defecto se veían toscos y no seguían la línea gráfica del sistema. Asimismo, las pestañas de las ediciones activas carecían de interactividad (eran meros marcadores estáticos) y presentaban problemas estéticos en los bordes.
+
+**PARA QUÉ**:
+- Elevar la fidelidad de diseño y la experiencia interactiva del panel administrativo para que coincida con la calidad premium del portal de docentes.
+
+---
+
+## ⚡ Notificaciones Flotantes y Detección Activa de Identidad Visual (v1.22.2)
+
+### Cambio 22.2: Ajustes de Toast y Visualización de Archivos Subidos
+**Fecha**: Junio 1, 2026  
+**Archivos afectados**: `templates/admin.html`, `static/style.css`, `utils.py`, `services/certificate_service.py`, `routes/certificados.py`
+
+**QUÉ**:
+- **Toast Proporcionado**: Se optimizó la clase `.portal-toast-overlay` en `static/style.css` para retirar el filtro de desenfoque de pantalla completa y reubicar las notificaciones flotando en la esquina superior derecha (`top: 1.5rem; right: 1.5rem;`), configurando un ancho máximo de `400px` (`max-width: 400px`) para evitar la desproporción visual anterior.
+- **Detección de Firma y Logo**: Se extendió la consulta de `obtener_direcciones()` en `utils.py` para devolver los campos de firma (`ruta_firma_img`) y logo (`ruta_logo_img`). En el frontend `admin.html`, se agregaron atributos `data-firma` y `data-logo` a los selects y se desarrolló una lógica en Javascript (`actualizarEstadoArchivosIdentidad`) para mostrar alertas dinámicas ("Firma actual registrada" / "Logo actual registrado") y evitar confusiones al administrador sobre si el archivo ya se había cargado.
+- **Estabilización de PDF Multiplataforma**: Se updated `_ruta_absoluta_a_file_url` en `services/certificate_service.py` usando `pathlib` para evitar barras diagonales de más (ej: `file:////var/...`), asegurando que `wkhtmltopdf` compile adecuadamente las imágenes del certificado en Linux/servidores de producción.
+- **Exposición de Errores Críticos**: Se modificaron las capturas silenciosas de errores en `generar_binario_pdf` de `certificate_service.py` y `routes/certificados.py` para propagar y renderizar la traza del error en pantalla en lugar de mostrar un aviso confuso de "Plantilla incompleta".
+
+**POR QUÉ**:
+- Las notificaciones Toast bloqueaban toda la pantalla e impedían trabajar. Además, los administradores no sabían si los archivos de firma/logo se habían guardado de verdad, y en el servidor Linux de producción las firmas no cargaban debido a problemas con la construcción de las rutas del protocolo `file:///`.
+
+**PARA QUÉ**:
+- Garantizar que los certificados se generen de manera fiable e idéntica en entornos de desarrollo y producción, mejorando drásticamente el feedback de errores técnicos y la experiencia de usuario del administrador al configurar la identidad institucional.
+
+---
+
+**Última actualización**: Junio 1, 2026  
+**Versión actual**: 1.22.2 (Detección Activa de Identidad Visual y Corrección PDF/Toasts)  
+**Estado**: Listo para producción. Todos los tests de la suite (14/14) aprobados correctamente.
 

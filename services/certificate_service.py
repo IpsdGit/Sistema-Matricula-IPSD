@@ -1,9 +1,13 @@
 import os
 import shutil
+# pyrefly: ignore [missing-import]
 import pdfkit
 from datetime import datetime
+# pyrefly: ignore [missing-import]
 from flask import render_template, current_app, url_for
+# pyrefly: ignore [missing-import]
 from werkzeug.utils import secure_filename
+# pyrefly: ignore [missing-import]
 from markupsafe import escape
 from database import get_db_connection
 from services import validacion_service
@@ -37,7 +41,10 @@ def _ruta_web_a_ruta_absoluta(ruta_web: str) -> str:
 def _ruta_absoluta_a_file_url(ruta_absoluta: str) -> str:
     if not ruta_absoluta:
         return ''
-    ruta = ruta_absoluta.replace('\\', '/')
+    import pathlib
+    ruta = pathlib.Path(ruta_absoluta).as_posix()
+    if ruta.startswith('/'):
+        return f'file://{ruta}'
     return f'file:///{ruta}'
 
 
@@ -706,7 +713,7 @@ def generar_binario_pdf(matricula_id):
         path_wkhtmltopdf = _resolver_wkhtmltopdf_path()
         if not path_wkhtmltopdf:
             raise RuntimeError(
-                'wkhtmltopdf no está instalado o no se encontró. Define WKHTMLTOPDF_PATH o instala wkhtmltopdf.'
+                'wkhtmltopdf no está instalado o no se encontró en el servidor. Define WKHTMLTOPDF_PATH o instala wkhtmltopdf.'
             )
         config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
         pdf_binario = pdfkit.from_string(html, False, options=options, configuration=config)
@@ -715,8 +722,8 @@ def generar_binario_pdf(matricula_id):
         try:
             current_app.logger.exception('Error generando PDF')
         except Exception:
-            print(f"Error generando PDF: {e}")
-        return None
+            pass
+        raise e
     finally:
         conn.close()
 

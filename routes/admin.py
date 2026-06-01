@@ -1144,6 +1144,7 @@ def register_admin_routes(app):
         if not id_curso:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Curso inválido'}), 400
+            flash('ID de edición/curso inválido.', 'danger')
             return redireccion_admin_vista('ediciones')
 
         if not _admin_puede_gestionar_curso(id_curso):
@@ -1162,6 +1163,12 @@ def register_admin_routes(app):
         )
         if result.get('ok'):
             _sincronizar_fechas_capacitacion_desde_sesiones(id_curso, fecha, fecha)
+            if not es_ajax:
+                flash('Sesión creada correctamente.', 'success')
+        else:
+            if not es_ajax:
+                flash(result.get('error', 'No se pudo crear la sesión.'), 'danger')
+
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -1191,6 +1198,7 @@ def register_admin_routes(app):
         if not id_curso:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            flash('ID de edición/curso inválido.', 'danger')
             return redireccion_admin_vista('ediciones')
 
         if not _admin_puede_gestionar_curso(id_curso):
@@ -1209,6 +1217,12 @@ def register_admin_routes(app):
         )
         if result.get('ok'):
             _sincronizar_fechas_capacitacion_desde_sesiones(id_curso)
+            if not es_ajax:
+                flash('Sesión actualizada correctamente.', 'success')
+        else:
+            if not es_ajax:
+                flash(result.get('error', 'No se pudo actualizar la sesión.'), 'danger')
+
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -1232,6 +1246,7 @@ def register_admin_routes(app):
         if not id_curso:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            flash('ID de edición/curso inválido.', 'danger')
             return redireccion_admin_vista('ediciones')
 
         if not _admin_puede_gestionar_curso(id_curso):
@@ -1242,6 +1257,12 @@ def register_admin_routes(app):
         result = eliminar_sesion(id_sesion)
         if result.get('ok'):
             _sincronizar_fechas_capacitacion_desde_sesiones(id_curso)
+            if not es_ajax:
+                flash('Sesión eliminada correctamente.', 'success')
+        else:
+            if not es_ajax:
+                flash(result.get('error', 'No se pudo eliminar la sesión.'), 'danger')
+
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -1265,6 +1286,7 @@ def register_admin_routes(app):
         if not id_curso:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            flash('ID de edición/curso inválido.', 'danger')
             return redireccion_admin_vista('ediciones')
 
         if not _admin_puede_gestionar_curso(id_curso):
@@ -1273,6 +1295,13 @@ def register_admin_routes(app):
             abort(403)
 
         result = abrir_asistencia_sesion(id_sesion)
+        if result.get('ok'):
+            if not es_ajax:
+                flash('Registro de asistencia abierto (Token generado).', 'success')
+        else:
+            if not es_ajax:
+                flash(result.get('error', 'No se pudo abrir el registro de asistencia.'), 'danger')
+
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -1296,6 +1325,7 @@ def register_admin_routes(app):
         if not id_curso:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Sesión inválida'}), 400
+            flash('ID de edición/curso inválido.', 'danger')
             return redireccion_admin_vista('ediciones')
 
         if not _admin_puede_gestionar_curso(id_curso):
@@ -1304,6 +1334,13 @@ def register_admin_routes(app):
             abort(403)
 
         result = cerrar_asistencia_sesion(id_sesion)
+        if result.get('ok'):
+            if not es_ajax:
+                flash('Registro de asistencia cerrado.', 'success')
+        else:
+            if not es_ajax:
+                flash(result.get('error', 'No se pudo cerrar el registro de asistencia.'), 'danger')
+
         if es_ajax:
             status = 200 if result.get('ok') else 400
             return jsonify(result), status
@@ -1397,10 +1434,12 @@ def register_admin_routes(app):
             tipo_accion = 'CURSO'
 
         if not id_curso or not nombre_curso or trimestre not in ['I', 'II', 'III', 'IV']:
+            flash('Datos de catálogo/acción formativa inválidos o incompletos.', 'danger')
             return redireccion_admin_vista('cursos')
 
         fecha_obj = _parse_fecha_form(fecha_curso)
         if not fecha_obj:
+            flash('Fecha inválida.', 'danger')
             return redireccion_admin_vista('cursos')
 
         try:
@@ -1419,10 +1458,12 @@ def register_admin_routes(app):
             semanas_duracion = 1
 
         if modalidad not in ['Virtual', 'Presencial', 'B-Learning'] or cupos_maximos < 0 or horas_totales < 1 or semanas_duracion < 1:
+            flash('Completa correctamente todos los campos obligatorios del catálogo/acción formativa.', 'danger')
             return redireccion_admin_vista('cursos')
 
         if modalidad == 'Virtual':
             if not enlace_virtual or not validar_enlace_virtual(enlace_virtual):
+                flash('El enlace virtual no es válido.', 'danger')
                 return redireccion_admin_vista('cursos')
         else:
             enlace_virtual = None
@@ -1453,8 +1494,10 @@ def register_admin_routes(app):
             id_plantilla_certificado=id_plantilla_certificado,
         )
         if not update_result['ok']:
+            flash('No se pudo actualizar el catálogo/acción formativa.', 'danger')
             return redireccion_admin_vista('cursos')
 
+        flash('Catálogo/acción formativa actualizado correctamente.', 'success')
         return redireccion_admin_vista('cursos')
 
     @app.route('/admin/crear_admin', methods=['POST'])
@@ -1468,9 +1511,11 @@ def register_admin_routes(app):
         direccion = normalizar_direccion(request.form.get('direccion', '').strip())
 
         if not validar_username_admin(username) or len(password) < 8 or not direccion:
+            flash('Datos de usuario administrador inválidos o contraseña menor a 8 caracteres.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         create_admin_user_record(username, password, direccion)
+        flash('Usuario administrador creado correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 
@@ -1485,12 +1530,15 @@ def register_admin_routes(app):
         direccion = normalizar_direccion(request.form.get('direccion', '').strip())
 
         if not username or not direccion:
+            flash('Datos de actualización incompletos.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         if new_password and len(new_password) < 8:
+            flash('La nueva contraseña debe tener al menos 8 caracteres.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         update_admin_user_record(username, new_password, direccion)
+        flash('Usuario administrador actualizado correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 
@@ -1502,9 +1550,11 @@ def register_admin_routes(app):
 
         username = request.form.get('username', '').strip()
         if not username:
+            flash('Usuario inválido para eliminar.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         delete_admin_user_record(username)
+        flash('Usuario administrador eliminado correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 
@@ -1547,9 +1597,11 @@ def register_admin_routes(app):
             or codigo_nuevo == 'GLOBAL'
             or not validar_nombre_direccion(nombre_nuevo)
         ):
+            flash('Datos de dirección inválidos o incompletos.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         update_direccion_record(codigo_actual, codigo_nuevo, nombre_nuevo)
+        flash('Dirección actualizada correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 
@@ -1561,9 +1613,11 @@ def register_admin_routes(app):
 
         codigo = normalizar_direccion(request.form.get('codigo', '').strip())
         if not codigo or codigo == 'GLOBAL':
+            flash('Dirección inválida para eliminar.', 'danger')
             return redireccion_admin_vista('usuarios')
 
         delete_direccion_record(codigo)
+        flash('Dirección eliminada correctamente.', 'success')
 
         return redireccion_admin_vista('usuarios')
 
@@ -1575,6 +1629,7 @@ def register_admin_routes(app):
 
         id_curso = (request.form.get('edicion_id') or request.form.get('id_curso') or '').strip()
         if not id_curso:
+            flash('ID de catálogo/acción formativa inválido.', 'danger')
             return redireccion_admin_vista('cursos')
 
         admin_rol = session.get('admin_rol', 'admin')
@@ -1582,6 +1637,7 @@ def register_admin_routes(app):
             abort(403)
 
         delete_curso_record(id_curso)
+        flash('Catálogo/acción formativa eliminado correctamente.', 'success')
 
         return redireccion_admin_vista('cursos')
 
@@ -1599,6 +1655,7 @@ def register_admin_routes(app):
         matricula_id = int(matricula_id_raw) if matricula_id_raw.isdigit() else None
 
         if not numero_empleado or not edicion_id:
+            flash('Datos de matrícula/inscripción inválidos.', 'danger')
             return redireccion_admin_vista(vista_target)
 
         admin_rol = session.get('admin_rol', 'admin')
@@ -1608,6 +1665,7 @@ def register_admin_routes(app):
             abort(403)
 
         delete_matricula_record(numero_empleado, edicion_id, matricula_id)
+        flash('Matrícula/Inscripción eliminada correctamente.', 'success')
 
         return redireccion_admin_vista(vista_target)
 
@@ -1718,6 +1776,7 @@ def register_admin_routes(app):
         else:
             if es_ajax:
                 return jsonify({'ok': False, 'error': 'Resultado inválido'}), 400
+            flash('Resultado de matrícula inválido.', 'danger')
             return redireccion_admin_vista('matriculas')
 
         update_result = update_matricula_resultado(
@@ -1736,11 +1795,13 @@ def register_admin_routes(app):
                 return jsonify({'ok': False, 'error': update_result['error']}), update_result['status_code']
             if update_result['status_code'] == 403:
                 abort(403)
+            flash(update_result.get('error', 'No se pudo actualizar el resultado.'), 'danger')
             return redireccion_admin_vista('matriculas')
 
         if es_ajax:
             return jsonify({'ok': True, 'resultado': resultado_texto})
 
+        flash('Resultado de matrícula actualizado correctamente.', 'success')
         return redireccion_admin_vista('matriculas')
 
     @app.route('/admin/vaciar_matriculas', methods=['POST'])
@@ -1751,9 +1812,11 @@ def register_admin_routes(app):
 
         confirmacion = request.form.get('confirmacion', '')
         if confirmacion != 'ELIMINAR':
+            flash('Confirmación de seguridad inválida. No se eliminó nada.', 'danger')
             return redireccion_admin_vista('matriculas')
 
         vaciar_matriculas_records()
+        flash('Todas las inscripciones y matrículas han sido eliminadas correctamente.', 'success')
 
         return redireccion_admin_vista('matriculas')
 

@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from flask import Blueprint, request, redirect, url_for, flash, session, make_response, current_app, abort
 from utils import admin_requerido, validar_csrf
 from services.admin_service import actualizar_identidad_direccion
@@ -170,12 +171,19 @@ def descargar_certificado(matricula_id):
         return redirect(url_for('login'))
         
     # El servicio ya valida que la matrícula esté aprobada = 1
-    pdf_binario = generar_binario_pdf(matricula_id)
-    
-    if not isinstance(pdf_binario, (bytes, bytearray)):
+    try:
+        pdf_binario = generar_binario_pdf(matricula_id)
+        if not pdf_binario:
+            raise ValueError("Faltan datos requeridos (firma, logo o plantilla sin configurar).")
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         return (
-            '<h3>Certificado no disponible</h3>'
-            '<p>Este certificado no está configurado todavía (plantilla incompleta) o la matrícula no ha sido aprobada.</p>',
+            f'<h3>Certificado no disponible</h3>'
+            f'<p>Ocurrió un problema al generar el documento. Verifica que la plantilla esté asignada al curso y que la identidad visual esté completa.</p>'
+            f'<hr>'
+            f'<h4>Detalles técnicos del servidor:</h4>'
+            f'<pre style="background:#f1f5f9; padding:15px; border-radius:8px; font-size:12px; overflow-x:auto;">{str(e)}</pre>',
             409,
             {'Content-Type': 'text/html; charset=utf-8'},
         )

@@ -1711,31 +1711,49 @@
   <main class="admin-main" style="padding: 0; margin-top: 1rem;">
     <div class="admin-content" style="max-width: 1400px; margin: 0 auto; width: 100%; padding: 0 1rem;">
 
-      {% with mensajes = get_flashed_messages(with_categories=true) %}
+       {% with mensajes = get_flashed_messages(with_categories=true) %}
       {% if mensajes %}
-      <div style="display:grid; gap:.55rem; margin-bottom:.85rem;">
-        {% for categoria, mensaje in mensajes %}
-        {% set clase_alerta = 'info' %}
-        {% if categoria in ['danger', 'error'] %}
+      {% for categoria, mensaje in mensajes %}
+      {% set clase_alerta = 'info' %}
+      {% set icono = 'info' %}
+      {% set titulo = 'Información' %}
+      {% if categoria in ['danger', 'error'] %}
         {% set clase_alerta = 'danger' %}
-        {% elif categoria in ['success', 'ok'] %}
+        {% set icono = 'block' %}
+        {% set titulo = 'Error' %}
+      {% elif categoria in ['success', 'ok'] %}
         {% set clase_alerta = 'success' %}
-        {% elif categoria in ['warning', 'warn'] %}
+        {% set icono = 'check_circle' %}
+        {% set titulo = 'Éxito' %}
+      {% elif categoria in ['warning', 'warn'] %}
         {% set clase_alerta = 'warning' %}
-        {% endif %}
-        <div class="alert-ipsd {{ clase_alerta }}" style="margin:0;">
-          <span>{% if clase_alerta == 'danger' %}<span class="material-symbols-outlined"
-              style="vertical-align: middle; font-size: inherit;">block</span>{% elif clase_alerta == 'success' %}<span
-              class="material-symbols-outlined"
-              style="vertical-align: middle; font-size: inherit;">check_circle</span>{% elif clase_alerta == 'warning'
-            %}<span class="material-symbols-outlined"
-              style="vertical-align: middle; font-size: inherit;">warning</span>️{% else %}<span
-              class="material-symbols-outlined" style="vertical-align: middle; font-size: inherit;">info</span>{% endif
-            %}</span>
-          <span>{{ mensaje }}</span>
-        </div>
-        {% endfor %}
+        {% set icono = 'warning' %}
+        {% set titulo = 'Advertencia' %}
+      {% endif %}
+      <div class="portal-toast-overlay" onclick="if(event.target===this) this.remove();" style="z-index: 9999;">
+        <article class="portal-toast-card" role="status" aria-live="polite" style="margin-top: 10vh;">
+          <div class="portal-toast-icon toast-{{ clase_alerta }}">
+            <span class="material-symbols-outlined" style="font-size: 1.15rem;">{{ icono }}</span>
+          </div>
+          <div class="portal-toast-content">
+            <h4>{{ titulo }}</h4>
+            <p style="margin-top: 0.25rem;">{{ mensaje }}</p>
+          </div>
+          <button type="button" class="portal-toast-close" onclick="this.closest('.portal-toast-overlay').remove();" aria-label="Cerrar aviso">×</button>
+        </article>
       </div>
+      <script>
+        setTimeout(() => {
+          const overlay = document.currentScript.previousElementSibling;
+          if (overlay && overlay.classList.contains('portal-toast-overlay')) {
+            overlay.style.transition = 'opacity .5s ease, transform .5s ease';
+            overlay.style.opacity = '0';
+            overlay.style.transform = 'translateY(-8px)';
+            setTimeout(() => overlay.remove(), 500);
+          }
+        }, 5000);
+      </script>
+      {% endfor %}
       {% endif %}
       {% endwith %}
 
@@ -2493,19 +2511,53 @@
           </div>
 
           <!-- Filter/Tabs Row -->
-          <div class="flex gap-4 border-b border-outline-variant/50 mb-6">
-            <button
-              class="pb-2 px-1 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none"
-              style="cursor:pointer;">Todas</button>
-            <button class="pb-2 px-1 font-body-md text-primary dark:text-primary-fixed font-bold border-b-2 border-primary bg-transparent"
-              style="cursor:pointer; outline:none;">Activas</button>
-            <button
-              class="pb-2 px-1 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none"
-              style="cursor:pointer;">Programadas</button>
-            <button
-              class="pb-2 px-1 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none"
-              style="cursor:pointer;">Histórico</button>
+          <div class="flex gap-6 border-b border-outline-variant/30 mb-6">
+            <button type="button" onclick="filterEdiciones('all', this)"
+              class="pb-2 px-2 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-all duration-200 bg-transparent border-0 border-b-2 border-transparent hover:border-outline-variant/60 font-semibold"
+              style="cursor:pointer; outline:none; margin-bottom:-1px;">Todas</button>
+            <button type="button" onclick="filterEdiciones('activas', this)"
+              class="pb-2 px-2 font-body-md text-primary dark:text-primary-fixed font-bold border-0 border-b-2 border-primary bg-transparent"
+              style="cursor:pointer; outline:none; margin-bottom:-1px;">Activas</button>
+            <button type="button" onclick="filterEdiciones('programadas', this)"
+              class="pb-2 px-2 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-all duration-200 bg-transparent border-0 border-b-2 border-transparent hover:border-outline-variant/60 font-semibold"
+              style="cursor:pointer; outline:none; margin-bottom:-1px;">Programadas</button>
+            <button type="button" onclick="filterEdiciones('historico', this)"
+              class="pb-2 px-2 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-all duration-200 bg-transparent border-0 border-b-2 border-transparent hover:border-outline-variant/60 font-semibold"
+              style="cursor:pointer; outline:none; margin-bottom:-1px;">Histórico</button>
           </div>
+
+          <script>
+            function filterEdiciones(tabName, clickedButton) {
+              const buttons = clickedButton.parentElement.querySelectorAll('button');
+              buttons.forEach(btn => {
+                btn.className = "pb-2 px-2 font-body-md text-on-surface-variant dark:text-outline-variant hover:text-primary dark:text-primary-fixed transition-all duration-200 bg-transparent border-0 border-b-2 border-transparent hover:border-outline-variant/60 font-semibold";
+              });
+              clickedButton.className = "pb-2 px-2 font-body-md text-primary dark:text-primary-fixed font-bold border-0 border-b-2 border-primary bg-transparent";
+
+              const rows = document.querySelectorAll('#section-ediciones tbody tr');
+              rows.forEach(row => {
+                const estado = (row.getAttribute('data-estado') || '').toLowerCase().trim();
+                let show = false;
+                if (tabName === 'all') {
+                  show = true;
+                } else if (tabName === 'activas') {
+                  show = (estado.includes('activ') || estado.includes('edici') || estado === '' || estado.includes('abiert'));
+                } else if (tabName === 'programadas') {
+                  show = (estado.includes('program') || estado.includes('planif'));
+                } else if (tabName === 'historico') {
+                  show = (estado.includes('finaliz') || estado.includes('cancel') || estado.includes('cerrad'));
+                }
+                row.style.display = show ? '' : 'none';
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+              const activeTab = document.querySelector('#section-ediciones [onclick*="activas"]');
+              if (activeTab) {
+                filterEdiciones('activas', activeTab);
+              }
+            });
+          </script>
 
           <!-- Data Table Card (Glassmorphism) -->
           <div
@@ -2545,7 +2597,7 @@
                 </thead>
                 <tbody class="font-body-md text-on-surface divide-y divide-outline-variant/20">
                   {% for curso in cursos %}
-                  <tr class="hover:bg-surface-container-low/50 transition-colors">
+                  <tr class="hover:bg-surface-container-low/50 transition-colors" data-estado="{{ (curso['estado'] or 'En Edicion')|lower|trim }}">
                     <td class="py-4 px-6 font-headline-md text-[14px] text-primary dark:text-primary-fixed">{{ curso['id'] }}</td>
                     <td class="py-4 px-6 font-medium">
                       {{ curso['nombre'] }}<br>
@@ -5113,27 +5165,102 @@
       <div>
         <label class="form-label" style="font-size:.8rem;">Dirección</label>
         {% if es_superadmin %}
-        <select class="form-select" name="direccion_codigo" required>
+        <select class="form-select" name="direccion_codigo" id="identidad-direccion-select" required onchange="actualizarEstadoArchivosIdentidad()">
+          <option value="">Selecciona una dirección</option>
           {% for d in direcciones %}
-          <option value="{{ d['codigo'] }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
+          <option value="{{ d['codigo'] }}" data-firma="{{ d.get('ruta_firma_img') or '' }}" data-logo="{{ d.get('ruta_logo_img') or '' }}">{{ d['codigo'] }} · {{ d['nombre'] }}</option>
           {% endfor %}
         </select>
         {% else %}
+        {% set mi_dir = namespace(firma='', logo='') %}
+        {% for d in direcciones %}
+          {% if d['codigo'] == admin_direccion %}
+            {% set mi_dir.firma = d.get('ruta_firma_img') or '' %}
+            {% set mi_dir.logo = d.get('ruta_logo_img') or '' %}
+          {% endif %}
+        {% endfor %}
         <input type="text" class="form-input" value="{{ admin_direccion }}" readonly
           style="background:#f1f5f9; cursor:not-allowed;">
-        <input type="hidden" name="direccion_codigo" value="{{ admin_direccion }}">
+        <input type="hidden" name="direccion_codigo" id="identidad-direccion-hidden" value="{{ admin_direccion }}" data-firma="{{ mi_dir.firma }}" data-logo="{{ mi_dir.logo }}">
         {% endif %}
       </div>
 
       <div>
-        <label class="form-label" style="font-size:.8rem;">Firma (PNG)</label>
-        <input type="file" class="form-input" name="firma_img" accept=".png" style="padding:.4rem;">
+        <label class="form-label" style="font-size:.8rem; font-weight: 600; margin-bottom: 0.4rem; display: block;">Firma (PNG)</label>
+        <div class="custom-file-upload" onclick="this.querySelector('input').click();">
+          <div class="custom-file-info">
+            <div class="custom-file-icon-box">
+              <span class="material-symbols-outlined">upload_file</span>
+            </div>
+            <div>
+              <div class="custom-file-title">Seleccionar archivo firma</div>
+              <div class="custom-file-name file-name">Ningún archivo seleccionado</div>
+              <div class="text-xs font-medium text-success mt-1 hidden badge-registrado" id="badge-firma-registrada" style="color: #10b981; display: flex; align-items: center; gap: 4px;">
+                <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                Firma actual registrada
+              </div>
+            </div>
+          </div>
+          <button type="button" class="custom-file-btn">Elegir</button>
+          <input type="file" name="firma_img" accept=".png" style="display: none;" onchange="this.closest('.custom-file-upload').querySelector('.file-name').textContent = this.files[0] ? this.files[0].name : 'Ningún archivo seleccionado';">
+        </div>
       </div>
 
       <div>
-        <label class="form-label" style="font-size:.8rem;">Logo Superior (PNG/JPG)</label>
-        <input type="file" class="form-input" name="logo_img" accept=".png,.jpg,.jpeg" style="padding:.4rem;">
+        <label class="form-label" style="font-size:.8rem; font-weight: 600; margin-bottom: 0.4rem; display: block;">Logo Superior (PNG/JPG)</label>
+        <div class="custom-file-upload" onclick="this.querySelector('input').click();">
+          <div class="custom-file-info">
+            <div class="custom-file-icon-box">
+              <span class="material-symbols-outlined">image</span>
+            </div>
+            <div>
+              <div class="custom-file-title">Seleccionar archivo logo</div>
+              <div class="custom-file-name file-name">Ningún archivo seleccionado</div>
+              <div class="text-xs font-medium text-success mt-1 hidden badge-registrado" id="badge-logo-registrado" style="color: #10b981; display: flex; align-items: center; gap: 4px;">
+                <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                Logo actual registrado
+              </div>
+            </div>
+          </div>
+          <button type="button" class="custom-file-btn">Elegir</button>
+          <input type="file" name="logo_img" accept=".png,.jpg,.jpeg" style="display: none;" onchange="this.closest('.custom-file-upload').querySelector('.file-name').textContent = this.files[0] ? this.files[0].name : 'Ningún archivo seleccionado';">
+        </div>
       </div>
+
+      <script>
+        function actualizarEstadoArchivosIdentidad() {
+          const selectElement = document.getElementById('identidad-direccion-select');
+          const hiddenElement = document.getElementById('identidad-direccion-hidden');
+          
+          let hasFirma = false;
+          let hasLogo = false;
+
+          if (selectElement) {
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+              hasFirma = !!selectedOption.getAttribute('data-firma');
+              hasLogo = !!selectedOption.getAttribute('data-logo');
+            }
+          } else if (hiddenElement) {
+            hasFirma = !!hiddenElement.getAttribute('data-firma');
+            hasLogo = !!hiddenElement.getAttribute('data-logo');
+          }
+
+          const badgeFirma = document.getElementById('badge-firma-registrada');
+          const badgeLogo = document.getElementById('badge-logo-registrado');
+
+          if (badgeFirma) {
+            badgeFirma.style.display = hasFirma ? 'flex' : 'none';
+          }
+          if (badgeLogo) {
+            badgeLogo.style.display = hasLogo ? 'flex' : 'none';
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          actualizarEstadoArchivosIdentidad();
+        });
+      </script>
 
       <p style="color:var(--text-muted); font-size:.8rem; margin:0; line-height:1.4;">Estos archivos se aplicarán
         automáticamente a todas las plantillas de tu dirección.</p>

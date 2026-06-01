@@ -85,7 +85,7 @@ def normalizar_direccion(direccion):
 
 def obtener_direcciones(conn):
     with conn.cursor() as cur:
-        cur.execute('SELECT codigo, nombre FROM direcciones ORDER BY codigo')
+        cur.execute('SELECT codigo, nombre, ruta_firma_img, ruta_logo_img FROM direcciones ORDER BY codigo')
         return cur.fetchall()
 
 

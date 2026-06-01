@@ -44,8 +44,23 @@ class DocenteLoginTest(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess['_csrf_token'] = csrf_token
 
+    @patch('routes.portal.get_db_connection')
     @patch('routes.portal.load_dashboard_context')
-    def test_dashboard_login_acepta_correo_y_numero_validos(self, mock_load_dashboard_context):
+    def test_dashboard_login_acepta_correo_y_numero_validos(self, mock_load_dashboard_context, mock_get_db):
+        from unittest.mock import MagicMock
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'numero_empleado': '12345678',
+            'nombre_completo': 'Docente Prueba',
+            'correo_institucional': 'docente.prueba@unah.edu.hn',
+            'activo': 1,
+            'notificaciones_leidas': None
+        }
+        mock_get_db.return_value = mock_conn
+
         mock_load_dashboard_context.return_value = {
             'ok': True,
             'contexto': {
@@ -81,8 +96,16 @@ class DocenteLoginTest(unittest.TestCase):
             self.assertEqual(sess.get('correo_docente'), 'docente.prueba@unah.edu.hn')
             self.assertEqual(sess.get('nombre_docente'), 'Docente Prueba')
 
+    @patch('routes.portal.get_db_connection')
     @patch('routes.portal.load_dashboard_context')
-    def test_dashboard_login_rechaza_credenciales_invalidas(self, mock_load_dashboard_context):
+    def test_dashboard_login_rechaza_credenciales_invalidas(self, mock_load_dashboard_context, mock_get_db):
+        from unittest.mock import MagicMock
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = None
+        mock_get_db.return_value = mock_conn
+
         self._set_csrf_session('csrf-2')
 
         response = self.client.post(
