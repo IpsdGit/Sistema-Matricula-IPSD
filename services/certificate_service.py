@@ -54,8 +54,10 @@ def _resolver_wkhtmltopdf_path() -> str:
         return env_path
 
     candidatos = [
-        r'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
-        r'C:\\Program Files (x86)\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
+        r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe',
+        r'C:\Program Files (x86)\wkhtmltopdf\bin\wkhtmltopdf.exe',
+        '/usr/local/bin/wkhtmltopdf',
+        '/usr/bin/wkhtmltopdf',
     ]
     for candidato in candidatos:
         if os.path.exists(candidato):
