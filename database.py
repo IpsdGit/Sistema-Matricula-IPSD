@@ -438,6 +438,22 @@ def asegurar_migraciones_minimas():
         )
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_cert_token ON certificados_emitidos (token_validacion)')
 
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS ediciones_invitaciones (
+                id SERIAL PRIMARY KEY,
+                edicion_id TEXT NOT NULL,
+                numero_empleado TEXT NOT NULL,
+                fecha_invitacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id) ON DELETE CASCADE,
+                FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado) ON DELETE CASCADE,
+                UNIQUE (edicion_id, numero_empleado)
+            )
+            '''
+        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_empleado ON ediciones_invitaciones (numero_empleado)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_edicion ON ediciones_invitaciones (edicion_id)')
+
         conn.commit()
     except Exception as e:
         print(f"Error asegurando migraciones: {e}")

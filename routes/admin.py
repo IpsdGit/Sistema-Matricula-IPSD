@@ -60,6 +60,18 @@ def register_admin_routes(app):
             or 'application/json' in (request.headers.get('Accept') or '')
         )
 
+    def _obtener_centros_regionales_admin():
+        conn = None
+        try:
+            from services.grupo_cerrado_service import obtener_centros_regionales
+            conn = get_db_connection()
+            return obtener_centros_regionales(conn)
+        except Exception:
+            return []
+        finally:
+            if conn is not None:
+                conn.close()
+
     def _admin_puede_gestionar_curso(id_curso):
         admin_rol = session.get('admin_rol', 'admin')
         if admin_rol == 'superadmin':
@@ -455,6 +467,8 @@ def register_admin_routes(app):
         else:
             plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
+        centros_regionales = _obtener_centros_regionales_admin()
+
         return render_template(
             'admin.html',
             registros=dashboard_payload['registros'],
@@ -474,6 +488,7 @@ def register_admin_routes(app):
             fecha_hoy=datetime.now().strftime('%Y-%m-%d'),
             horarios_base=HORARIOS_BASE,
             plantillas=plantillas,
+            centros_regionales=centros_regionales,
         )
 
     @app.route('/admin/ediciones/nueva')
@@ -516,6 +531,8 @@ def register_admin_routes(app):
         else:
             plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
+        centros_regionales = _obtener_centros_regionales_admin()
+
         return render_template(
             'admin.html',
             registros=dashboard_payload['registros'],
@@ -543,6 +560,7 @@ def register_admin_routes(app):
             sesiones_curso=[],
             modo_nueva_edicion=True,
             catalogo_seleccionado=catalogo_detalle,
+            centros_regionales=centros_regionales,
         )
 
     @app.route('/admin/curso/<id_curso>/sesiones')
@@ -576,7 +594,10 @@ def register_admin_routes(app):
         sesiones_curso = sesiones_result.get('sesiones', []) if sesiones_result.get('ok') else []
         curso_sesion_detalle = _obtener_detalle_curso(id_curso)
         catalogo_id = (curso_sesion_detalle['catalogo_id'] if curso_sesion_detalle else None)
-        ediciones_catalogo = listar_ediciones_catalogo(catalogo_id)
+        if id_curso:
+            ediciones_catalogo = [curso_sesion_detalle] if curso_sesion_detalle else []
+        else:
+            ediciones_catalogo = listar_ediciones_catalogo(catalogo_id)
         fecha_hoy = datetime.now().strftime('%Y-%m-%d')
 
         jornadas_config = []
@@ -619,6 +640,8 @@ def register_admin_routes(app):
         else:
             plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
+        centros_regionales = _obtener_centros_regionales_admin()
+
         return render_template(
             'admin.html',
             registros=dashboard_payload['registros'],
@@ -644,6 +667,7 @@ def register_admin_routes(app):
             jornadas_config=jornadas_config,
             catalogo_id=catalogo_id,
             sesiones_curso=sesiones_curso,
+            centros_regionales=centros_regionales,
         )
 
     @app.route('/admin/stats')
@@ -1070,6 +1094,87 @@ def register_admin_routes(app):
         flash('Edición actualizada correctamente.', 'success')
         return redireccion_admin_vista('ediciones')
 
+    @app.route('/admin/ediciones/grupo_cerrado/centros', methods=['GET'])
+    @admin_requerido
+    def admin_api_centros_regionales():
+        """Retorna la lista de centros regionales. Si se pasa ?centro=X, devuelve el total de docentes."""
+        try:
+            from services.grupo_cerrado_service import obtener_centros_regionales, obtener_docentes_por_centro
+            conn = get_db_connection()
+            centro_filtro = request.args.get('centro', '').strip()
+            if centro_filtro:
+                docentes = obtener_docentes_por_centro(conn, centro_filtro)
+                conn.close()
+                return jsonify({'ok': True, 'total': len(docentes)})
+            centros = obtener_centros_regionales(conn)
+            conn.close()
+            return jsonify({'ok': True, 'centros': centros})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)})
+
+
+    @app.route('/admin/ediciones/<edicion_id>/grupo_cerrado/procesar', methods=['POST'])
+    @admin_requerido
+    def admin_procesar_grupo_cerrado(edicion_id):
+        edicion_id = (edicion_id or '').strip().upper()
+        if not edicion_id or not _admin_puede_gestionar_curso(edicion_id):
+            return jsonify({'ok': False, 'error': 'No autorizado.'}), 403
+            
+        token = request.form.get('_csrf_token')
+        if not validar_csrf(token):
+            return jsonify({'ok': False, 'error': 'Token inválido.'}), 403
+
+        accion = request.form.get('accion')
+        metodo = request.form.get('metodo') # 'excel', 'manual', 'centro'
+        
+        if accion not in ['automatica', 'invitacion']:
+            return jsonify({'ok': False, 'error': 'Acción inválida.'}), 400
+            
+        from services.grupo_cerrado_service import (
+            procesar_archivo_excel, validar_docentes, obtener_docentes_por_centro, ejecutar_accion_grupo_cerrado
+        )
+        
+        conn = get_db_connection()
+        lista_numeros = []
+        
+        try:
+            if metodo == 'excel':
+                archivo = request.files.get('archivo_excel')
+                if not archivo or not archivo.filename.endswith(('.xlsx', '.xls')):
+                    return jsonify({'ok': False, 'error': 'Sube un archivo Excel válido.'}), 400
+                lista_numeros = procesar_archivo_excel(archivo)
+                
+            elif metodo == 'manual':
+                numeros_raw = request.form.get('numeros_empleado', '')
+                lista_numeros = [n.strip() for n in numeros_raw.split(',') if n.strip()]
+                
+            elif metodo == 'centro':
+                centro = request.form.get('centro_regional', '')
+                if not centro:
+                    return jsonify({'ok': False, 'error': 'Selecciona un centro.'}), 400
+                docentes_centro = obtener_docentes_por_centro(conn, centro)
+                lista_numeros = [d['numero_empleado'] for d in docentes_centro]
+            else:
+                return jsonify({'ok': False, 'error': 'Método inválido.'}), 400
+                
+            docentes_validos = validar_docentes(conn, lista_numeros)
+            if not docentes_validos:
+                return jsonify({'ok': False, 'error': 'No se encontraron docentes válidos en la lista enviada.'}), 400
+                
+            nums_validos = [d['numero_empleado'] for d in docentes_validos]
+            insertados, ignorados = ejecutar_accion_grupo_cerrado(conn, edicion_id, accion, nums_validos)
+            
+            return jsonify({
+                'ok': True, 
+                'mensaje': f'Se procesaron {len(nums_validos)} docentes. {insertados} nuevos, {ignorados} ya estaban asignados.',
+                'insertados': insertados,
+                'ignorados': ignorados
+            })
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/admin/curso/<id_curso>/asistencias')
     @admin_requerido
     def admin_gestion_asistencias(id_curso):
@@ -1101,6 +1206,8 @@ def register_admin_routes(app):
         if not reporte.get('ok'):
             return redireccion_admin_vista('ediciones')
 
+        centros_regionales = _obtener_centros_regionales_admin()
+
         return render_template(
             'admin.html',
             registros=dashboard_payload['registros'],
@@ -1121,6 +1228,7 @@ def register_admin_routes(app):
             horarios_base=HORARIOS_BASE,
             curso_asistencias_id=id_curso,
             curso_asistencia_reporte=reporte,
+            centros_regionales=centros_regionales,
         )
 
     @app.route('/admin/sesion/crear', methods=['POST'])

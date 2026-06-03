@@ -1532,6 +1532,75 @@
 {% endblock %}
 
 {% block content %}
+
+<script>
+function mostrarNotificacion(mensaje, tipo = 'warning') {
+  const overlay = document.createElement('div');
+  overlay.className = 'portal-toast-overlay';
+  overlay.style.zIndex = '9999';
+  overlay.onclick = function(e) { if(e.target === this) this.remove(); };
+  
+  const icono = tipo === 'success' ? 'check_circle' : (tipo === 'error' ? 'error' : 'warning');
+  const titulo = tipo === 'success' ? 'Éxito' : (tipo === 'error' ? 'Error' : 'Aviso');
+  const clase_alerta = tipo === 'error' ? 'danger' : tipo;
+  
+  overlay.innerHTML = `
+    <article class="portal-toast-card" role="status" aria-live="polite" style="margin-top: 10vh;">
+      <div class="portal-toast-icon toast-${clase_alerta}">
+        <span class="material-symbols-outlined" style="font-size: 1.15rem;">${icono}</span>
+      </div>
+      <div class="portal-toast-content">
+        <h4>${titulo}</h4>
+        <p style="margin-top: 0.25rem;">${mensaje}</p>
+      </div>
+      <button type="button" class="portal-toast-close" onclick="this.closest('.portal-toast-overlay').remove();" aria-label="Cerrar aviso">×</button>
+    </article>
+  `;
+  document.body.appendChild(overlay);
+  
+  setTimeout(() => {
+    if (document.body.contains(overlay)) {
+      overlay.style.transition = 'opacity .5s ease, transform .5s ease';
+      overlay.style.opacity = '0';
+      overlay.style.transform = 'translateY(-8px)';
+      setTimeout(() => overlay.remove(), 500);
+    }
+  }, 10000);
+}
+
+function mostrarConfirmacion(mensaje, callback) {
+  const overlay = document.createElement('div');
+  overlay.className = 'portal-toast-overlay';
+  overlay.style.zIndex = '9999';
+  overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  
+  overlay.innerHTML = `
+    <article class="portal-toast-card" role="dialog" aria-modal="true" style="margin: 20vh auto; width: 90%; max-width: 400px; flex-direction: column; align-items: stretch; gap: 1rem; padding: 1.5rem;">
+      <div style="display: flex; gap: 1rem; align-items: flex-start;">
+        <div class="portal-toast-icon toast-warning">
+          <span class="material-symbols-outlined" style="font-size: 1.5rem;">help</span>
+        </div>
+        <div class="portal-toast-content" style="flex: 1;">
+          <h4 style="font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: bold; color: var(--on-surface);">Confirmación</h4>
+          <p style="white-space: pre-wrap; margin: 0; line-height: 1.4; color: var(--on-surface-variant); font-size: 0.95rem;">${mensaje}</p>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+        <button type="button" id="btn-cancel-confirm" style="padding: 0.5rem 1rem; border-radius: 99px; border: 1px solid var(--outline-variant); background: transparent; color: var(--on-surface); font-weight: bold; cursor: pointer; transition: background 0.2s;">Cancelar</button>
+        <button type="button" id="btn-accept-confirm" style="padding: 0.5rem 1rem; border-radius: 99px; border: none; background: var(--danger); color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s;">Aceptar</button>
+      </div>
+    </article>
+  `;
+  document.body.appendChild(overlay);
+  
+  const btnCancel = overlay.querySelector('#btn-cancel-confirm');
+  const btnAccept = overlay.querySelector('#btn-accept-confirm');
+  
+  btnCancel.onclick = () => { overlay.remove(); };
+  btnAccept.onclick = () => { overlay.remove(); if (callback) callback(); };
+}
+</script>
+
 <div class="admin-layout" data-es-superadmin="{{ '1' if es_superadmin else '0' }}"
   data-vista-inicial="{{ vista_inicial }}" style="display:block; padding-top: 5rem;">
 
@@ -1743,15 +1812,20 @@
         </article>
       </div>
       <script>
-        setTimeout(() => {
-          const overlay = document.currentScript.previousElementSibling;
-          if (overlay && overlay.classList.contains('portal-toast-overlay')) {
-            overlay.style.transition = 'opacity .5s ease, transform .5s ease';
-            overlay.style.opacity = '0';
-            overlay.style.transform = 'translateY(-8px)';
-            setTimeout(() => overlay.remove(), 500);
-          }
-        }, 5000);
+        (function() {
+          const overlays = document.querySelectorAll('.portal-toast-overlay:not(.handled-timeout)');
+          overlays.forEach(overlay => {
+            overlay.classList.add('handled-timeout');
+            setTimeout(() => {
+              if (document.body.contains(overlay)) {
+                overlay.style.transition = 'opacity .5s ease, transform .5s ease';
+                overlay.style.opacity = '0';
+                overlay.style.transform = 'translateY(-8px)';
+                setTimeout(() => overlay.remove(), 500);
+              }
+            }, 10000);
+          });
+        })();
       </script>
       {% endfor %}
       {% endif %}
@@ -2635,6 +2709,16 @@
                     </td>
                     <td class="py-4 px-6 text-right">
                       <div class="flex items-center justify-end gap-2 text-on-surface-variant dark:text-outline-variant">
+                        {% if curso['privacidad'] == 'Cerrada' %}
+                        <button type="button" 
+                          data-edicion-id="{{ curso['id'] }}" 
+                          data-nombre="{{ curso['nombre']|escape }}"
+                          onclick="abrirModalGrupoCerrado(this.getAttribute('data-edicion-id'), this.getAttribute('data-nombre'))"
+                          class="p-1.5 hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center text-primary font-bold bg-transparent border-none cursor-pointer"
+                          title="Gestionar Matrícula (Grupo Cerrado)">
+                          <span class="material-symbols-outlined text-[20px]">psychology</span>
+                        </button>
+                        {% endif %}
                         <a href="{{ url_for('admin_gestion_sesiones', id_curso=curso['id']) }}"
                           class="p-1.5 hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center text-on-surface-variant dark:text-outline-variant"
                           title="Calendario">
@@ -2934,16 +3018,17 @@
           const btn = e.target.closest('.btn-del-edicion');
           if (!btn) return;
           const id = btn.getAttribute('data-edicion-id');
-          if (!confirm(`¿Eliminar la edición "${id}"?\n\nSe eliminarán TODAS sus sesiones y matrículas. Esta acción NO se puede deshacer.`)) return;
-          const csrfEl = document.querySelector('input[name="_csrf_token"]');
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = `/admin/ediciones/${id}/eliminar`;
-          const t = document.createElement('input');
-          t.type = 'hidden'; t.name = '_csrf_token'; t.value = csrfEl ? csrfEl.value : '';
-          form.appendChild(t);
-          document.body.appendChild(form);
-          form.submit();
+          mostrarConfirmacion(`¿Eliminar la edición "${id}"?\n\nSe eliminarán TODAS sus sesiones y matrículas. Esta acción NO se puede deshacer.`, () => {
+            const csrfEl = document.querySelector('input[name="_csrf_token"]');
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/ediciones/${id}/eliminar`;
+            const t = document.createElement('input');
+            t.type = 'hidden'; t.name = '_csrf_token'; t.value = csrfEl ? csrfEl.value : '';
+            form.appendChild(t);
+            document.body.appendChild(form);
+            form.submit();
+          });
         });
 
         /* ─── Enlace de Acceso condicional (modal Calendario) ─── */
@@ -4019,7 +4104,7 @@
                               <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
                               <button type="submit"
                                 class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-error transition-colors bg-transparent border-none cursor-pointer"
-                                title="Eliminar sesión" onclick="return confirm('¿Eliminar esta sesión?');">
+                                title="Eliminar sesión" onclick="event.preventDefault(); mostrarConfirmacion('¿Eliminar esta sesión?', () => this.closest('form').submit());">
                                 <span class="material-symbols-outlined text-[18px]">delete</span>
                               </button>
                             </form>
@@ -4244,7 +4329,7 @@
                               <button type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-usuario" title="Editar usuario" data-username="{{ u['username'] }}" data-direccion="{{ u['direccion'] }}" data-rol="{{ u['rol'] }}">
                                 <span class="material-symbols-outlined text-[18px]">edit</span>
                               </button>
-                              <form action="/admin/eliminar_admin" method="POST" onsubmit="return confirm('¿Eliminar este usuario admin?');" style="margin:0;">
+                              <form action="/admin/eliminar_admin" method="POST" onsubmit="event.preventDefault(); mostrarConfirmacion('¿Eliminar este usuario admin?', () => this.submit());" style="margin:0;">
                                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="view" value="usuarios">
                                 <input type="hidden" name="username" value="{{ u['username'] }}">
@@ -4314,7 +4399,7 @@
                           <button type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-primary-fixed/50 text-slate-600 hover:text-primary dark:text-primary-fixed flex items-center justify-center transition-colors border-none cursor-pointer btn-edit-direccion" title="Editar dirección" data-codigo="{{ d['codigo'] }}" data-nombre="{{ d['nombre'] }}">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                           </button>
-                          <form action="/admin/eliminar_direccion" method="POST" style="margin:0;" onsubmit="return confirm('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?');">
+                          <form action="/admin/eliminar_direccion" method="POST" style="margin:0;" onsubmit="event.preventDefault(); mostrarConfirmacion('Solo se elimina si no tiene admins ni cursos asociados. ¿Continuar?', () => this.submit());">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="view" value="usuarios">
                             <input type="hidden" name="codigo" value="{{ d['codigo'] }}">
@@ -4556,7 +4641,7 @@
                             onclick="abrirModalEditarPlantilla(this)">
                             <span class="material-symbols-outlined" data-icon="edit">edit</span>
                           </button>
-                          <form action="/admin/certificados/plantilla/eliminar/{{ p.id }}" method="POST" class="inline-block m-0" onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla?');">
+                          <form action="/admin/certificados/plantilla/eliminar/{{ p.id }}" method="POST" class="inline-block m-0" onsubmit="event.preventDefault(); mostrarConfirmacion('¿Seguro que deseas eliminar esta plantilla?', () => this.submit());">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="p-2 text-error hover:bg-error/10 rounded-lg transition-colors border-none cursor-pointer" title="Eliminar">
                               <span class="material-symbols-outlined" data-icon="delete">delete</span>
@@ -5588,8 +5673,221 @@
     </form>
   </div>
 </div>
-{% endblock %}
+<!-- Modal Grupo Cerrado -->
+<div class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10" id="modal-grupo-cerrado" aria-hidden="true">
+  <!-- MODAL CONTAINER: Refractive Glassmorphism / The Insight Blob concept adapted for a large layout -->
+  <div class="w-[95vw] max-w-[1200px] h-[90vh] flex flex-col bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] overflow-hidden shadow-2xl shadow-primary/20 border border-white/60 relative">
+    <!-- Soft inner glow accent -->
+    <div class="absolute inset-0 rounded-3xl border border-secondary/20 pointer-events-none"></div>
 
+    <!-- Header -->
+    <header class="flex items-center justify-between px-6 sm:px-10 py-5 border-b border-outline-variant/30 bg-surface-container-low shrink-0">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-[26px]">psychology</span>
+        </div>
+        <div>
+          <h2 class="font-headline-lg text-headline-md font-bold text-primary dark:text-primary-fixed tracking-tight" style="margin:0;">Gestión de Grupo Cerrado</h2>
+          <div class="font-body-md text-sm text-outline mt-0.5" id="grupo-cerrado-edicion-info">Cargando edición...</div>
+        </div>
+      </div>
+      <!-- Indicador de Pasos -->
+      <div class="flex items-center gap-3">
+        <div id="gc-step-1" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-outline-variant/20 transition-all">
+          <span class="material-symbols-outlined text-[16px] text-on-surface-variant" id="gc-step-1-icon">radio_button_unchecked</span>
+          <span class="text-xs font-semibold text-on-surface-variant">Paso 1</span>
+        </div>
+        <div class="w-6 h-px bg-outline-variant/50"></div>
+        <div id="gc-step-2" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-outline-variant/20 transition-all">
+          <span class="material-symbols-outlined text-[16px] text-on-surface-variant" id="gc-step-2-icon">radio_button_unchecked</span>
+          <span class="text-xs font-semibold text-on-surface-variant">Paso 2</span>
+        </div>
+        <button type="button" onclick="cerrarModal('modal-grupo-cerrado')" class="ml-2 w-9 h-9 rounded-full hover:bg-surface-container-high/50 flex items-center justify-center text-on-surface-variant transition-colors bg-transparent border-none cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 sm:px-10 py-8 bg-white dark:bg-surface-container-lowest">
+      <form id="form-grupo-cerrado" onsubmit="return false;" class="flex flex-col gap-10 max-w-4xl mx-auto">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="edicion_id" id="grupo-cerrado-edicion-id">
+        
+        <!-- 1. Acción a realizar -->
+        <section class="bg-surface-bright dark:bg-surface-container rounded-3xl p-6 md:p-8 border border-outline-variant/30 shadow-sm">
+            <h2 class="font-headline-md text-[1.25rem] font-bold text-on-surface mb-6 flex items-center gap-3">
+                <span class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">app_registration</span>
+                </span>
+                1. ¿Qué acción deseas realizar?
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label class="gc-radio-card relative flex cursor-pointer rounded-2xl border-2 border-outline-variant/30 bg-white dark:bg-surface-container-lowest p-6 hover:border-primary/50 transition-all hover:shadow-md focus-within:ring-2 focus-within:ring-primary">
+                    <input type="radio" name="accion" value="automatica" class="sr-only peer" onchange="gcUpdateSteps()">
+                    <div class="flex flex-col gap-4 w-full">
+                        <div class="flex items-center justify-between">
+                            <span class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shadow-inner">
+                                <span class="material-symbols-outlined !text-[#2563eb]">bolt</span>
+                            </span>
+                            <div class="h-6 w-6 rounded-full border-2 border-outline-variant peer-checked:border-primary peer-checked:bg-[#2563eb] flex items-center justify-center transition-colors">
+                                <div class="h-2.5 w-2.5 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="block font-headline-md text-base font-bold text-on-surface">Matricular Automáticamente</span>
+                            <span class="block font-body-md text-sm text-on-surface-variant mt-1.5 leading-relaxed">El docente quedará matriculado de inmediato en estado Pendiente de Evaluación.</span>
+                        </div>
+                    </div>
+                </label>
+                
+                <label class="gc-radio-card relative flex cursor-pointer rounded-2xl border-2 border-outline-variant/30 bg-white dark:bg-surface-container-lowest p-6 hover:border-primary/50 transition-all hover:shadow-md focus-within:ring-2 focus-within:ring-primary">
+                    <input type="radio" name="accion" value="invitacion" class="sr-only peer" onchange="gcUpdateSteps()">
+                    <div class="flex flex-col gap-4 w-full">
+                        <div class="flex items-center justify-between">
+                            <span class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center shadow-inner">
+                                <span class="material-symbols-outlined !text-[#eab308]">mark_email_unread</span>
+                            </span>
+                            <div class="h-6 w-6 rounded-full border-2 border-outline-variant peer-checked:border-primary peer-checked:bg-[#2563eb] flex items-center justify-center transition-colors">
+                                <div class="h-2.5 w-2.5 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="block font-headline-md text-base font-bold text-on-surface">Sólo Enviar Invitación</span>
+                            <span class="block font-body-md text-sm text-on-surface-variant mt-1.5 leading-relaxed">El docente verá el curso en su portal y él decidirá voluntariamente si hace clic en Matricularse.</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </section>
+
+        <!-- Flecha divisora -->
+        <div class="flex flex-col items-center gap-1 py-2 relative z-0">
+          <div class="w-px h-4 bg-outline-variant/40"></div>
+          <div class="w-10 h-10 flex items-center justify-center cursor-pointer hover:bg-surface-container-high rounded-full transition-colors" onclick="document.getElementById('gc-step-2-section').scrollIntoView({behavior: 'smooth'})" title="Ir al Paso 2">
+            <span class="material-symbols-outlined text-primary/60 text-[28px] animate-bounce">keyboard_double_arrow_down</span>
+          </div>
+          <div class="w-px h-4 bg-outline-variant/40"></div>
+        </div>
+
+        <!-- 2. Filtrar docentes -->
+        <section id="gc-step-2-section" class="bg-surface-bright dark:bg-surface-container rounded-3xl p-6 md:p-8 border border-outline-variant/30 shadow-sm relative transition-all duration-300">
+            
+            <!-- OVERLAY DE BLOQUEO (Se oculta por JS) -->
+            <div id="gc-step-2-overlay" class="absolute inset-0 z-10 bg-white/60 dark:bg-surface-container/60 backdrop-blur-[2px] flex items-center justify-center cursor-not-allowed transition-opacity duration-300" style="border-radius:inherit;">
+                <div class="bg-white dark:bg-surface-container-high px-6 py-4 rounded-2xl shadow-lg border border-outline-variant/30 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-amber-500 text-[28px]">lock</span>
+                    <div>
+                        <p class="text-sm font-bold text-on-surface">Paso 2 bloqueado</p>
+                        <p class="text-xs text-on-surface-variant">Selecciona una acción en el Paso 1 primero.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="font-headline-md text-[1.25rem] font-bold text-on-surface mb-6 flex items-center gap-3">
+                <span class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">group_add</span>
+                </span>
+                2. Seleccionar docentes
+            </h2>
+
+            <!-- Pestañas Topbar -->
+            <div class="pillbar-nav flex items-center gap-3 mb-8 overflow-x-auto pb-2" role="tablist">
+                <button type="button" class="gc-tab-btn sidebar-link active flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap focus:outline-none border-none bg-transparent cursor-pointer" data-target="panel-excel" onclick="switchGcTab(this)">
+                    <span class="material-symbols-outlined text-[18px]">upload_file</span> Subir Excel
+                </button>
+                <button type="button" class="gc-tab-btn sidebar-link flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap focus:outline-none border-none bg-transparent cursor-pointer" data-target="panel-filtro" onclick="switchGcTab(this)">
+                    <span class="material-symbols-outlined text-[18px]">filter_list</span> Filtrar por:
+                </button>
+            </div>
+
+            <input type="hidden" name="metodo" id="input-gc-metodo" value="excel">
+
+            <div class="relative">
+                <!-- Panel Excel -->
+                <div id="panel-excel" class="gc-tab-panel active">
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Cargar lista Excel</label>
+                    <button type="button" class="text-primary hover:bg-primary/10 w-7 h-7 rounded-full flex items-center justify-center transition-colors border-none bg-transparent cursor-pointer" onclick="abrirModalAyudaExcel()" title="Ver formato de ejemplo">
+                        <span class="material-symbols-outlined text-[18px]">help</span>
+                    </button>
+                  </div>
+                  <div id="gc-excel-dropzone" class="relative rounded-2xl border-2 border-dashed border-outline-variant/60 p-5 flex flex-col items-center gap-3 transition-all cursor-pointer hover:border-primary/50 hover:bg-primary/5" onclick="if(event.target.tagName !== 'BUTTON') document.getElementById('gc_file_upload').click();">
+                    <span class="material-symbols-outlined text-[36px] text-outline-variant" id="gc-excel-icon">upload_file</span>
+                    <div class="text-center">
+                      <p class="text-sm font-semibold text-on-surface" id="gc-excel-title">Subir archivo Excel</p>
+                      <p class="text-xs text-on-surface-variant mt-0.5" id="gc_file_name_display">Columna A: números de empleado</p>
+                    </div>
+                    <div class="flex gap-2">
+                      <button type="button" id="gc-excel-btn" class="px-4 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors bg-transparent cursor-pointer" onclick="document.getElementById('gc_file_upload').click();">Examinar</button>
+                      <button type="button" id="gc-excel-clear-btn" class="hidden px-4 py-1.5 rounded-full text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors bg-transparent cursor-pointer" onclick="limpiarExcelGc(event)">Quitar</button>
+                    </div>
+                    <input type="file" id="gc_file_upload" name="archivo_excel" accept=".xlsx, .xls" class="hidden" onchange="onGcFileSelected(this)">
+                  </div>
+                  <!-- Preview de empleados del excel -->
+                  <div id="gc-excel-preview" class="hidden mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <p class="text-xs font-semibold text-emerald-700 flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">check_circle</span> <span id="gc-excel-count"></span></p>
+                  </div>
+                </div>
+
+                <!-- Panel Filtro -->
+                <div id="panel-filtro" class="gc-tab-panel hidden">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Centro Regional (Obligatorio) -->
+                    <div>
+                      <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Centro Regional <span class="text-red-500">*</span></label>
+                      <select id="gc_centro_regional" name="centro_regional" class="form-select">
+                        <option value="">Buscar centro regional...</option>
+                        {% for centro in centros_regionales|default([]) %}
+                          <option value="{{ centro }}">{{ centro }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <!-- Facultad (Opcional) -->
+                    <div>
+                      <label class="flex items-center justify-between text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
+                        <span>Facultad <span class="text-[10px] lowercase font-normal">(Opcional)</span></span>
+                      </label>
+                      <select id="gc_facultad" name="facultad" class="form-select">
+                        <option value="">Todas las facultades...</option>
+                        <option value="Ciencias Económicas, Administrativas y Contables">Ciencias Económicas, Administrativas y Contables</option>
+                        <option value="Ingeniería">Ingeniería</option>
+                        <option value="Ciencias Jurídicas">Ciencias Jurídicas</option>
+                        <option value="Ciencias Médicas">Ciencias Médicas</option>
+                        <option value="Humanidades y Artes">Humanidades y Artes</option>
+                        <option value="Ciencias Sociales">Ciencias Sociales</option>
+                        <option value="Ciencias">Ciencias</option>
+                        <option value="Odontología">Odontología</option>
+                        <option value="Química y Farmacia">Química y Farmacia</option>
+                        <option value="Ciencias Espaciales">Ciencias Espaciales</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Preview total docentes -->
+                  <div id="gc-centro-preview" class="hidden mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                    <p class="text-xs font-semibold text-blue-700 flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">group</span> <span id="gc-centro-count"></span></p>
+                  </div>
+                </div>
+            </div>
+        </section>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="flex items-center justify-end px-6 sm:px-10 py-6 border-t border-outline-variant/30 bg-surface-container-low dark:bg-surface-container shrink-0 gap-4">
+      <button type="button" onclick="cerrarModal('modal-grupo-cerrado')" class="px-6 py-2.5 rounded-full font-medium text-on-surface-variant hover:bg-surface-variant/50 transition-colors border-none bg-transparent cursor-pointer">
+        Cancelar
+      </button>
+      <button type="button" id="btn-submit-gc" onclick="procesarGrupoCerrado()" class="bg-[#001732] hover:bg-[#001732]/90 text-white flex items-center gap-2 shadow-sm border-none cursor-pointer transition-colors" style="border-radius:9999px; padding: 0.6rem 1.5rem;">
+        <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+        Procesar Lote
+      </button>
+    </footer>
+  </div>
+</div>
+{% endblock %}
 {% block extra_scripts %}
 <script>
   // Variables para modales
@@ -5881,7 +6179,7 @@
     const dataUrl = canvas?.toDataURL('image/png') || img?.src || '';
 
     if (!dataUrl) {
-      alert('No hay un QR disponible para descargar.');
+      mostrarNotificacion('No hay un QR disponible para descargar.', 'warning');
       return;
     }
 
@@ -5909,12 +6207,12 @@
     const dataUrl = canvas?.toDataURL('image/png') || img?.src || '';
 
     if (!dataUrl) {
-      alert('No hay un QR disponible para exportar a PDF.');
+      mostrarNotificacion('No hay un QR disponible para exportar a PDF.', 'warning');
       return;
     }
 
     if (!jsPDFCtor) {
-      alert('No se pudo cargar la libreria para exportar PDF.');
+      mostrarNotificacion('No se pudo cargar la libreria para exportar PDF.', 'warning');
       return;
     }
 
@@ -6289,7 +6587,7 @@
     document.querySelectorAll('.btn-edit-sesion').forEach(btn => {
       btn.addEventListener('click', function () {
         if ((this.dataset.estado || '0') !== '0') {
-          alert('Solo se pueden editar sesiones cerradas.');
+          mostrarNotificacion('Solo se pueden editar sesiones cerradas.', 'warning');
           return;
         }
         abrirModalEditarSesion({
@@ -7165,18 +7463,18 @@
         });
 
         if (!bloques.length) {
-          alert('Debes agregar al menos una jornada.');
+          mostrarNotificacion('Debes agregar al menos una jornada.', 'warning');
           return;
         }
 
         const manualInvalido = bloques.find(bloque => bloque.modo_configuracion === 'manual' && !bloque.fechas_manual.length);
         if (manualInvalido) {
-          alert('Debes seleccionar fechas manuales para las jornadas en modo manual.');
+          mostrarNotificacion('Debes seleccionar fechas manuales para las jornadas en modo manual.', 'warning');
           return;
         }
 
         if (fechaInicioCal && fechaFinCal && fechaFinCal.value < fechaInicioCal.value) {
-          alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+          mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio.', 'warning');
           return;
         }
 
@@ -7208,10 +7506,10 @@
             window.location.href = data.redirect_url || window.location.href;
             return;
           }
-          alert(data.error || 'No se pudo generar el calendario.');
+          mostrarNotificacion(data.error || 'No se pudo generar el calendario.', 'error');
         } catch (err) {
           console.error('Error al generar calendario:', err);
-          alert('No se pudo generar el calendario.');
+          mostrarNotificacion('No se pudo generar el calendario.', 'warning');
         }
       });
     }
@@ -7718,5 +8016,538 @@
       toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     });
   })();
+  let gcChoicesInstancia = null;
+  let gcChoicesFacultad = null;
+  let gcChoicesCentro = null;
+  const gcCentrosPreload = JSON.parse('{{ centros_regionales | default([]) | tojson | safe }}');
+  let gcCentroOptionsHtml = null;
+  let gcFacultadesOptionsHtml = null;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const sc = document.getElementById('gc_centro_regional');
+    if (sc) {
+      gcCentroOptionsHtml = sc.innerHTML;
+    }
+    const sf = document.getElementById('gc_facultad');
+    if (sf) {
+      gcFacultadesOptionsHtml = sf.innerHTML;
+    }
+  });
+
+  function abrirModalAyudaExcel() {
+    abrirModal('modal-ayuda-excel');
+  }
+
+  function cerrarModalAyudaExcel() {
+    cerrarModal('modal-ayuda-excel');
+  }
+
+  function gcPopulateCentros(selectEl, centros) {
+    if (!selectEl || !Array.isArray(centros)) return false;
+    let added = 0;
+    centros.forEach(c => {
+      const texto = String(c || '').trim();
+      if (!texto) return;
+      const opt = document.createElement('option');
+      opt.value = texto;
+      opt.textContent = texto;
+      selectEl.appendChild(opt);
+      added += 1;
+    });
+    return added > 0;
+  }
+
+  function gcInitChoicesCentro(selectEl) {
+    if (!selectEl) return;
+    try {
+      gcChoicesCentro = new Choices(selectEl, { searchEnabled: true, itemSelectText: '', placeholder: true, placeholderValue: 'Buscar centro regional...', removeItemButton: true });
+      selectEl.addEventListener('change', onGcCentroChange);
+      selectEl.addEventListener('addItem', onGcCentroChange);
+      selectEl.addEventListener('removeItem', onGcCentroChange);
+    } catch (e) {
+      console.warn('Choices Centro init error:', e);
+    }
+  }
+
+  function gcUpdateSteps() {
+    // Paso 1: iluminar la tarjeta seleccionada
+    const radios = document.querySelectorAll('input[name="accion"]');
+    let accion = null;
+    radios.forEach(radio => {
+        const label = radio.closest('.gc-radio-card');
+        if (radio.checked) {
+            accion = radio;
+            label.classList.add('border-primary', 'bg-blue-50', 'dark:bg-blue-900/20');
+            label.classList.remove('border-outline-variant/30', 'bg-white', 'dark:bg-surface-container-lowest');
+        } else {
+            label.classList.remove('border-primary', 'bg-blue-50', 'dark:bg-blue-900/20');
+            label.classList.add('border-outline-variant/30', 'bg-white', 'dark:bg-surface-container-lowest');
+        }
+    });
+    
+    // Icono del Paso 1
+    const step1 = document.getElementById('gc-step-1');
+    const icon1 = document.getElementById('gc-step-1-icon');
+    
+    // OVERLAY BLOQUEO
+    const step2Overlay = document.getElementById('gc-step-2-overlay');
+    
+    if (accion) {
+      step1.classList.remove('bg-outline-variant/20');
+      step1.classList.add('bg-emerald-100');
+      icon1.textContent = 'check_circle';
+      icon1.classList.remove('text-on-surface-variant');
+      icon1.classList.add('!text-emerald-600');
+      
+      // Desbloquear Paso 2
+      step2Overlay.classList.add('opacity-0', 'pointer-events-none');
+    } else {
+      step1.classList.add('bg-outline-variant/20');
+      step1.classList.remove('bg-emerald-100');
+      icon1.textContent = 'radio_button_unchecked';
+      icon1.classList.add('text-on-surface-variant');
+      icon1.classList.remove('!text-emerald-600');
+      
+      // Bloquear Paso 2
+      step2Overlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+    
+    // Paso 2: archivo cargado o centro seleccionado
+    const fileOk = document.getElementById('gc_file_upload')?.files?.length > 0;
+    const metodoActivo = document.getElementById('input-gc-metodo').value;
+    const centroVal = typeof gcGetChoiceVal !== 'undefined' ? gcGetChoiceVal(gcChoicesCentro, 'gc_centro_regional') : document.getElementById('gc_centro_regional')?.value;
+    const centroOk = (metodoActivo === 'centro') && !!centroVal;
+    
+    const step2 = document.getElementById('gc-step-2');
+    const icon2 = document.getElementById('gc-step-2-icon');
+    if (fileOk || centroOk) {
+      step2.classList.remove('bg-outline-variant/20');
+      step2.classList.add('bg-emerald-100');
+      icon2.textContent = 'check_circle';
+      icon2.classList.remove('text-on-surface-variant');
+      icon2.classList.add('!text-emerald-600');
+    } else {
+      step2.classList.add('bg-outline-variant/20');
+      step2.classList.remove('bg-emerald-100');
+      icon2.textContent = 'radio_button_unchecked';
+      icon2.classList.add('text-on-surface-variant');
+      icon2.classList.remove('!text-emerald-600');
+    }
+  }
+
+  function limpiarExcelGc(event) {
+      if(event) {
+          event.preventDefault();
+          event.stopPropagation();
+      }
+      const fileInput = document.getElementById('gc_file_upload');
+      if (fileInput) fileInput.value = '';
+      
+      const excelPreview = document.getElementById('gc-excel-preview');
+      if (excelPreview) excelPreview.classList.add('hidden');
+      
+      const dropzone = document.getElementById('gc-excel-dropzone');
+      if (dropzone) {
+          dropzone.classList.add('border-outline-variant/60');
+          dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/50');
+      }
+      
+      const excelIcon = document.getElementById('gc-excel-icon');
+      if (excelIcon) {
+          excelIcon.textContent = 'upload_file';
+          excelIcon.classList.add('text-outline-variant');
+          excelIcon.classList.remove('!text-emerald-500');
+      }
+      
+      const excelBtn = document.getElementById('gc-excel-btn');
+      if (excelBtn) excelBtn.textContent = 'Examinar';
+      
+      const excelTitle = document.getElementById('gc-excel-title');
+      if (excelTitle) excelTitle.textContent = 'Subir archivo Excel';
+      
+      const excelDisplay = document.getElementById('gc_file_name_display');
+      if (excelDisplay) excelDisplay.textContent = 'Columna A: números de empleado';
+      
+      const clearBtn = document.getElementById('gc-excel-clear-btn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      
+      gcUpdateSteps();
+  }
+
+  function onGcFileSelected(input) {
+    const file = input.files[0];
+    const display = document.getElementById('gc_file_name_display');
+    const preview = document.getElementById('gc-excel-preview');
+    const count = document.getElementById('gc-excel-count');
+    const dropzone = document.getElementById('gc-excel-dropzone');
+    const icon = document.getElementById('gc-excel-icon');
+    const btn = document.getElementById('gc-excel-btn');
+    const clearBtn = document.getElementById('gc-excel-clear-btn');
+    const title = document.getElementById('gc-excel-title');
+    if (file) {
+      display.textContent = file.name;
+      title.textContent = '¡Archivo listo!';
+      dropzone.classList.remove('border-outline-variant/60');
+      dropzone.classList.add('border-emerald-400', 'bg-emerald-50/50');
+      icon.textContent = 'task_alt';
+      icon.classList.remove('text-outline-variant');
+      icon.classList.add('!text-emerald-500');
+      btn.textContent = 'Modificar';
+      if(clearBtn) clearBtn.classList.remove('hidden');
+      count.textContent = 'Archivo "' + file.name + '" cargado. Se procesará al enviar.';
+      preview.classList.remove('hidden');
+    } else {
+      display.textContent = 'Columna A: números de empleado';
+      title.textContent = 'Subir archivo Excel';
+      dropzone.classList.add('border-outline-variant/60');
+      dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/50');
+      icon.textContent = 'upload_file';
+      icon.classList.add('text-outline-variant');
+      icon.classList.remove('!text-emerald-500');
+      btn.textContent = 'Examinar';
+      if(clearBtn) clearBtn.classList.add('hidden');
+      preview.classList.add('hidden');
+    }
+    gcUpdateSteps();
+  }
+
+  function onGcCentroChange() {
+    const val = gcGetChoiceVal(gcChoicesCentro, 'gc_centro_regional');
+    const valFacultad = gcGetChoiceVal(gcChoicesFacultad, 'gc_facultad');
+    
+    // Actualizar UI inmediatamente sin esperar al fetch
+    gcUpdateSteps();
+    
+    const preview = document.getElementById('gc-centro-preview');
+    const countEl = document.getElementById('gc-centro-count');
+    if (val) {
+      // Nota: Aquí se podrá agregar '&facultad=valFacultad' en el futuro
+      fetch(`{{ url_for('admin_api_centros_regionales') }}?centro=${encodeURIComponent(val)}`)
+        .then(r => r.json())
+        .then(data => {
+          const total = data.total !== undefined ? data.total : '?';
+          let msj = `Centro "${val}": ${total} docente(s) activo(s) serán añadidos al lote.`;
+          if (valFacultad) msj += ` (Filtro extra: ${valFacultad})`;
+          countEl.textContent = msj;
+          preview.classList.remove('hidden');
+          gcUpdateSteps();
+        }).catch(() => {
+          let msj = `Centro "${val}" seleccionado.`;
+          if (valFacultad) msj += ` (Filtro extra: ${valFacultad})`;
+          countEl.textContent = msj;
+          preview.classList.remove('hidden');
+          gcUpdateSteps();
+        });
+    } else {
+      preview.classList.add('hidden');
+      gcUpdateSteps();
+    }
+  }
+
+  function switchGcTab(btn) {
+      const targetId = btn.getAttribute('data-target');
+      
+      const fileInput = document.getElementById('gc_file_upload');
+      const fileOk = fileInput && fileInput.files && fileInput.files.length > 0;
+      const selectCentro = document.getElementById('gc_centro_regional');
+      const centroVal = gcChoicesCentro ? gcChoicesCentro.getValue(true) : selectCentro?.value;
+      const centroOk = !!centroVal;
+      
+      if (targetId === 'panel-filtro' && fileOk) {
+          mostrarNotificacion('Ya seleccionaste un archivo Excel. Para usar los filtros, primero quita el archivo Excel dando clic en "Quitar".', 'warning');
+          return;
+      }
+      
+      if (targetId === 'panel-excel' && centroOk) {
+          mostrarNotificacion('Ya seleccionaste un Centro Regional. Para subir un archivo Excel, primero limpia la selección del filtro dando clic en la "x" del Centro.', 'warning');
+          return;
+      }
+
+      document.querySelectorAll('.gc-tab-btn').forEach(b => {
+          b.classList.remove('active', 'text-primary', 'dark:text-primary-fixed');
+          b.classList.add('text-on-surface-variant', 'dark:text-outline-variant');
+      });
+      document.querySelectorAll('.gc-tab-panel').forEach(p => p.classList.add('hidden'));
+
+      btn.classList.add('active', 'text-primary', 'dark:text-primary-fixed');
+      btn.classList.remove('text-on-surface-variant', 'dark:text-outline-variant');
+      
+      document.getElementById(targetId).classList.remove('hidden');
+
+      if (targetId === 'panel-excel') {
+          document.getElementById('input-gc-metodo').value = 'excel';
+      } else if (targetId === 'panel-filtro') {
+          document.getElementById('input-gc-metodo').value = 'centro';
+      }
+      gcUpdateSteps();
+  }
+
+  function gcForceSelectReset(selectId, defaultHtml) {
+    const el = document.getElementById(selectId);
+    if (!el) return null;
+    
+    // Si está envuelto en un contenedor de Choices, sacarlo a la fuerza
+    const parent = el.parentNode;
+    if (parent && parent.classList.contains('choices__inner')) {
+      const grandParent = parent.parentNode;
+      if (grandParent && grandParent.classList.contains('choices')) {
+        el.hidden = false;
+        el.classList.remove('choices__input', 'is-hidden');
+        el.removeAttribute('data-choice');
+        grandParent.parentNode.insertBefore(el, grandParent);
+        grandParent.remove();
+      }
+    }
+    
+    // Limpiar clases residuales
+    el.className = 'form-select';
+    el.innerHTML = defaultHtml || '';
+    return el;
+  }
+
+  function abrirModalGrupoCerrado(edicionId, nombreEdicion) {
+    document.getElementById('grupo-cerrado-edicion-id').value = edicionId;
+    document.getElementById('grupo-cerrado-edicion-info').innerHTML = `<strong>${nombreEdicion}</strong> (${edicionId})`;
+    
+    // Resetear radio buttons (desmarcar todos)
+    document.querySelectorAll('input[name="accion"]').forEach(r => { r.checked = false; });
+    
+    // Pestaña inicial: excel
+    const tabExcel = document.querySelector('.gc-tab-btn[data-target="panel-excel"]');
+    if(tabExcel) switchGcTab(tabExcel);
+    
+    // === CHOICES CLEANUP: Destruir de forma segura ===
+    try { if (gcChoicesCentro) { gcChoicesCentro.destroy(); } } catch(e) {}
+    gcChoicesCentro = null;
+    try { if (gcChoicesFacultad) { gcChoicesFacultad.destroy(); } } catch(e) {}
+    gcChoicesFacultad = null;
+
+    // Extracción manual y forzosa
+    const selectCentro = gcForceSelectReset('gc_centro_regional', gcCentroOptionsHtml || '<option value="">Buscar centro regional...</option>');
+    const sf = gcForceSelectReset('gc_facultad', gcFacultadesOptionsHtml || '<option value="">Todas las facultades...</option>');
+
+    // Inicializar Choices de Facultad sobre el nodo limpio
+    try {
+      gcChoicesFacultad = new Choices(sf, { searchEnabled: true, itemSelectText: '', placeholder: true, placeholderValue: 'Todas las facultades...', removeItemButton: true });
+      sf.addEventListener('change', onGcCentroChange);
+      sf.addEventListener('addItem', onGcCentroChange);
+      sf.addEventListener('removeItem', onGcCentroChange);
+    } catch(e) { console.warn('Choices Facultad init error:', e); }
+    
+    // Resetear estado visual
+    gcUpdateSteps();
+
+    // Resetear la zona de Excel
+    const fileInput = document.getElementById('gc_file_upload');
+    if(fileInput) fileInput.value = '';
+    const excelPreview = document.getElementById('gc-excel-preview');
+    if(excelPreview) excelPreview.classList.add('hidden');
+    const dropzone = document.getElementById('gc-excel-dropzone');
+    if(dropzone) {
+      dropzone.classList.add('border-outline-variant/60');
+      dropzone.classList.remove('border-emerald-400', 'bg-emerald-50/50');
+    }
+    const excelIcon = document.getElementById('gc-excel-icon');
+    if(excelIcon) { excelIcon.textContent = 'upload_file'; excelIcon.classList.add('text-outline-variant'); excelIcon.classList.remove('!text-emerald-500'); }
+    const excelBtn = document.getElementById('gc-excel-btn');
+    if(excelBtn) excelBtn.textContent = 'Examinar';
+    const excelTitle = document.getElementById('gc-excel-title');
+    if(excelTitle) excelTitle.textContent = 'Subir archivo Excel';
+    const excelDisplay = document.getElementById('gc_file_name_display');
+    if(excelDisplay) excelDisplay.textContent = 'Columna A: n\u00fameros de empleado';
+    
+    const clearBtn = document.getElementById('gc-excel-clear-btn');
+    if(clearBtn) clearBtn.classList.add('hidden');
+    
+    // Ocultar preview centro
+    const centroPreview = document.getElementById('gc-centro-preview');
+    if(centroPreview) centroPreview.classList.add('hidden');
+
+    // Cargar centros en el selector (precarga desde servidor si existe)
+    const sc = document.getElementById('gc_centro_regional');
+    const needsPopulate = sc && sc.options.length <= 1;
+    const preloadOk = needsPopulate ? gcPopulateCentros(sc, gcCentrosPreload) : true;
+
+    if (preloadOk) {
+      gcInitChoicesCentro(sc);
+    } else {
+      fetch("{{ url_for('admin_api_centros_regionales') }}")
+        .then(async r => {
+          if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+          const isJson = r.headers.get('content-type')?.includes('application/json');
+          if (!isJson) throw new Error('Respuesta no es JSON. Sesion expirada o respuesta invalida.');
+          return r.json();
+        })
+        .then(data => {
+          if (data.ok && Array.isArray(data.centros)) {
+            const anyAdded = gcPopulateCentros(sc, data.centros);
+            if (!anyAdded) {
+              mostrarNotificacion('No se encontraron centros regionales en el sistema.', 'warning');
+            }
+          } else {
+            mostrarNotificacion('Error al cargar centros: ' + (data.error || 'Respuesta invalida del servidor'), 'error');
+          }
+          gcInitChoicesCentro(sc);
+        }).catch(e => {
+          console.error('Fetch centros error:', e);
+          mostrarNotificacion('Fallo la conexion al pedir los centros regionales: ' + e.message, 'error');
+          gcInitChoicesCentro(sc);
+        });
+    }
+        
+    abrirModal('modal-grupo-cerrado');
+  }
+
+  function gcGetChoiceVal(choicesInst, fallbackId) {
+    const el = document.getElementById(fallbackId);
+    if (el && el.value) return el.value;
+    if (choicesInst) {
+      const v = choicesInst.getValue(true);
+      if (Array.isArray(v)) return v.length > 0 ? v[0] : '';
+      if (v && typeof v === 'object') return v.value || '';
+      return v || '';
+    }
+    return '';
+  }
+
+  async function procesarGrupoCerrado() {
+      const form = document.getElementById('form-grupo-cerrado');
+      const formData = new FormData(form);
+      
+      // Forzar la lectura de Choices.js al enviar el formulario
+      const realCentro = gcGetChoiceVal(gcChoicesCentro, 'gc_centro_regional');
+      if (realCentro) formData.set('centro_regional', realCentro);
+      const realFacultad = gcGetChoiceVal(gcChoicesFacultad, 'gc_facultad');
+      if (realFacultad) formData.set('facultad', realFacultad);
+
+      const edicionId = formData.get('edicion_id');
+      const btn = document.getElementById('btn-submit-gc');
+      const originalText = btn.innerHTML;
+
+      const metodo = formData.get('metodo');
+      if (metodo === 'excel' && !formData.get('archivo_excel').name) {
+          mostrarNotificacion('Por favor selecciona un archivo Excel.', 'warning');
+          return;
+      }
+      if (metodo === 'centro' && !formData.get('centro_regional')) {
+          mostrarNotificacion('Por favor selecciona un centro regional.', 'warning');
+          return;
+      }
+      if (metodo === 'manual' && !formData.get('numeros_empleado').trim()) {
+          mostrarNotificacion('Por favor ingresa al menos un número de empleado.', 'warning');
+          return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[1.2rem]">sync</span> Procesando...';
+
+      try {
+          const response = await fetch(`/admin/ediciones/${edicionId}/grupo_cerrado/procesar`, {
+              method: 'POST',
+              body: formData
+          });
+          const result = await response.json();
+          if (result.ok) {
+              mostrarNotificacion('¡Éxito! ' + result.mensaje, 'success');
+              cerrarModal('modal-grupo-cerrado');
+          } else {
+              mostrarNotificacion('Error: ' + result.error, 'error');
+          }
+      } catch (error) {
+          mostrarNotificacion('Ocurrió un error inesperado al procesar la solicitud.', 'error');
+      } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+      }
+  }
 </script>
+
+<!-- Modal Ayuda Excel Grupo Cerrado -->
+<div class="modal-overlay" id="modal-ayuda-excel" aria-hidden="true">
+  <div class="modal-box" style="max-width:720px; width:95%; border-radius:24px; padding:0;">
+    
+    <header class="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+          <span class="material-symbols-outlined">lightbulb</span>
+        </div>
+        <h3 class="font-headline-md text-lg font-bold text-on-surface">Formato de Excel</h3>
+      </div>
+      <button type="button" onclick="cerrarModalAyudaExcel()" class="w-8 h-8 rounded-full hover:bg-surface-container-high/50 flex items-center justify-center text-on-surface-variant transition-colors bg-transparent border-none cursor-pointer">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </header>
+
+    <div class="p-6 overflow-y-auto">
+      <p class="text-sm text-on-surface-variant mb-4">
+        Para asegurar que el sistema procese correctamente a los docentes, el archivo Excel (<strong>.xlsx</strong>) debe cumplir con el siguiente formato básico. 
+        <br><br>
+        <strong class="text-primary">Dato obligatorio:</strong> Solo la Columna A es estrictamente obligatoria para el procesamiento de matrículas.
+      </p>
+
+      <div class="rounded-xl border border-outline-variant/30 overflow-x-auto mb-4 bg-surface dark:bg-surface-container-lowest custom-scrollbar">
+        <table class="w-full text-left text-xs whitespace-nowrap">
+          <thead class="bg-[#002b5c] text-white">
+            <tr>
+              <th class="px-3 py-2 border-r border-white/20 font-semibold align-top"><span class="text-[10px] opacity-70 block mb-0.5">A (Requerido)</span>Número de empleado</th>
+              <th class="px-3 py-2 border-r border-white/20 font-semibold align-top"><span class="text-[10px] opacity-70 block mb-0.5">B (Opcional)</span>Nombre Completo</th>
+              <th class="px-3 py-2 border-r border-white/20 font-semibold align-top"><span class="text-[10px] opacity-70 block mb-0.5">C (Opcional)</span>Correo Institucional</th>
+              <th class="px-3 py-2 border-r border-white/20 font-semibold align-top"><span class="text-[10px] opacity-70 block mb-0.5">D (Opcional)</span>Centro Regional</th>
+              <th class="px-3 py-2 font-semibold align-top"><span class="text-[10px] opacity-70 block mb-0.5">E (Opcional)</span>Facultad</th>
+            </tr>
+          </thead>
+          <tbody class="text-on-surface">
+            <tr class="border-b border-outline-variant/20">
+              <td class="px-3 py-2 border-r border-outline-variant/20">544</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 font-medium">David Alejandro Meza Diaz</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 text-primary">davidmeza@unah.edu.hn</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20">Campus Cortés</td>
+              <td class="px-3 py-2">Ciencias Económicas, Administrativas y Contables</td>
+            </tr>
+            <tr class="border-b border-outline-variant/20 bg-surface-container-low">
+              <td class="px-3 py-2 border-r border-outline-variant/20">9333</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 font-medium">Kevin Josué Estrada</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 text-primary">kevinestrada@unah.edu.hn</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20">Campus Cortés</td>
+              <td class="px-3 py-2">Ciencias Económicas, Administrativas y Contables</td>
+            </tr>
+            <tr class="border-b border-outline-variant/20">
+              <td class="px-3 py-2 border-r border-outline-variant/20">14568</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 font-medium">Javier Eduardo Morazán</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 text-primary">javiermorazan@unah.edu.hn</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20">Ciudad Universitaria</td>
+              <td class="px-3 py-2">Ingeniería</td>
+            </tr>
+            <tr class="border-b border-outline-variant/20 bg-surface-container-low">
+              <td class="px-3 py-2 border-r border-outline-variant/20">20045</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 font-medium">Jennifer Aylin Padilla</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 text-primary">jenniferpadilla@unah.edu.hn</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20">Ciudad Universitaria</td>
+              <td class="px-3 py-2">Ingeniería</td>
+            </tr>
+            <tr>
+              <td class="px-3 py-2 border-r border-outline-variant/20">25456</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 font-medium">Sara Abigail Rodriguez</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20 text-primary">sararodriguez@unah.edu.hn</td>
+              <td class="px-3 py-2 border-r border-outline-variant/20">Ciudad Universitaria</td>
+              <td class="px-3 py-2">Ingeniería</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4 flex gap-3">
+        <span class="material-symbols-outlined text-amber-500">warning</span>
+        <p class="text-xs text-amber-700 dark:text-amber-400 leading-relaxed"><strong>Nota Importante:</strong> El sistema solo leerá los números de empleado (Columna A). Las demás columnas son ignoradas por el algoritmo, pero son útiles para tu propio control administrativo. Asegúrate de no incluir celdas vacías entre las filas.</p>
+      </div>
+
+    </div>
+    <div class="p-4 border-t border-outline-variant/30 flex justify-end bg-surface-container-low shrink-0 gap-3">
+      <button type="button" class="btn-primary-ipsd px-6 py-2.5 rounded-full cursor-pointer border-none font-medium flex items-center gap-2" onclick="cerrarModalAyudaExcel()">
+        <span class="material-symbols-outlined text-[18px]">thumb_up</span>
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}

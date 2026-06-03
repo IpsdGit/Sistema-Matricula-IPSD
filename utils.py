@@ -399,13 +399,17 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                ef.fecha_limite_matricula
         FROM ediciones_formativas ef
         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-        WHERE ef.privacidad = 'Abierta'
+        WHERE (ef.privacidad = 'Abierta' 
+               OR EXISTS (
+                   SELECT 1 FROM ediciones_invitaciones ei 
+                   WHERE ei.edicion_id = ef.id AND ei.numero_empleado = %s
+               ))
           AND (ef.fecha_limite_matricula IS NULL OR ef.fecha_limite_matricula >= %s)
-                    AND ef.estado = 'Programado'
+          AND ef.estado = 'Programado'
         ORDER BY ef.fecha_inicio DESC, ef.id DESC
     '''
     with conn.cursor() as cur:
-        cur.execute(query_disponibles, (now_str,))
+        cur.execute(query_disponibles, (numero_empleado, now_str))
         cursos_raw = cur.fetchall()
 
     cursos_agrupados = {}

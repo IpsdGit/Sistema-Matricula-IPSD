@@ -154,9 +154,16 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
             conn.close()
             return {'ok': False, 'error': 'Acción formativa inválida.', 'error_view': 'index'}
 
-        if (edicion['privacidad'] or '').strip() != 'Abierta' or (edicion['estado'] or '').strip() != 'Programado':
+        if (edicion['estado'] or '').strip() != 'Programado':
             conn.close()
             return {'ok': False, 'error': 'Esta acción formativa no está disponible.', 'error_view': 'index'}
+            
+        privacidad = (edicion['privacidad'] or '').strip()
+        if privacidad != 'Abierta':
+            cur.execute('SELECT 1 FROM ediciones_invitaciones WHERE edicion_id = %s AND numero_empleado = %s', (edicion_id, numero_empleado))
+            if not cur.fetchone():
+                conn.close()
+                return {'ok': False, 'error': 'No tienes una invitación para matricularte en esta edición cerrada.', 'error_view': 'index'}
 
         fecha_limite = _parse_fecha_limite(edicion['fecha_limite_matricula'])
         if fecha_limite and datetime.now() > fecha_limite:

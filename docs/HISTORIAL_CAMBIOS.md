@@ -5157,7 +5157,43 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
-**Última actualización**: Junio 1, 2026  
-**Versión actual**: 1.22.2 (Detección Activa de Identidad Visual y Corrección PDF/Toasts)  
-**Estado**: Listo para producción. Todos los tests de la suite (14/14) aprobados correctamente.
+## 🎓 Mejoras de UX/UI en Flujo Grupo Cerrado y Sistema de Notificaciones (v1.23.0)
+
+### Cambio 23.1: Reestructuración de la Interfaz del Modal de Grupo Cerrado
+**Fecha**: Junio 3, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- **Redondeo de Bordes Refractivos**: Se aplicó la clase `overflow-hidden` al contenedor principal de `modal-grupo-cerrado` (`w-[95vw] max-w-[1200px] h-[90vh] flex flex-col bg-surface-container-lowest rounded-[32px] rounded-tl-[16px] overflow-hidden`) para asegurar que el pie de página y el encabezado no anularan el redondeo suave de las esquinas.
+- **Botón de Identidad Institucional**: Se modificó el color del botón "Procesar Lote" reemplazando la clase `btn-primary-ipsd` genérica por el azul profundo institucional exacto (`bg-[#001732] hover:bg-[#001732]/90 text-white transition-colors`).
+- **Respuesta Visual Síncrona**: La validación de llenado del "Paso 2" se desvinculó de la respuesta de red, ejecutando `gcUpdateSteps()` de manera síncrona dentro de `onGcCentroChange()` para encender la validación verde de inmediato sin micro-retrasos.
+
+**POR QUÉ**:
+- El modal tenía una apariencia un poco "cuadrada" visualmente, y el botón no correspondía estrictamente a los lineamientos gráficos de la universidad. Además, el "Paso 2" tardaba una fracción de segundo o se quedaba trabado en gris esperando una respuesta del servidor al seleccionar un campus.
+
+**PARA QUÉ**:
+- Aumentar drásticamente el "Premium Feel" del administrador, haciéndole sentir en un entorno reactivo y estéticamente superior que respeta por completo el branding de la institución.
+
+---
+
+### Cambio 23.2: Reingeniería del Puente de Datos con Choices.js
+**Fecha**: Junio 3, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- **Desvinculación Segura (DOM)**: Se removió la clonación forzada de nodos (`cloneNode(true)`) al intentar limpiar la librería `Choices.js`. En su lugar, se implementó `gcForceSelectReset(selectId)`, una función de reingeniería inversa que desarma manualmente el cascarón de Choices en el DOM y restaura el selector HTML5 invisible prístino cada vez que se abre el modal.
+- **Lectura Agresiva de Valor**: Se integró `gcGetChoiceVal(choicesInst, fallbackId)` para priorizar siempre el valor nativo del DOM. Este valor es forzado asíncronamente con `formData.set('centro_regional', realCentro)` justo en el momento en que se procesa el formulario.
+- **Auto-dismiss Toasts**: Todas las alertas nativas (alert/confirm) se integraron al ecosistema Toast con un cierre fijo de 10 segundos, solucionando notificaciones estancadas.
+
+**POR QUÉ**:
+- Choices.js tenía un problema con su función `destroy()`, dejando un componente fantasma en pantalla al cerrar y volver a abrir la ventana de Grupo Cerrado. Esto engañaba al sistema haciéndole creer que el Campus estaba vacío (valor `""`), bloqueando en su totalidad la opción de matrícula con un falso error de "Por favor selecciona un centro regional".
+
+**PARA QUÉ**:
+- Garantizar estabilidad absoluta y a prueba de fallos al matricular un gran volumen de usuarios mediante filtro de campus regional, un flujo crítico de la herramienta.
+
+---
+
+**Última actualización**: Junio 3, 2026  
+**Versión actual**: 1.23.0 (UX/UI Grupo Cerrado y Refactorización Choices.js)  
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos críticos aprobados.
 
