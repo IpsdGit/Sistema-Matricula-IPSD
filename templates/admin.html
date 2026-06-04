@@ -4677,13 +4677,13 @@ function mostrarConfirmacion(mensaje, callback) {
       {% set curso_reporte = curso_asistencia_reporte['curso'] %}
 
       <div
-        class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 lg:p-8 overflow-y-auto active"
+        class="modal-overlay fixed inset-0 z-[60] flex p-4 md:p-6 lg:p-8 overflow-y-auto active"
         id="modal-asistencia-curso" aria-hidden="false"
         data-close-url="{{ url_for('admin') }}?view={{ vista_inicial }}">
 
         <!-- The Study Card (Modal) -->
         <div
-          class="bg-surface-container-lowest/75 backdrop-blur-2xl w-full max-w-[1500px] rounded-t-xl rounded-b-[32px] shadow-[0_40px_40px_-15px_rgba(0,23,54,0.1)] border border-white/40 overflow-hidden flex flex-col">
+          class="m-auto bg-surface-container-lowest/75 backdrop-blur-2xl w-full max-w-[1500px] rounded-t-xl rounded-b-[32px] shadow-[0_40px_40px_-15px_rgba(0,23,54,0.1)] border border-white/40 overflow-hidden flex flex-col">
           <!-- Header -->
           <div
             class="p-6 md:p-8 border-b border-surface-variant flex justify-between items-start gap-6 bg-surface-container-lowest/50 shrink-0">

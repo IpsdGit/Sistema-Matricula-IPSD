@@ -574,7 +574,7 @@ def construir_eventos_calendario_docente(conn, numero_empleado):
     cursos_vinculados_query = '''
         SELECT DISTINCT edicion_id
         FROM matriculas
-        WHERE numero_empleado = %s
+        WHERE numero_empleado = %s AND aprobado IS NULL
     '''
 
     params_vinculados = (numero_empleado,)
