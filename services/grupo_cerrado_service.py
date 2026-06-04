@@ -93,7 +93,7 @@ def ejecutar_accion_grupo_cerrado(conn, edicion_id, accion, lista_docentes):
             if not cursor.fetchone():
                 cursor.execute('''
                     INSERT INTO matriculas (numero_empleado, edicion_id, aprobado)
-                    VALUES (%s, %s, 0)
+                    VALUES (%s, %s, NULL)
                 ''', (numero, edicion_id))
                 
                 # Crear registro en historial indicando que fue automática

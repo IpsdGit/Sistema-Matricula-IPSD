@@ -562,6 +562,14 @@ document.addEventListener('DOMContentLoaded', function() {
         sesionAbiertaActual.asistencia_marcada = true;
         setFeedback(payload.mensaje || 'Asistencia registrada correctamente.', false);
         marcarBtn.textContent = 'Asistencia ya marcada';
+        
+        if (currentCursoId) {
+            cargarDetalleCurso(currentCursoId);
+        }
+        
+        // Let's also dispatch an event so the dashboard can reload itself silently
+        document.dispatchEvent(new Event('asistencia_marcada_ok'));
+        
       } catch (error) {
         marcarBtn.disabled = false;
         setFeedback((error && error.message) || 'No se pudo marcar asistencia.', true);
@@ -569,12 +577,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  let currentCursoId = null;
+
   function activarInteraccionCurso(elemento) {
     if (!elemento) return;
 
     const abrir = function() {
       const idCurso = (elemento.dataset.cursoModalId || elemento.dataset.idCurso || '').trim();
       if (!idCurso) return;
+      currentCursoId = idCurso;
       cargarDetalleCurso(idCurso);
     };
 

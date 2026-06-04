@@ -1,8 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
 <script>
-  /* Anti-flash: apply theme before render */
-  (function(){var t=localStorage.getItem('ipsd-theme');if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark')document.documentElement.classList.add('dark');}})();
+  /* Anti-flash: apply theme before render (perfil-specific) */
+  (function(){
+    var role = '{% if session.get("admin_logueado") %}admin{% elif session.get("empleado_portal") %}docente{% else %}guest{% endif %}';
+    var key = 'ipsd-theme-' + role;
+    var t = localStorage.getItem(key);
+    if(t){
+      document.documentElement.setAttribute('data-theme',t);
+      if(t==='dark') document.documentElement.classList.add('dark');
+    }
+  })();
 </script>
 
 <head>

@@ -2626,9 +2626,9 @@ function mostrarConfirmacion(mensaje, callback) {
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-              const activeTab = document.querySelector('#section-ediciones [onclick*="activas"]');
+              const activeTab = document.querySelector('#section-ediciones [onclick*="all"]');
               if (activeTab) {
-                filterEdiciones('activas', activeTab);
+                filterEdiciones('all', activeTab);
               }
             });
           </script>
@@ -2652,6 +2652,9 @@ function mostrarConfirmacion(mensaje, callback) {
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Jornada</th>
+                    <th
+                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
+                      Privacidad</th>
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Horario</th>
@@ -2688,6 +2691,11 @@ function mostrarConfirmacion(mensaje, callback) {
                     <td class="py-4 px-6">
                       {{ curso['jornada'] or '—' }}<br>
                       <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{ curso.get('etiqueta_edicion') or '—' }}</span>
+                    </td>
+                    <td class="py-4 px-6">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ 'border-green-200 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' if (curso.get('privacidad') or 'Abierta') == 'Abierta' else 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400' }}">
+                        {{ curso.get('privacidad') or 'Abierta' }}
+                      </span>
                     </td>
                     <td class="py-4 px-6">{{ curso['hora'] or '—' }}</td>
                     <td class="py-4 px-6">
@@ -2740,7 +2748,7 @@ function mostrarConfirmacion(mensaje, callback) {
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="9" style="text-align:center; color:var(--text-muted); padding:2rem;">No hay ediciones
+                    <td colspan="10" style="text-align:center; color:var(--text-muted); padding:2rem;">No hay ediciones
                       activas en este momento.</td>
                   </tr>
                   {% endfor %}
@@ -7707,7 +7715,7 @@ function mostrarConfirmacion(mensaje, callback) {
     const HTML = document.documentElement;
     const ICON_BTNS = document.querySelectorAll('[data-theme-toggle-icon]');
     const BTNS = document.querySelectorAll('[data-theme-toggle-btn]');
-    const KEY = 'ipsd-theme';
+    const KEY = 'ipsd-theme-admin';
 
     function applyTheme(theme) {
       // Bloqueo temporal de transiciones para acelerar drásticamente el renderizado
@@ -8450,6 +8458,7 @@ function mostrarConfirmacion(mensaje, callback) {
           if (result.ok) {
               mostrarNotificacion('¡Éxito! ' + result.mensaje, 'success');
               cerrarModal('modal-grupo-cerrado');
+              reloadAdminEdiciones();
           } else {
               mostrarNotificacion('Error: ' + result.error, 'error');
           }
@@ -8458,6 +8467,23 @@ function mostrarConfirmacion(mensaje, callback) {
       } finally {
           btn.disabled = false;
           btn.innerHTML = originalText;
+      }
+  }
+
+  async function reloadAdminEdiciones() {
+      try {
+          const res = await fetch('/admin?view=ediciones');
+          const html = await res.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          const currentTable = document.querySelector('#section-ediciones table');
+          const newTable = doc.querySelector('#section-ediciones table');
+          if (currentTable && newTable) {
+              currentTable.innerHTML = newTable.innerHTML;
+          }
+      } catch (e) {
+          console.error("Error recargando la tabla de ediciones", e);
       }
   }
 </script>

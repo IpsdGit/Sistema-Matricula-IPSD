@@ -74,7 +74,7 @@
   --transition-fast: all .15s ease;
   
   /* Escala global para responsividad */
-  --scale: 0.80;
+  --scale: 0.95;
 }
 
 /* â”€â”€â”€ Reset y base â”€â”€â”€ */
@@ -591,7 +591,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
 .portal-layout {
   display: flex;
   min-height: calc(100vh / var(--scale));
-  padding: 20px;
+  padding: 8px 20px 20px;
   gap: 18px;
   position: relative;
   background:
@@ -1293,7 +1293,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 700; letter-spacing: -.02em; }
   font-weight: 600;
   letter-spacing: .01em;
   color: var(--on-surface);
-  max-width: 170px;
+  max-width: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

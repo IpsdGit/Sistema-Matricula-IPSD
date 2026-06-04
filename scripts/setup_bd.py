@@ -1,9 +1,15 @@
 import os
 import psycopg2
+# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 def get_db_connection():
-    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    # database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     return psycopg2.connect(database_url)
 
 def inicializar_bd():
@@ -242,6 +248,20 @@ def inicializar_bd():
             direccion TEXT NOT NULL DEFAULT 'IPSD'
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ediciones_invitaciones (
+            id SERIAL PRIMARY KEY,
+            edicion_id TEXT NOT NULL,
+            numero_empleado TEXT NOT NULL,
+            fecha_invitacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(edicion_id) REFERENCES ediciones_formativas(id) ON DELETE CASCADE,
+            FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado) ON DELETE CASCADE,
+            UNIQUE (edicion_id, numero_empleado)
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_empleado ON ediciones_invitaciones (numero_empleado)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_edicion ON ediciones_invitaciones (edicion_id)')
 
     superadmin_username = os.environ.get('SUPERADMIN_USERNAME', 'admin').strip() or 'admin'
     superadmin_password = os.environ.get(

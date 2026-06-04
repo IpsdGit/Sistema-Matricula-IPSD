@@ -138,7 +138,8 @@
           <div class="portal-user-menu" id="portal-user-menu">
             <button type="button" class="portal-user-chip" id="portal-user-menu-trigger" aria-haspopup="true"
               aria-expanded="false" aria-controls="portal-user-dropdown">
-              <span class="portal-user-avatar">{{ ('Docente')[:1] | upper }}</span>
+              {% set n_parts = (nombre_docente or 'Docente').split() %}
+              <span class="portal-user-avatar">{{ n_parts[0][:1] | upper }}{{ n_parts[1][:1] | upper if n_parts|length > 1 else '' }}</span>
               <span class="portal-user-meta">
                 <span class="portal-user-name">{{ nombre_docente or 'Docente' }}</span>
                 <span class="portal-user-id">Empleado: {{ empleado }}</span>
@@ -200,6 +201,26 @@
         </article>
       </div>
       {% endif %}
+
+      <div class="portal-toast-overlay" style="z-index: 10000; top: 5rem;">
+        {% for notif in notificaciones_todas %}
+          {% if not notif.leida and (notif.tipo == 'invitacion' or notif.titulo == 'Se te ha agregado a una nueva acción formativa') %}
+          <article class="portal-toast-card" role="status" aria-live="polite" style="transform: scale(1.05); transform-origin: right top; border-left: 4px solid var(--primary); box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+            <div class="portal-toast-icon toast-info" style="font-size: 1.25rem;">{{ notif.icono }}</div>
+            <div class="portal-toast-content">
+              <h4 style="color: var(--primary); font-size: 1.05rem;">{{ notif.titulo }}</h4>
+              <p>{{ notif.mensaje }}</p>
+              {% if notif.accion_url %}
+              <div style="margin-top: 0.5rem;">
+                <a href="{{ notif.accion_url }}" class="portal-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; pointer-events: auto;" onclick="this.closest('.portal-toast-card').remove();">{{ notif.accion_label }}</a>
+              </div>
+              {% endif %}
+            </div>
+            <button type="button" class="portal-toast-close" onclick="this.closest('.portal-toast-card').remove();" aria-label="Cerrar aviso" style="pointer-events: auto;">×</button>
+          </article>
+          {% endif %}
+        {% endfor %}
+      </div>
 
       {% if seccion_activa == 'notificaciones' %}
       <section class="notificaciones-section animate-fade-up">
@@ -996,7 +1017,7 @@
     const HTML = document.documentElement;
     const ICON = document.getElementById('theme-toggle-icon');
     const BTN = document.getElementById('theme-toggle');
-    const KEY = 'ipsd-theme';
+    const KEY = 'ipsd-theme-docente';
 
     function applyTheme(theme) {
       HTML.setAttribute('data-theme', theme);
@@ -1024,6 +1045,99 @@
         applyTheme((HTML.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark');
       });
     }
+  })();
+</script>
+
+<script>
+  /* ── AJAX EN TIEMPO REAL PARA MATRÍCULA Y CANCELACIÓN ── */
+  (function () {
+    function bindAjaxForms() {
+      document.querySelectorAll('form.matricula-form, form.enroll-cancel-form').forEach(form => {
+        // Prevent double binding
+        if (form.dataset.ajaxBound) return;
+        form.dataset.ajaxBound = 'true';
+        
+        // Remove the old interceptor class so it doesn't trigger the old modal if we want full AJAX
+        // Actually, the user might want the confirmation modal for cancellation. 
+        // We will only do this for matricula-form here.
+      });
+
+      document.querySelectorAll('form.matricula-form').forEach(form => {
+        if (form.dataset.ajaxMatriculaBound) return;
+        form.dataset.ajaxMatriculaBound = 'true';
+
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const btn = form.querySelector('[type="submit"]');
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:1.2rem;">sync</span>';
+          }
+          
+          try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, { method: form.method, body: formData });
+            const html = await response.text();
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            const shell = document.querySelector('.portal-dashboard-shell');
+            const newShell = doc.querySelector('.portal-dashboard-shell');
+            if (shell && newShell) {
+                shell.innerHTML = newShell.innerHTML;
+                if (typeof Choices !== 'undefined') {
+                    shell.querySelectorAll('select').forEach(function (el) {
+                      new Choices(el, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+                    });
+                }
+            }
+            
+            const currentOverlay = document.querySelector('.portal-toast-overlay');
+            const newOverlay = doc.querySelector('.portal-toast-overlay');
+            if (currentOverlay && newOverlay) {
+                currentOverlay.innerHTML = newOverlay.innerHTML;
+                currentOverlay.classList.remove('hidden');
+            } else if (newOverlay) {
+                document.body.appendChild(newOverlay);
+            }
+            
+            // Re-bind forms in the new DOM
+            bindAjaxForms();
+            
+          } catch (error) {
+            console.error(error);
+            window.location.reload();
+          }
+        });
+      });
+    }
+    
+    document.addEventListener('DOMContentLoaded', bindAjaxForms);
+    
+    // Listen to custom event from main.js when attendance is marked
+    document.addEventListener('asistencia_marcada_ok', async function () {
+        try {
+            const res = await fetch('/dashboard?seccion=disponibles');
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            const shell = document.querySelector('.portal-dashboard-shell');
+            const newShell = doc.querySelector('.portal-dashboard-shell');
+            if (shell && newShell) {
+                shell.innerHTML = newShell.innerHTML;
+                if (typeof Choices !== 'undefined') {
+                    shell.querySelectorAll('select').forEach(function (el) {
+                      new Choices(el, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+                    });
+                }
+            }
+            bindAjaxForms();
+        } catch (e) {
+            console.error("Error bg update", e);
+        }
+    });
   })();
 </script>
 {% endblock %}

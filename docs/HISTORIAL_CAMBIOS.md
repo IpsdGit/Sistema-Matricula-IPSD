@@ -5195,5 +5195,83 @@ Inicio: Lunes, 22 de Abril de 2026
 
 **Última actualización**: Junio 3, 2026  
 **Versión actual**: 1.23.0 (UX/UI Grupo Cerrado y Refactorización Choices.js)  
-**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos críticos aprobados.
+
+---
+
+## 🌗 Aislamiento de Temas, UX Responsiva, Invitaciones y Actualización en Tiempo Real con AJAX (v1.24.0)
+
+### Cambio 24.1: Aislamiento e independencia de la configuración de tema (Modo Claro/Oscuro) por rol
+**Fecha**: Junio 4, 2026  
+**Archivos afectados**: [base.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/base.html), [admin.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/admin.html), [dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html)
+
+**QUÉ**:
+- Rediseño de la clave de almacenamiento del tema en `localStorage`. Se reemplazó el uso de la clave global única `ipsd-theme` por claves diferenciadas según el rol del usuario autenticado: `ipsd-theme-admin` para el panel administrativo y `ipsd-theme-docente` para el portal de docentes.
+- Actualización de la lógica del script anti-flash en [base.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/base.html) para detectar el rol del usuario en la sesión de Flask (`admin`, `docente` o `guest`) y cargar el valor correcto antes del renderizado de la página.
+
+**POR QUÉ**:
+- Anteriormente, al cambiar el modo claro u oscuro en cualquiera de las interfaces (docente o admin), el cambio afectaba de forma global en el navegador, modificando también la apariencia del otro perfil. Se requería que cada rol mantuviera su preferencia de tema de forma independiente.
+
+**PARA QUÉ**:
+- Lograr que cada docente y cada administrador elija su tema preferido de forma local y personalizada, sin interferir en la visualización de otros roles.
+
+---
+
+### Cambio 24.2: Optimización del escalado visual (Zoom), ajuste de topbar e iniciales del avatar
+**Fecha**: Junio 4, 2026  
+**Archivos afectados**: [style.css](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/static/style.css), [dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html)
+
+**QUÉ**:
+- **Ajuste de Zoom**: Se incrementó la variable `--scale` de `0.80` a `0.95` en [style.css](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/static/style.css) para optimizar el tamaño de visualización de los componentes y adaptarlos a pantallas con espacio desperdiciado sin estirar los elementos.
+- **Top Bar Acoplada**: Se redujo el padding superior de `.portal-layout` de `20px` a `8px` para elevar y acoplar la barra superior. Además, se eliminó la restricción `max-width` en el contenedor del nombre de usuario de la barra para asegurar que se muestre el nombre completo sin recortes.
+- **Iniciales del Avatar**: Se reemplazó la visualización estática de la inicial por una lógica Jinja que divide el nombre del docente y extrae la primera letra de su nombre y primer apellido (ej. "Juan Pérez" -> "JP"), mejorando la identidad visual.
+
+**POR QUÉ**:
+- El diseño original a escala 0.80 se visualizaba muy pequeño y dejaba áreas de pantalla vacías. Estirar los elementos sin zoom no proporcionaba el acabado de visualización deseado. El nombre del usuario se recortaba innecesariamente y la inicial del avatar docente mostraba información genérica.
+
+**PARA QUÉ**:
+- Mejorar el confort de lectura, optimizar la experiencia responsiva en pantallas de alta resolución y personalizar el perfil del docente.
+
+---
+
+### Cambio 24.3: Registro y visualización de notificaciones para matrículas automáticas e invitaciones
+**Fecha**: Junio 4, 2026  
+**Archivos afectados**: [utils.py](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/utils.py), [dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html), [setup_bd.py](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/scripts/setup_bd.py)
+
+**QUÉ**:
+- **Tabla de Invitaciones**: Se creó la tabla `ediciones_invitaciones` en la base de datos para almacenar invitaciones formales enviadas a los docentes asociando su número de empleado con la edición formativa correspondiente.
+- **Notificaciones Flotantes y de Historial**:
+  - Al realizarse una matrícula automática (Grupo Cerrado / Administrativa), se evalúa el detalle del historial del docente y se muestra la notificación destacada con el mensaje: *"Se te ha agregado a una nueva acción formativa"*.
+  - Para invitaciones pendientes de matrícula, se despliega una notificación de tipo `invitación` con el mensaje: *"Invitación a acción formativa: Has sido invitado(a) a participar en: [Curso]"*.
+- **Toast Notificatorio al Ingreso**: Se diseñó una superposición flotante (`portal-toast-overlay`) en [dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html) que evalúa las notificaciones pendientes de tipo invitación o matrícula administrativa y las despliega como Toasts prominentes y llamativos cuando el docente ingresa al portal.
+
+**POR QUÉ**:
+- Los docentes requerían alertas visibles e inequívocas al ingresar al sistema de que habían sido matriculados administrativamente en nuevos cursos o que tenían invitaciones pendientes, evitando que las pasaran por alto.
+
+**PARA QUÉ**:
+- Asegurar que los docentes estén informados instantáneamente sobre cambios de matrícula o invitaciones, fomentando la participación e interacción activa con la plataforma.
+
+---
+
+### Cambio 24.4: Actualizaciones en tiempo real sin recarga de página (AJAX) y corrección de estado de matrícula manual
+**Fecha**: Junio 4, 2026  
+**Archivos afectados**: [admin.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/admin.html), [dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html), [main.js](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/static/main.js), [grupo_cerrado_service.py](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/services/grupo_cerrado_service.py)
+
+**QUÉ**:
+- **Matrícula y Cancelación sin Recarga**: Se implementó una lógica de intercepción en Javascript ([dashboard.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/dashboard.html)) que utiliza `fetch` y `DOMParser` para enviar y recibir datos en segundo plano al matricularse o cancelar matrícula en el dashboard del docente. Al finalizar, reemplaza dinámicamente el contenedor `.portal-dashboard-shell` e inicializa de nuevo Choices.js de ser necesario.
+- **Asistencia en Tiempo Real**: Se agregó el evento personalizado `asistencia_marcada_ok` en [main.js](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/static/main.js). Al dispararse tras registrar una asistencia, el dashboard del docente actualiza silenciosamente su estado en el fondo.
+- **Grupo Cerrado Admin Real-Time**: Al procesar un lote en Grupo Cerrado en el panel administrativo, se invoca `reloadAdminEdiciones()` para recargar la tabla de ediciones en segundo plano sin recargar todo el sitio.
+- **Corrección de Estado Inicial en Matrícula Manual**: Se modificó [grupo_cerrado_service.py](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/services/grupo_cerrado_service.py) para insertar el valor `NULL` en lugar de `0` en la columna `aprobado` de las nuevas matrículas automáticas de grupo cerrado. Esto soluciona el error donde se listaban erróneamente como "No aprobados" en lugar de "Pendientes".
+- **Ajustes de Interfaz**: Se configuró la pestaña de visualización por defecto de las Ediciones Activas en [admin.html](file:///c:/Users/Carlo/Documents/GitHub/Sistema-Matricula-IPSD/templates/admin.html) a la opción "Todas" (all) e introdujo una columna con coloridos badges de Privacidad (Abierta vs Cerrada).
+
+**POR QUÉ**:
+- Para optimizar la fluidez del sistema y evitar recargas bruscas del navegador que degradaban la experiencia del usuario. De igual manera, se debía corregir el error por el cual las matrículas de Grupo Cerrado aparecían con el estado de "No Aprobado" de forma predeterminada.
+
+**PARA QUÉ**:
+- Lograr una experiencia fluida tipo Single Page Application (SPA) para administradores y docentes, manteniendo la consistencia de datos y estados correctos de aprobación en la base de datos.
+
+---
+
+**Última actualización**: Junio 4, 2026  
+**Versión actual**: 1.24.0 (Aislamiento de Temas, UX Responsiva, Invitaciones y Actualización en Tiempo Real con AJAX)  
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
 

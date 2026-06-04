@@ -396,7 +396,11 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                ef.fecha_inicio,
                ef.jornada,
                ef.hora,
-               ef.fecha_limite_matricula
+               ef.fecha_limite_matricula,
+               EXISTS (
+                   SELECT 1 FROM ediciones_invitaciones ei 
+                   WHERE ei.edicion_id = ef.id AND ei.numero_empleado = %s
+               ) AS es_invitacion
         FROM ediciones_formativas ef
         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
         WHERE (ef.privacidad = 'Abierta' 
@@ -409,7 +413,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
         ORDER BY ef.fecha_inicio DESC, ef.id DESC
     '''
     with conn.cursor() as cur:
-        cur.execute(query_disponibles, (numero_empleado, now_str))
+        cur.execute(query_disponibles, (numero_empleado, numero_empleado, now_str))
         cursos_raw = cur.fetchall()
 
     cursos_agrupados = {}
@@ -469,6 +473,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'modalidad': modalidad,
                 'modalidad_icono': 'B' if modalidad == 'B-Learning' else ('V' if modalidad == 'Virtual' else 'P'),
                 'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(fecha_inicio),
+                'es_invitacion': bool(c.get('es_invitacion', False)),
                 'mensaje_oportunidades': mensaje_oportunidades,
                 'ediciones': [edicion_info]
             }
@@ -761,30 +766,57 @@ def construir_notificaciones_docente(
             )
         elif estado == 'PENDIENTE':
             nombre_accion = fila.get('nombre_accion') or fila.get('nombre_curso') or 'Acción Formativa'
-            agregar(
-                tipo='matricula',
-                titulo='Confirmación de Matrícula',
-                mensaje=f"Te has inscrito exitosamente en la Acción Formativa: \"{nombre_accion}\".",
-                nivel='success',
-                icono='✅',
-                fecha=fecha,
-                clave=f"mat-pend-{fila['id']}",
-                accion_url='/dashboard?seccion=calendario',
-                accion_label='Ver Calendario'
-            )
+            detalle = fila.get('detalle', '')
+            if 'administrativamente' in detalle or 'Grupo Cerrado' in detalle:
+                agregar(
+                    tipo='matricula',
+                    titulo='Se te ha agregado a una nueva acción formativa',
+                    mensaje=f"Fuiste inscrito(a) en: \"{nombre_accion}\".",
+                    nivel='success',
+                    icono='📝',
+                    fecha=fecha,
+                    clave=f"mat-pend-{fila['id']}",
+                    accion_url='/dashboard?seccion=calendario',
+                    accion_label='Ver Calendario'
+                )
+            else:
+                agregar(
+                    tipo='matricula',
+                    titulo='Confirmación de Matrícula',
+                    mensaje=f"Te has inscrito exitosamente en la Acción Formativa: \"{nombre_accion}\".",
+                    nivel='success',
+                    icono='✅',
+                    fecha=fecha,
+                    clave=f"mat-pend-{fila['id']}",
+                    accion_url='/dashboard?seccion=calendario',
+                    accion_label='Ver Calendario'
+                )
 
     for curso in cursos_disponibles[:4]:
-        agregar(
-            tipo='nueva_oferta',
-            titulo='Nueva acción formativa disponible',
-            mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['id']})",
-            nivel='info',
-            icono='🆕',
-            fecha='Disponible ahora',
-            clave=f"oferta-{curso['id']}",
-            accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
-            accion_label='Ir a la acción formativa',
-        )
+        if curso.get('es_invitacion'):
+            agregar(
+                tipo='invitacion',
+                titulo='Invitación a acción formativa',
+                mensaje=f"Has sido invitado(a) a participar en: {curso['nombre']} ({curso['id']})",
+                nivel='info',
+                icono='✉️',
+                fecha='Disponible ahora',
+                clave=f"invitacion-{curso['id']}",
+                accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+                accion_label='Ver invitación',
+            )
+        else:
+            agregar(
+                tipo='nueva_oferta',
+                titulo='Nueva acción formativa disponible',
+                mensaje=f"{curso['nombre']} · {curso['modalidad']} ({curso['id']})",
+                nivel='info',
+                icono='🆕',
+                fecha='Disponible ahora',
+                clave=f"oferta-{curso['id']}",
+                accion_url=f"/dashboard?seccion=disponibles#curso-{curso['id']}",
+                accion_label='Ir a la acción formativa',
+            )
     if len(cursos_disponibles) > 4:
         agregar(
             tipo='nueva_oferta',
@@ -907,6 +939,7 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
                 h.nombre_accion,
                 h.estado_codigo,
                 h.fecha_evento,
+                h.detalle,
                 c.nombre AS estado_nombre,
                 c.categoria AS estado_categoria,
                 m_act.id AS matricula_activa_id,
@@ -961,6 +994,7 @@ def obtener_historial_acciones_formativas(conn, numero_empleado, filtro_historia
                 'estado_nombre': estado_nombre,
                 'estado_categoria': estado_categoria,
                 'fecha_evento': fila['fecha_evento'],
+                'detalle': fila.get('detalle', ''),
                 'modalidad': modalidad,
                 'modalidad_icono': modalidad_icono,
             }
