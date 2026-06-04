@@ -38,8 +38,8 @@ class PooledConnectionWrapper:
 
 def get_db_connection():
     global _pool
-   # database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+   # database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     if _pool is None:
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=2,

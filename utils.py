@@ -355,6 +355,9 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
     # Convertir a dict para poder mutarlo o acceder más fácil
     cursos_matriculados_list = []
     for fila in cursos_matriculados:
+        if fila['aprobado'] is not None:
+            continue
+            
         modalidad = (fila['modalidad'] or '').strip()
         if modalidad not in {'Virtual', 'Presencial', 'B-Learning'}:
             modalidad = 'Virtual'
@@ -430,14 +433,13 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
             },
         )
 
+        if resumen['pendientes'] > 0 or resumen['aprobados'] > 0:
+            continue
+
         bloqueado = (
-            resumen['aprobados'] > 0
-            or resumen['pendientes'] > 0
-            or resumen['reprobados'] >= LIMITE_REPROBADO
+            resumen['reprobados'] >= LIMITE_REPROBADO
             or resumen['abandonos'] >= LIMITE_ABANDONO
         )
-        if bloqueado:
-            continue
 
         fecha_inicio = c['fecha_inicio']
         clave_grupo = (clave, fecha_inicio)
@@ -475,6 +477,7 @@ def cargar_contexto_dashboard_docente(conn, numero_empleado):
                 'fecha_inicio_texto': _fecha_inicio_legible_desde_iso(fecha_inicio),
                 'es_invitacion': bool(c.get('es_invitacion', False)),
                 'mensaje_oportunidades': mensaje_oportunidades,
+                'bloqueado': bloqueado,
                 'ediciones': [edicion_info]
             }
         else:
@@ -1060,6 +1063,17 @@ def construir_contexto_dashboard(
     notificaciones_no_leidas = len([n for n in notificaciones if not n['leida']])
     calendario_eventos_docente = construir_eventos_calendario_docente(conn, numero_empleado)
 
+    ahora_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    proximas_actividades = []
+    for evt in calendario_eventos_docente:
+        fecha = evt.get('fecha_iso', '')
+        hora = evt.get('hora_fin', evt.get('hora_inicio', '00:00'))
+        if not fecha:
+            continue
+        evt_dt_str = f"{fecha} {hora[:5]}"
+        if evt_dt_str >= ahora_str:
+            proximas_actividades.append(evt)
+
     return {
         'empleado': numero_empleado,
         'cursos': cursos_disponibles,
@@ -1075,4 +1089,5 @@ def construir_contexto_dashboard(
         'resumen_notificaciones': resumen_notificaciones,
         'notificaciones_total': notificaciones_no_leidas,
         'calendario_eventos_docente': calendario_eventos_docente,
+        'proximas_actividades': proximas_actividades,
     }

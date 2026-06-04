@@ -278,3 +278,41 @@ def register_portal_routes(app):
             return jsonify(resultado), resultado.get('status_code', 400)
 
         return jsonify(resultado), 200
+
+    @app.route('/api/notificaciones/marcar_leida', methods=['POST'])
+    def api_marcar_notificacion_leida():
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada.'}), 401
+
+        payload = request.get_json(silent=True) or {}
+        notif_id = payload.get('notificacion_id')
+        if not notif_id:
+            return jsonify({'ok': False, 'error': 'Falta notificacion_id'}), 400
+
+        numero_empleado = docente['numero_empleado']
+        conn = get_db_connection()
+        try:
+            import json
+            with conn.cursor() as cur:
+                cur.execute("SELECT notificaciones_leidas FROM docentes WHERE numero_empleado = %s", (numero_empleado,))
+                row = cur.fetchone()
+                ids_leidas = []
+                if row and row['notificaciones_leidas']:
+                    try:
+                        ids_leidas = json.loads(row['notificaciones_leidas'])
+                    except Exception:
+                        ids_leidas = []
+                
+                if notif_id not in ids_leidas:
+                    ids_leidas.append(notif_id)
+                    cur.execute(
+                        "UPDATE docentes SET notificaciones_leidas = %s WHERE numero_empleado = %s",
+                        (json.dumps(sorted(list(set(ids_leidas)))), numero_empleado)
+                    )
+                    conn.commit()
+            return jsonify({'ok': True})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+        finally:
+            conn.close()

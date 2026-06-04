@@ -179,8 +179,8 @@
       {% endif %}
 
       {% if matricula_feedback %}
-      <div class="portal-toast-overlay" id="portal-toast-overlay">
-        <article class="portal-toast-card" role="status" aria-live="polite">
+      <div class="portal-toast-overlay" style="pointer-events: none;">
+        <article class="portal-toast-card" role="status" aria-live="polite" style="pointer-events: auto;">
           {% if matricula_feedback['tipo'] == 'warning' %}
           <div class="portal-toast-icon" style="background: #fef3c7; color: #92400e; font-size: 1.15rem;"
             aria-hidden="true">⚠️</div>
@@ -197,29 +197,62 @@
             <p class="portal-toast-meta">Jornada: {{ matricula_feedback['horario'] }}</p>
             {% endif %}
           </div>
-          <button type="button" class="portal-toast-close" id="portal-toast-close" aria-label="Cerrar aviso">×</button>
+          <button type="button" class="portal-toast-close" onclick="this.closest('.portal-toast-overlay').remove();" aria-label="Cerrar aviso">×</button>
         </article>
+        <script>
+          setTimeout(() => {
+            const scripts = document.getElementsByTagName('script');
+            const myScript = scripts[scripts.length - 1];
+            const toast = myScript.closest('.portal-toast-overlay');
+            if (toast) toast.remove();
+          }, 5000);
+        </script>
       </div>
       {% endif %}
 
-      <div class="portal-toast-overlay" style="z-index: 10000; top: 5rem;">
+      <div class="portal-toast-overlay" style="z-index: 10000; top: 5rem; pointer-events: none;">
         {% for notif in notificaciones_todas %}
           {% if not notif.leida and (notif.tipo == 'invitacion' or notif.titulo == 'Se te ha agregado a una nueva acción formativa') %}
-          <article class="portal-toast-card" role="status" aria-live="polite" style="transform: scale(1.05); transform-origin: right top; border-left: 4px solid var(--primary); box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+          <article class="portal-toast-card auto-toast" data-notif-id="{{ notif.id }}" role="status" aria-live="polite" style="transform: scale(1.05); transform-origin: right top; border-left: 4px solid var(--primary); box-shadow: 0 10px 25px rgba(0,0,0,0.15); pointer-events: auto;">
             <div class="portal-toast-icon toast-info" style="font-size: 1.25rem;">{{ notif.icono }}</div>
             <div class="portal-toast-content">
               <h4 style="color: var(--primary); font-size: 1.05rem;">{{ notif.titulo }}</h4>
               <p>{{ notif.mensaje }}</p>
               {% if notif.accion_url %}
               <div style="margin-top: 0.5rem;">
-                <a href="{{ notif.accion_url }}" class="portal-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; pointer-events: auto;" onclick="this.closest('.portal-toast-card').remove();">{{ notif.accion_label }}</a>
+                <a href="{{ notif.accion_url }}" class="portal-btn" style="padding: 0.35rem 0.8rem; font-size: 0.85rem; pointer-events: auto;" onclick="cerrarNotificacionToast(this, '{{ notif.id }}');">{{ notif.accion_label }}</a>
               </div>
               {% endif %}
             </div>
-            <button type="button" class="portal-toast-close" onclick="this.closest('.portal-toast-card').remove();" aria-label="Cerrar aviso" style="pointer-events: auto;">×</button>
+            <button type="button" class="portal-toast-close" onclick="cerrarNotificacionToast(this, '{{ notif.id }}');" aria-label="Cerrar aviso" style="pointer-events: auto;">×</button>
           </article>
           {% endif %}
         {% endfor %}
+        <script>
+          function cerrarNotificacionToast(element, notifId) {
+              const card = element.closest('.portal-toast-card');
+              if (card) card.remove();
+              fetch('/api/notificaciones/marcar_leida', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ notificacion_id: notifId }),
+                  keepalive: true
+              }).catch(err => console.error(err));
+          }
+          
+          setTimeout(() => {
+              document.querySelectorAll('.auto-toast').forEach(card => {
+                  const notifId = card.getAttribute('data-notif-id');
+                  card.remove();
+                  fetch('/api/notificaciones/marcar_leida', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ notificacion_id: notifId }),
+                      keepalive: true
+                  }).catch(err => console.error(err));
+              });
+          }, 10000);
+        </script>
       </div>
 
       {% if seccion_activa == 'notificaciones' %}
@@ -318,44 +351,61 @@
         </div>
 
         {% if historial_acciones %}
-        <div class="historial-bento-grid">
-
-          {# --- Tarjeta destacada (primer elemento) --- #}
-          {% set item0 = historial_acciones[0] %}
-          {% set ec0 = 'aprobada' if item0['estado_categoria'] == 'aprobadas' else ('abandono' if item0['estado_codigo']
-          == 'ABANDONO' else ('no-aprobada' if item0['estado_categoria'] == 'no_aprobadas' else ('cancelada' if
-          item0['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-          <div class="historial-bento-featured curso-modal-trigger" data-curso-modal-id="{{ item0['edicion_id'] }}"
-            tabindex="0" role="button" aria-label="Ver detalle de {{ item0['nombre_accion'] }}">
-            <div class="historial-glass-card historial-glass-card--featured">
-              <div class="historial-card-top">
-                <span class="historial-status-pill historial-status-pill--{{ ec0 }}">
-                  <span class="historial-status-dot"></span>
-                  {{ item0['estado_nombre'] }}
-                </span>
-                <span class="historial-course-id-small">ID: {{ item0['edicion_id'] }}</span>
-              </div>
-              <h3 class="historial-glass-title">{{ item0['nombre_accion'] }}</h3>
-              <p class="historial-glass-desc">{{ item0['horario_elegido'] or 'Jornada por confirmar' }}</p>
-              <div class="historial-glass-footer">
-                <div class="historial-glass-date">
-                  <span class="historial-glass-date-label">Fecha del evento</span>
-                  <span class="historial-glass-date-value">{{ (item0['fecha_evento']|string)[:10] if
-                    item0['fecha_evento'] else
-                    'Sin fecha' }}</span>
-                </div>
-                <span class="historial-arrow-icon">→</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-start;">
+          
+          {# --- Columna Izquierda: Listado --- #}
+          <div style="flex: 1 1 60%; min-width: 300px;">
+            <div class="historial-bento-full" style="margin-top: 0;">
+              <h2 class="historial-list-section-title">
+                <span class="ui-icon ui-icon-history" aria-hidden="true"></span>
+                Listado de Actividades
+              </h2>
+              <div class="historial-list-stack">
+                {% set category_order = ['pendientes', 'aprobadas', 'no_aprobadas', 'canceladas'] %}
+                {% for cat in category_order %}
+                  {% set items = historial_acciones | selectattr('estado_categoria', 'equalto', cat) | list %}
+                  {% if items %}
+                    {% if filtro_historial == 'todas' %}
+                    <h3 style="margin-top: 1.2rem; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-left: 0.5rem; border-left: 3px solid var(--border-color);">{{ cat | replace('_', ' ') }}</h3>
+                    {% endif %}
+                    {% for accion in items %}
+                    {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if
+                    accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas'
+                    else ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
+                    <div class="historial-list-item curso-modal-trigger" data-curso-modal-id="{{ accion['edicion_id'] }}"
+                      tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_accion'] }}">
+                      <div class="historial-list-item-left">
+                        <div class="historial-list-icon historial-list-icon--{{ ec }}">
+                          <span class="material-symbols-outlined" style="font-size: 1.25rem;">
+                            {% if ec == 'aprobada' %}verified
+                            {% elif ec in ('no-aprobada','abandono') %}cancel
+                            {% elif ec == 'cancelada' %}block
+                            {% else %}hourglass_empty{% endif %}
+                          </span>
+                        </div>
+                        <div>
+                          <p class="historial-list-name">{{ accion['nombre_accion'] }}</p>
+                          <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ (accion['fecha_evento']|string)[:10] if accion['fecha_evento'] else 'Sin fecha' }}</p>
+                        </div>
+                      </div>
+                      <div class="historial-list-item-right">
+                        <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm">{{
+                          accion['estado_nombre'] }}</span>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
               </div>
             </div>
           </div>
 
-          {# --- Tarjeta resumen (oscura) + Certificados --- #}
-          {% set total = resumen_historial['todas'] %}
-          {% set aprobadas = resumen_historial['aprobadas'] %}
-          {% set pct = ((aprobadas / total) * 100) | int if total > 0 else 0 %}
-          <div class="historial-bento-summary-cell" style="display:flex; flex-direction:column; gap:.75rem;">
-
-            {# Mini-card certificados #}
+          {# --- Columna Derecha: Resumen --- #}
+          <div style="flex: 1 1 30%; min-width: 300px; display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 2rem;">
+            {% set total = resumen_historial['todas'] %}
+            {% set aprobadas = resumen_historial['aprobadas'] %}
+            {% set pct = ((aprobadas / total) * 100) | int if total > 0 else 0 %}
+            
             <a href="/dashboard?seccion=historial&filtro_historial=aprobadas" class="historial-cert-card">
               <div class="historial-cert-icon">
                 <span class="material-symbols-outlined" style="font-size:1.3rem;">workspace_premium</span>
@@ -367,7 +417,7 @@
               <span class="historial-cert-arrow">→</span>
             </a>
 
-            <div class="historial-glass-card historial-glass-card--dark" style="flex:1;">
+            <div class="historial-glass-card historial-glass-card--dark" style="margin: 0; padding: 1.5rem;">
               <span class="historial-summary-label"><span class="material-symbols-outlined"
                   style="vertical-align: middle; font-size: inherit;">bar_chart</span> Resumen de Actividades</span>
               <div class="historial-summary-stats">
@@ -402,65 +452,6 @@
               </div>
             </div>
           </div>
-
-          {# --- Tarjetas pequeñas (elementos 2-4) --- #}
-          {% for accion in historial_acciones[1:4] %}
-          {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if
-          accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas' else
-          ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-          <div class="historial-bento-small curso-modal-trigger" data-curso-modal-id="{{ accion['edicion_id'] }}"
-            tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_accion'] }}">
-            <div class="historial-glass-card">
-              <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm"
-                style="margin-bottom:.75rem;">
-                <span class="historial-status-dot"></span>{{ accion['estado_nombre'] }}
-              </span>
-              <h4 class="historial-glass-title historial-glass-title--sm">{{ accion['nombre_accion'] }}</h4>
-              <p class="historial-glass-meta">
-                {{ accion['edicion_id'] }}<br>
-                {{ (accion['fecha_evento']|string)[:10] if accion['fecha_evento'] else 'Sin fecha' }}
-              </p>
-              <span class="historial-arrow-icon" style="margin-top:auto; display:block;">→</span>
-            </div>
-          </div>
-          {% endfor %}
-
-          {# --- Sección lista (elementos 5+) --- #}
-          {% if historial_acciones | length > 4 %}
-          <div class="historial-bento-full">
-            <h2 class="historial-list-section-title">
-              <span class="ui-icon ui-icon-history" aria-hidden="true"></span>
-              Actividades Anteriores
-            </h2>
-            <div class="historial-list-stack">
-              {% for accion in historial_acciones[4:] %}
-              {% set ec = 'aprobada' if accion['estado_categoria'] == 'aprobadas' else ('abandono' if
-              accion['estado_codigo'] == 'ABANDONO' else ('no-aprobada' if accion['estado_categoria'] == 'no_aprobadas'
-              else ('cancelada' if accion['estado_categoria'] == 'canceladas' else 'pendiente'))) %}
-              <div class="historial-list-item curso-modal-trigger" data-curso-modal-id="{{ accion['edicion_id'] }}"
-                tabindex="0" role="button" aria-label="Ver detalle de {{ accion['nombre_accion'] }}">
-                <div class="historial-list-item-left">
-                  <div class="historial-list-icon historial-list-icon--{{ ec }}">
-                    <span
-                      class="ui-icon {% if ec == 'aprobada' %}ui-icon-success{% elif ec in ('no-aprobada','abandono') %}ui-icon-danger{% elif ec == 'cancelada' %}ui-icon-warning{% else %}ui-icon-info{% endif %}"
-                      aria-hidden="true"></span>
-                  </div>
-                  <div>
-                    <p class="historial-list-name">{{ accion['nombre_accion'] }}</p>
-                    <p class="historial-list-meta">{{ accion['edicion_id'] }} · {{ (accion['fecha_evento']|string)[:10]
-                      if
-                      accion['fecha_evento'] else 'Sin fecha' }}</p>
-                  </div>
-                </div>
-                <div class="historial-list-item-right">
-                  <span class="historial-status-pill historial-status-pill--{{ ec }} historial-status-pill--sm">{{
-                    accion['estado_nombre'] }}</span>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
 
         </div>
         {% else %}
@@ -569,7 +560,7 @@
                     {% elif curso['aprobado'] == 2 %}
                     <span class="enroll-status-badge enroll-status-badge--abandon">Abandonó</span>
                     {% else %}
-                    <span class="enroll-status-badge enroll-status-badge--pending">En Curso</span>
+                    <span class="enroll-status-badge enroll-status-badge--pending">En Progreso</span>
                     {% endif %}
                     <span class="enroll-card-num">{{ curso['catalogo_id'] }}</span>
                   </div>
@@ -612,8 +603,8 @@
               <span class="proximas-panel-title">Próximas Actividades</span>
             </div>
             <div class="proximas-panel-list">
-              {% if calendario_eventos_docente %}
-              {% for evento in calendario_eventos_docente[:5] %}
+              {% if proximas_actividades %}
+              {% for evento in proximas_actividades[:5] %}
               <a href="/dashboard?seccion=calendario" class="proximas-item" title="Ir al calendario">
                 <div class="proximas-item-date">
                   <span class="proximas-item-day">{{ evento.dia_sem_corto }}</span>
@@ -670,7 +661,7 @@
                   {% endif %}
                 </p>
                 {% if curso['mensaje_oportunidades'] %}
-                <p class="curso-oportunidad-line">{{ curso['mensaje_oportunidades'] }}</p>
+                <p class="curso-oportunidad-line" {% if curso['bloqueado'] %}style="color: var(--danger, #ef4444); font-weight: 600;"{% endif %}>{{ curso['mensaje_oportunidades'] }}</p>
                 {% endif %}
               </div>
               <div class="curso-footer">
@@ -697,8 +688,13 @@
                     {% endif %}
                   </div>
                   <button type="submit" class="btn-primary-ipsd w-full"
-                    style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;">
-                    Matricularme
+                    {% if curso['bloqueado'] %}
+                    style="justify-content:center; font-size:.88rem; padding:.6rem 1rem; background: var(--bg-surface-elevated, #e2e8f0); color: var(--text-muted, #64748b); cursor: not-allowed;"
+                    disabled
+                    {% else %}
+                    style="justify-content:center; font-size:.88rem; padding:.6rem 1rem;"
+                    {% endif %}>
+                    {{ 'No disponible' if curso['bloqueado'] else 'Matricularme' }}
                   </button>
                 </form>
               </div>
@@ -1066,48 +1062,14 @@
         if (form.dataset.ajaxMatriculaBound) return;
         form.dataset.ajaxMatriculaBound = 'true';
 
-        form.addEventListener('submit', async function (e) {
-          e.preventDefault();
+        form.addEventListener('submit', function (e) {
           const btn = form.querySelector('[type="submit"]');
           if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:1.2rem;">sync</span>';
-          }
-          
-          try {
-            const formData = new FormData(form);
-            const response = await fetch(form.action, { method: form.method, body: formData });
-            const html = await response.text();
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const shell = document.querySelector('.portal-dashboard-shell');
-            const newShell = doc.querySelector('.portal-dashboard-shell');
-            if (shell && newShell) {
-                shell.innerHTML = newShell.innerHTML;
-                if (typeof Choices !== 'undefined') {
-                    shell.querySelectorAll('select').forEach(function (el) {
-                      new Choices(el, { searchEnabled: false, itemSelectText: '', shouldSort: false });
-                    });
-                }
-            }
-            
-            const currentOverlay = document.querySelector('.portal-toast-overlay');
-            const newOverlay = doc.querySelector('.portal-toast-overlay');
-            if (currentOverlay && newOverlay) {
-                currentOverlay.innerHTML = newOverlay.innerHTML;
-                currentOverlay.classList.remove('hidden');
-            } else if (newOverlay) {
-                document.body.appendChild(newOverlay);
-            }
-            
-            // Re-bind forms in the new DOM
-            bindAjaxForms();
-            
-          } catch (error) {
-            console.error(error);
-            window.location.reload();
+            // Dar tiempo mínimo para que el submit nativo se dispare antes de deshabilitar el botón
+            setTimeout(() => {
+              btn.disabled = true;
+              btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:1.2rem;">sync</span>';
+            }, 50);
           }
         });
       });
