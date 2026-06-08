@@ -5275,3 +5275,31 @@ Inicio: Lunes, 22 de Abril de 2026
 **Versión actual**: 1.24.0 (Aislamiento de Temas, UX Responsiva, Invitaciones y Actualización en Tiempo Real con AJAX)  
 **Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
 
+---
+
+## ✨ Rediseño Moderno de Login y Portal Docente (v1.25.0)
+
+### Cambio 25.1: Rediseño de Layout y Fondo Animado (Plexus)
+**Fecha**: Junio 8, 2026
+**Archivos afectados**: `templates/index.html`, `static/Logo_UNAH.png`
+
+**QUÉ**:
+- Rediseño completo de la pantalla de inicio de sesión (`index.html`) adoptando un formato "Split-Card" responsivo con Tailwind CSS.
+- Se implementó un fondo interactivo y dinámico "Plexus Network" utilizando `<canvas>` nativo y JavaScript. El fondo se configuró con colores institucionales (tonos azul hielo sobre fondo azul marino oscuro).
+- Se reemplazó el icono genérico en el panel de bienvenida por el logotipo oficial de la UNAH escalado, centrado con flexbox.
+- Se corrigió el padding de los iconos superpuestos en los inputs del formulario para evitar colisión de texto.
+
+**POR QUÉ**:
+- La interfaz anterior era funcional pero no transmitía la identidad visual moderna y corporativa requerida por la institución.
+- Se necesitaba una interfaz "premium" que captara la atención de los docentes y mantuviera altos estándares de diseño web.
+- El canvas animado sustituye a una imagen estática ofreciendo interactividad con impacto cero en el rendimiento y adaptación a cualquier resolución.
+
+**PARA QUÉ**:
+- Mejorar sustancialmente la primera impresión (Look and Feel) del portal IPSD.
+- Incrementar la experiencia de usuario (UX) garantizando contraste, legibilidad y estructura limpia.
+
+---
+
+**Última actualización**: Junio 8, 2026
+**Versión actual**: 1.25.0 (Rediseño Moderno de Login y Portal Docente)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.

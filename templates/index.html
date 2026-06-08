@@ -4,140 +4,66 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>UNAH Docentes - Acceso Formativo</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Public+Sans:wght@700&display=swap"
+    <title>Acceso Docente — Portal UNAH</title>
+    <meta name="description"
+        content="Portal de Acciones Formativas Docentes UNAH. Gestione su matrícula, horarios e historial académico." />
+
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet" />
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         rel="stylesheet" />
 
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
-        /* Anti-flash & theme loading logic */
-        (function () {
-            var t = localStorage.getItem('ipsd-theme');
-            if (t) {
-                document.documentElement.setAttribute('data-theme', t);
-                if (t === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-            } else {
-                document.documentElement.classList.add('light'); // Default to light
-            }
-        })();
-    </script>
-
-    <script id="tailwind-config">
-        window.tailwind = window.tailwind || {};
         tailwind.config = {
-            darkMode: "class",
             theme: {
                 extend: {
-                    "colors": {
-                        "on-secondary": "#ffffff",
-                        "secondary-container": "#ffc72c",
-                        "on-primary-fixed-variant": "#264779",
-                        "surface": "#f7f9fb",
-                        "secondary": "#775a00",
-                        "on-primary": "#ffffff",
-                        "on-error": "#ffffff",
-                        "surface-container-high": "#e6e8ea",
-                        "on-error-container": "#93000a",
-                        "on-tertiary": "#ffffff",
-                        "on-secondary-container": "#6f5400",
-                        "inverse-on-surface": "#eff1f3",
-                        "outline": "#747780",
-                        "on-primary-container": "#7594cb",
-                        "on-surface": "#191c1e",
-                        "surface-container-highest": "#e0e3e5",
-                        "on-secondary-fixed": "#251a00",
-                        "on-background": "#191c1e",
-                        "tertiary-fixed-dim": "#a5c8ff",
-                        "inverse-surface": "#2d3133",
-                        "primary-fixed": "#d6e3ff",
-                        "on-tertiary-fixed": "#001c3a",
-                        "surface-tint": "#3f5f92",
-                        "on-tertiary-fixed-variant": "#004785",
-                        "outline-variant": "#c4c6d0",
-                        "primary-fixed-dim": "#aac7ff",
-                        "tertiary-fixed": "#d4e3ff",
-                        "on-surface-variant": "#43474f",
-                        "surface-dim": "#d8dadc",
-                        "primary": "#001736",
-                        "secondary-fixed": "#ffdf99",
-                        "surface-bright": "#f7f9fb",
-                        "inverse-primary": "#aac7ff",
-                        "surface-variant": "#e0e3e5",
-                        "primary-container": "#002b5c",
-                        "tertiary": "#001732",
-                        "error-container": "#ffdad6",
-                        "secondary-fixed-dim": "#f6bf22",
-                        "tertiary-container": "#002c56",
-                        "surface-container-lowest": "#ffffff",
-                        "on-tertiary-container": "#4395f3",
-                        "on-secondary-fixed-variant": "#5a4300",
-                        "surface-container-low": "#f2f4f6",
-                        "on-primary-fixed": "#001b3e",
-                        "error": "#ba1a1a",
-                        "background": "#f7f9fb",
-                        "surface-container": "#eceef0"
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        unah: {
+                            navy: '#1E2B58',
+                            navyDark: '#0f1a38',
+                            gold: '#FBC02D',
+                            goldHover: '#F9A825',
+                            gray: '#6B7280',
+                        }
                     },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
+                    boxShadow: {
+                        card: '0 24px 64px -12px rgba(15,26,56,0.18)',
+                        glow: '0 4px 18px 0 rgba(251,192,45,0.45)',
                     },
-                    "spacing": {
-                        "organic-offset": "64px",
-                        "container-padding": "40px",
-                        "unit": "8px",
-                        "gutter": "24px"
+                    keyframes: {
+                        float: {
+                            '0%,100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        },
+                        'pulse-ring': {
+                            '0%,100%': { opacity: '0.12', transform: 'scale(1)' },
+                            '50%': { opacity: '0.22', transform: 'scale(1.04)' },
+                        }
                     },
-                    "fontFamily": {
-                        "headline-lg": ["Manrope"],
-                        "body-md": ["Manrope"],
-                        "display-xl": ["Manrope"],
-                        "body-lg": ["Manrope"],
-                        "label-caps": ["Public Sans"],
-                        "headline-md": ["Manrope"]
-                    },
-                    "fontSize": {
-                        "headline-lg": ["32px", { "lineHeight": "120%", "fontWeight": "700" }],
-                        "body-md": ["16px", { "lineHeight": "160%", "fontWeight": "400" }],
-                        "display-xl": ["48px", { "lineHeight": "110%", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                        "body-lg": ["18px", { "lineHeight": "160%", "fontWeight": "400" }],
-                        "label-caps": ["12px", { "lineHeight": "100%", "letterSpacing": "0.08em", "fontWeight": "700" }],
-                        "headline-md": ["24px", { "lineHeight": "130%", "fontWeight": "600" }]
+                    animation: {
+                        float: 'float 5s ease-in-out infinite',
+                        'pulse-ring': 'pulse-ring 3.5s ease-in-out infinite',
                     }
                 }
             }
         }
     </script>
+
     <style>
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* ── Page background ─────────────────────────────────── */
+        body {
+            background: #EEF2F9;
+            background-image:
+                radial-gradient(circle at 12% 55%, rgba(30, 43, 88, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 88% 25%, rgba(251, 192, 45, 0.05) 0%, transparent 50%);
         }
 
-        .bg-pattern {
-            background-image: radial-gradient(circle at 15% 50%, rgba(117, 148, 203, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(255, 199, 44, 0.1) 0%, transparent 50%);
-        }
-
-        .form-input.is-invalid {
-            border-bottom-color: #ef4444 !important;
-        }
-
-        .form-input.is-valid {
-            border-bottom-color: #10b981 !important;
-        }
-
+        /* ── Validation ──────────────────────────────────────── */
         .form-error {
             display: none;
         }
@@ -145,203 +71,371 @@
         .form-error.show {
             display: block;
         }
+
+        .is-invalid {
+            border-color: #EF4444 !important;
+        }
+
+        /* ── Right panel: Dark overlay ───────────────────────── */
+        .right-panel-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg,
+                    rgba(15, 26, 56, 0.68) 0%,
+                    rgba(15, 26, 56, 0.50) 50%,
+                    rgba(10, 18, 40, 0.78) 100%);
+            z-index: 1;
+        }
+
+        /* ── Feature cards ───────────────────────────────────── */
+        .feature-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            backdrop-filter: blur(6px);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: background .2s, border-color .2s;
+        }
+
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.10);
+            border-color: rgba(251, 192, 45, 0.30);
+        }
+
+        /* ── Step cards ──────────────────────────────────────── */
+        .step-card {
+            background: #fff;
+            border: 1px solid #E5E7EB;
+            border-radius: 1rem;
+            padding: 1.25rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: box-shadow .2s, transform .2s;
+        }
+
+        .step-card:hover {
+            box-shadow: 0 8px 24px -6px rgba(30, 43, 88, 0.14);
+            transform: translateY(-3px);
+        }
     </style>
 </head>
 
-<body
-    class="bg-primary text-on-primary min-h-screen flex flex-col items-center justify-between relative overflow-x-hidden bg-pattern">
-    <!-- Background Decorators for Fluid Campus feel -->
-    <div
-        class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-container blur-[120px] opacity-60 z-0">
-    </div>
-    <div
-        class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-tertiary-container blur-[150px] opacity-50 z-0">
+<body class="min-h-screen flex flex-col font-sans antialiased text-unah-navy">
+
+    <div class="flex-1 flex items-center justify-center w-full p-4 sm:p-6 lg:p-8">
+
+        <main
+            class="w-full max-w-5xl flex flex-col lg:flex-row bg-white rounded-2xl overflow-hidden shadow-card relative z-10">
+
+            <section class="w-full lg:w-[46%] p-7 sm:p-10 flex flex-col justify-center bg-white">
+                <div class="w-full max-w-xs mx-auto lg:mx-0">
+
+                    <header class="mb-8">
+                        <div class="inline-flex items-center justify-center w-9 h-9 rounded-lg mb-4"
+                            style="background: rgba(30,43,88,0.08);">
+                            <span class="material-symbols-outlined text-unah-navy text-xl"
+                                style="font-variation-settings:'FILL' 1;">school</span>
+                        </div>
+                        <h1
+                            class="text-2xl sm:text-3xl font-extrabold text-unah-navy mb-1.5 tracking-tight leading-tight">
+                            Acceso Docente
+                        </h1>
+                        <p class="text-unah-gray text-xs font-medium">
+                            Ingrese sus credenciales institucionales para continuar.
+                        </p>
+                    </header>
+
+                    {% if error %}
+                    <div
+                        class="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm text-red-500 flex-shrink-0">warning</span>
+                        <span>{{ error }}</span>
+                    </div>
+                    {% endif %}
+
+                    <form action="/dashboard" method="POST" id="login-form" class="space-y-5" novalidate>
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-unah-gray uppercase tracking-widest mb-1.5"
+                                for="correo_institucional">
+                                Correo Institucional
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-0 top-1/2 -translate-y-1/2 pl-3 text-gray-400 pointer-events-none flex items-center">
+                                    <span class="material-symbols-outlined text-[18px]">mail</span>
+                                </span>
+                                <input
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-unah-gold focus:border-transparent transition-all text-sm font-semibold text-unah-navy placeholder-gray-400 shadow-sm"
+                                    id="correo_institucional" name="correo_institucional"
+                                    placeholder="usuario@unah.edu.hn" autocomplete="username" maxlength="160"
+                                    type="email" required />
+                            </div>
+                            <div class="form-error text-red-500 text-[10px] mt-1.5" id="email-error">
+                                Ingresa un correo válido.
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-unah-gray uppercase tracking-widest mb-1.5"
+                                for="numero_empleado">
+                                Número de Empleado
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-0 top-1/2 -translate-y-1/2 pl-3 text-gray-400 pointer-events-none flex items-center">
+                                    <span class="material-symbols-outlined text-[18px]">badge</span>
+                                </span>
+                                <input
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-unah-gold focus:border-transparent transition-all text-sm font-semibold text-unah-navy placeholder-gray-400 shadow-sm"
+                                    id="numero_empleado" name="numero_empleado"
+                                    placeholder="Ingrese su código de empleado" autocomplete="off" inputmode="numeric"
+                                    maxlength="12" type="text" required />
+                            </div>
+                            <div class="form-error text-red-500 text-[10px] mt-1.5" id="emp-error">
+                                Solo se permiten dígitos (4 a 12 caracteres).
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <button id="submit-btn" type="submit"
+                                class="w-full flex justify-center items-center gap-2 py-3.5 px-6 rounded-xl text-sm font-bold text-unah-navy bg-unah-gold hover:bg-unah-goldHover shadow-glow transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-unah-gold focus:ring-offset-2">
+                                <span id="btn-text">Ingresar al Portal</span>
+                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-6 text-center">
+                        <a href="/login_admin"
+                            class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors underline underline-offset-2">
+                            Acceso Administrador
+                        </a>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="relative overflow-hidden w-full lg:w-[54%] min-h-[580px] bg-[#0f1a38]">
+
+                <canvas id="plexus-canvas" class="absolute inset-0 w-full h-full z-0 pointer-events-none"></canvas>
+
+                <div class="right-panel-overlay"></div>
+
+                <div class="relative z-10 w-full h-full flex flex-col justify-center p-7 sm:p-10 lg:p-14">
+
+                    <div class="max-w-md mx-auto w-full">
+                        <div class="mb-10 flex justify-center">
+                            <img src="{{ url_for('static', filename='Logo_UNAH.png') }}" alt="Logo UNAH"
+                                class="h-32 md:h-40 w-auto object-contain transition-all duration-300" />
+                        </div>
+
+                        <h2
+                            class="text-center text-white text-2xl sm:text-3xl font-extrabold leading-tight mb-8 animate-float">
+                            Bienvenido a su
+                            <span
+                                class="block text-unah-gold text-3xl sm:text-4xl font-extrabold uppercase tracking-tight mt-1">
+                                Portal Formativo
+                            </span>
+                        </h2>
+
+                        <div class="space-y-3">
+                            <div class="feature-card">
+                                <div class="mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style="border: 1px solid rgba(251,192,45,0.5); background: rgba(251,192,45,0.10);">
+                                    <span class="material-symbols-outlined text-unah-gold text-sm"
+                                        style="font-variation-settings:'FILL' 1;">search</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-[13px]">Consulta de inscripciones</h4>
+                                    <p class="text-white/50 text-[11px] mt-0.5 leading-snug">Verifique el estado de sus
+                                        solicitudes en tiempo real.</p>
+                                </div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style="border: 1px solid rgba(251,192,45,0.5); background: rgba(251,192,45,0.10);">
+                                    <span class="material-symbols-outlined text-unah-gold text-sm"
+                                        style="font-variation-settings:'FILL' 1;">schedule</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-[13px]">Elección de horarios</h4>
+                                    <p class="text-white/50 text-[11px] mt-0.5 leading-snug">Seleccione los bloques que
+                                        mejor se adapten a su carga académica.</p>
+                                </div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style="border: 1px solid rgba(251,192,45,0.5); background: rgba(251,192,45,0.10);">
+                                    <span class="material-symbols-outlined text-unah-gold text-sm"
+                                        style="font-variation-settings:'FILL' 1;">event_busy</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-[13px]">Cancelación de matrícula</h4>
+                                    <p class="text-white/50 text-[11px] mt-0.5 leading-snug">Gestione sus retiros de
+                                        forma ágil dentro de los periodos establecidos.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
     </div>
 
-    <main
-        class="w-full max-w-[1280px] mx-auto px-6 py-8 lg:py-10 lg:px-container-padding grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 relative z-10 items-center flex-grow min-h-screen">
-        <!-- Left Content Area -->
-        <section class="lg:col-span-7 flex flex-col justify-center pr-0 lg:pr-6 mb-8 lg:mb-0">
-            <div class="mb-6">
-                <span
-                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-secondary-container/20 text-secondary-container mb-4">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">school</span>
-                </span>
-                <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-on-primary mb-3 leading-tight">
-                    Portal de Acciones Formativas · UNAH
-                </h1>
-                <p class="text-sm lg:text-base text-on-primary/70 max-w-xl">
-                    Gestione su participación en programas de formación docente. Una plataforma diseñada para la
-                    claridad y eficiencia académica.
+    <section class="w-full max-w-5xl mx-auto px-4 pb-12 pt-4 relative z-10">
+        <h2 class="text-lg font-extrabold text-center text-unah-navy mb-1 tracking-tight">
+            ¿Cómo funciona?
+        </h2>
+        <p class="text-center text-unah-gray text-xs mb-8">Tres pasos para completar tu matrícula formativa.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div class="step-card">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm mb-4 text-unah-navy"
+                    style="background: rgba(251,192,45,0.18); border: 2px solid rgba(251,192,45,0.45);">
+                    1
+                </div>
+                <span class="material-symbols-outlined text-[28px] text-unah-navy mb-3"
+                    style="font-variation-settings:'FILL' 1;">login</span>
+                <h3 class="text-sm font-bold text-unah-navy mb-1.5">Ingresa tus credenciales</h3>
+                <p class="text-[11px] text-unah-gray leading-relaxed">
+                    Usa tu correo institucional y número de empleado para acceder.
                 </p>
             </div>
-            <div class="space-y-4 mt-6">
-                <div class="flex items-start gap-3">
-                    <div
-                        class="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                        <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm md:text-base text-on-primary font-bold">Consulta de inscripciones</h3>
-                        <p class="text-xs md:text-sm text-on-primary/60">Verifique el estado de sus solicitudes en
-                            tiempo real.</p>
-                    </div>
+            <div class="step-card">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm mb-4 text-unah-navy"
+                    style="background: rgba(251,192,45,0.18); border: 2px solid rgba(251,192,45,0.45);">
+                    2
                 </div>
-                <div class="flex items-start gap-3">
-                    <div
-                        class="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                        <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm md:text-base text-on-primary font-bold">Elección de horarios</h3>
-                        <p class="text-xs md:text-sm text-on-primary/60">Seleccione los bloques que mejor se adapten a
-                            su carga académica.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div
-                        class="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                        <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm md:text-base text-on-primary font-bold">Cancelación de matrícula</h3>
-                        <p class="text-xs md:text-sm text-on-primary/60">Gestione sus retiros de forma ágil dentro de
-                            los periodos establecidos.</p>
-                    </div>
-                </div>
+                <span class="material-symbols-outlined text-[28px] text-unah-navy mb-3"
+                    style="font-variation-settings:'FILL' 1;">menu_book</span>
+                <h3 class="text-sm font-bold text-unah-navy mb-1.5">Elige tu curso</h3>
+                <p class="text-[11px] text-unah-gray leading-relaxed">
+                    Explora las acciones formativas y selecciona la jornada conveniente.
+                </p>
             </div>
-        </section>
-
-        <!-- Right Login Area -->
-        <section class="lg:col-span-5 relative">
-            <!-- Decorative image hint as per requirement -->
-            <div
-                class="absolute -right-8 -top-8 w-24 h-24 opacity-20 hidden lg:block rounded-full overflow-hidden blur-sm">
-                <img alt="" class="w-full h-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQG5zSUiEy3IGbtQwWir2YSR-sVfI8E9Do7U4exTOmc5PpBRbRcHNA14CEAHc37aNJHbJCPQjoWW29Ia8JX8J64gG3OCNraSaQj6zvhDsVW0BvUnlZrduYsnyxZE6FyW9fAiGa4W-wvff4lqRELd3YY7JekvBPvXFcEonX-CoPorQ7WaJtE1_97g5QiW2qEOz3XWDqNkShibMcWQ5vfIjMMxuueJ8fn6SIG6zTuIDV-pCj1pprhiUAJ4p_DXV-JLJrq51YSbC-QPfr" />
-            </div>
-            <div
-                class="glass-panel rounded-2xl p-6 lg:p-8 shadow-[0_20px_50px_rgba(0,23,54,0.5)] relative overflow-hidden">
-                <!-- Subtle internal highlight -->
-                <div
-                    class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-secondary-container/50 to-transparent">
+            <div class="step-card">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm mb-4 text-unah-navy"
+                    style="background: rgba(251,192,45,0.18); border: 2px solid rgba(251,192,45,0.45);">
+                    3
                 </div>
-                <div class="text-center mb-6">
-                    <div
-                        class="mx-auto w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3 border border-white/10">
-                        <span class="material-symbols-outlined text-secondary-container text-2xl">person</span>
-                    </div>
-                    <h2 class="text-lg lg:text-xl font-bold text-on-primary mb-1">Acceso Docente</h2>
-                    <p class="text-xs text-on-primary/50">Ingrese sus credenciales institucionales para continuar</p>
-                </div>
-
-                {% if error %}
-                <div class="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-800/50 text-red-300 text-xs flex items-center gap-2"
-                    id="error-alert">
-                    <span class="material-symbols-outlined text-sm">warning</span>
-                    <span>{{ error }}</span>
-                </div>
-                {% endif %}
-
-                <form action="/dashboard" method="POST" id="login-form" class="space-y-4" novalidate>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-                    <div>
-                        <label
-                            class="block text-[10px] font-bold tracking-wider text-on-primary/70 mb-1 ml-0.5 uppercase"
-                            for="correo_institucional">CORREO INSTITUCIONAL</label>
-                        <div class="relative group">
-                            <span
-                                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-primary/40 group-focus-within:text-secondary-container transition-colors">
-                                <span class="material-symbols-outlined text-[18px]">mail</span>
-                            </span>
-                            <input
-                                class="form-input w-full bg-white/5 border-b border-white/20 rounded-t-lg px-3 py-2.5 pl-10 text-sm text-on-primary placeholder:text-on-primary/30 focus:outline-none focus:bg-white/10 focus:border-secondary-container transition-all"
-                                id="correo_institucional" name="correo_institucional" placeholder="usuario@unah.edu.hn"
-                                autocomplete="username" maxlength="160" type="email" required />
-                        </div>
-                        <div class="form-error text-red-400 text-[11px] mt-1" id="email-error">Ingresa un correo válido.
-                        </div>
-                    </div>
-
-                    <div>
-                        <label
-                            class="block text-[10px] font-bold tracking-wider text-on-primary/70 mb-1 ml-0.5 uppercase"
-                            for="numero_empleado">NÚMERO DE EMPLEADO</label>
-                        <div class="relative group">
-                            <span
-                                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-primary/40 group-focus-within:text-secondary-container transition-colors">
-                                <span class="material-symbols-outlined text-[18px]">badge</span>
-                            </span>
-                            <input
-                                class="form-input w-full bg-white/5 border-b border-white/20 rounded-t-lg px-3 py-2.5 pl-10 text-sm text-on-primary placeholder:text-on-primary/30 focus:outline-none focus:bg-white/10 focus:border-secondary-container transition-all"
-                                id="numero_empleado" name="numero_empleado" placeholder="Ingrese su código de empleado"
-                                autocomplete="off" inputmode="numeric" maxlength="12" type="text" required />
-                        </div>
-                        <div class="form-error text-red-400 text-[11px] mt-1" id="emp-error">Solo se permiten dígitos (4
-                            a 12 caracteres).</div>
-                    </div>
-
-                    <button
-                        class="w-full mt-2 bg-on-primary-fixed-variant hover:bg-surface-tint text-on-primary font-semibold text-sm py-3 rounded-full flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.01] shadow-lg shadow-on-primary-fixed-variant/20"
-                        type="submit" id="submit-btn">
-                        <span id="btn-text">Ingresar al Portal</span>
-                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </button>
-                </form>
-
-                <div class="mt-6 text-center">
-                    <a class="text-xs text-on-primary/40 hover:text-on-primary/80 transition-colors underline decoration-on-primary/20 hover:decoration-on-primary/50"
-                        href="/login_admin">
-                        Acceso Administrador
-                    </a>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Sección ¿Cómo funciona? -->
-    <section class="w-full max-w-[1280px] mx-auto px-6 pb-10 lg:px-container-padding relative z-10">
-        <div class="glass-panel rounded-2xl p-6 lg:p-8 w-full">
-            <h2 class="text-lg lg:text-xl font-bold text-center text-on-primary mb-6 tracking-tight">¿Cómo funciona?
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <!-- Paso 1 -->
-                <div class="flex flex-col items-center text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div
-                        class="w-8 h-8 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center font-bold text-sm mb-3">
-                        1</div>
-                    <h3 class="text-sm font-semibold mb-1">Ingresa tus credenciales</h3>
-                    <p class="text-[11px] lg:text-xs text-on-primary/60">Usa tu correo institucional y tu número de
-                        empleado para acceder a tu perfil.</p>
-                </div>
-                <!-- Paso 2 -->
-                <div class="flex flex-col items-center text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div
-                        class="w-8 h-8 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center font-bold text-sm mb-3">
-                        2</div>
-                    <h3 class="text-sm font-semibold mb-1">Elige tu curso</h3>
-                    <p class="text-[11px] lg:text-xs text-on-primary/60">Explora las acciones formativas disponibles y
-                        selecciona la jornada que más te convenga.</p>
-                </div>
-                <!-- Paso 3 -->
-                <div class="flex flex-col items-center text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div
-                        class="w-8 h-8 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center font-bold text-sm mb-3">
-                        3</div>
-                    <h3 class="text-sm font-semibold mb-1">¡Listo!</h3>
-                    <p class="text-[11px] lg:text-xs text-on-primary/60">Queda registrado automáticamente. Puedes
-                        cancelar en cualquier momento.</p>
-                </div>
+                <span class="material-symbols-outlined text-[28px] text-unah-navy mb-3"
+                    style="font-variation-settings:'FILL' 1;">verified</span>
+                <h3 class="text-sm font-bold text-unah-navy mb-1.5">¡Listo!</h3>
+                <p class="text-[11px] text-unah-gray leading-relaxed">
+                    Quedas registrado automáticamente. Puedes cancelar dentro del periodo habilitado.
+                </p>
             </div>
         </div>
     </section>
 
-    <footer class="w-full text-center py-4 text-xs text-on-primary/40 border-t border-white/5">
-        <p>© 2026 Universidad Nacional Autónoma de Honduras. Todos los derechos reservados.</p>
+    <footer class="w-full text-center py-6 text-[11px] text-gray-400 border-t border-gray-200/60 mt-auto">
+        © 2026 Universidad Nacional Autónoma de Honduras · IPSD. Todos los derechos reservados.
     </footer>
 
     <script src="{{ url_for('static', filename='main.js') }}"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const canvas = document.getElementById("plexus-canvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+
+            let width, height;
+            let particles = [];
+
+            // --- CONFIGURACIÓN OPTIMIZADA ---
+            const PARTICLE_COLOR = 'rgba(210, 235, 255, ';
+            const LINE_COLOR = 'rgba(190, 225, 255, ';
+            const NUM_PARTICLES = 65;
+            const MAX_DIST = 140;
+
+            function resize() {
+                const parent = canvas.parentElement;
+                width = parent.clientWidth;
+                height = parent.clientHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 1.2;
+                    this.vy = (Math.random() - 0.5) * 1.2;
+                    this.radius = Math.random() * 2 + 0.8;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = PARTICLE_COLOR + '0.7)';
+                    ctx.fill();
+                }
+            }
+
+            function init() {
+                resize();
+                particles = [];
+                for (let i = 0; i < NUM_PARTICLES; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < NUM_PARTICLES; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+
+                    for (let j = i + 1; j < NUM_PARTICLES; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < MAX_DIST) {
+                            const opacity = 1 - (dist / MAX_DIST);
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = LINE_COLOR + (opacity * 0.6) + ')';
+                            ctx.lineWidth = 0.8;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener("resize", () => {
+                resize();
+            });
+
+            init();
+            animate();
+        });
+    </script>
 </body>
 
 </html>
