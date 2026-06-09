@@ -2,6 +2,7 @@ import os
 import psycopg2
 # pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde el archivo .env

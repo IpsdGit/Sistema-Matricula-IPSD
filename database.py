@@ -129,6 +129,8 @@ def asegurar_migraciones_minimas():
             cursor.execute("ALTER TABLE docentes ADD COLUMN centro_universitario_regional TEXT NOT NULL DEFAULT ''")
         if 'notificaciones_leidas' not in columnas_docentes:
             cursor.execute("ALTER TABLE docentes ADD COLUMN notificaciones_leidas TEXT NOT NULL DEFAULT '[]'")
+        if 'facultad' not in columnas_docentes:
+            cursor.execute("ALTER TABLE docentes ADD COLUMN facultad TEXT NOT NULL DEFAULT ''")
 
         cursor.execute('''
             SELECT DISTINCT direccion
@@ -221,6 +223,10 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN duracion_horas INTEGER')
         if 'persona_apoyo' not in columnas_ediciones:
             cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN persona_apoyo TEXT')
+        if 'calendario_academico' not in columnas_ediciones:
+            cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN calendario_academico TEXT')
+        if 'periodo' not in columnas_ediciones:
+            cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN periodo TEXT')
 
         cursor.execute("UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'")
 
@@ -454,6 +460,20 @@ def asegurar_migraciones_minimas():
         )
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_empleado ON ediciones_invitaciones (numero_empleado)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_invitaciones_edicion ON ediciones_invitaciones (edicion_id)')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reportes_generados (
+                id SERIAL PRIMARY KEY,
+                titulo_reporte TEXT NOT NULL,
+                admin_id INTEGER,
+                fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                parametros_extraccion JSONB,
+                formato TEXT NOT NULL,
+                total_registros_extraidos INTEGER NOT NULL,
+                ruta_archivo TEXT NOT NULL,
+                FOREIGN KEY (admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+            )
+        ''')
 
         conn.commit()
     except Exception as e:
