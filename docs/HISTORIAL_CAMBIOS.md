@@ -5341,6 +5341,87 @@ Inicio: Lunes, 22 de Abril de 2026
 
 ---
 
+### Cambio 26.3: Integración de columna Facultad en la sincronización de docentes
+**Fecha**: Junio 9, 2026  
+**Archivos afectados**: `scripts/sync_docentes_excel.py`
+
+**QUÉ**:
+- Modificación del script de sincronización `sync_docentes_excel.py` para mapear, validar e importar el campo `Facultad` desde el archivo de Excel hacia la columna `facultad` de la tabla `docentes` en la base de datos PostgreSQL.
+- Se agregó el campo en `resolver_columnas` y en la query de inserción y actualización (`INSERT INTO docentes ON CONFLICT DO UPDATE`).
+
+**POR QUÉ**:
+- La columna `facultad` había sido añadida a la base de datos pero el script de sincronización Excel de docentes la omitía por completo, provocando que los reportes no mostraran la facultad del docente y aparecieran vacíos.
+
+**PARA QUÉ**:
+- Habilitar que los reportes jerárquicos y la exportación de datos a Excel muestren la facultad de cada docente matriculado.
+
+---
+
 **Última actualización**: Junio 9, 2026
 **Versión actual**: 1.26.0 (Optimización de Despliegue de Listas y Agrupación por Tipo de Acción)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
+
+---
+
+### Cambio 26.3: Sincronización automática de esquema y migraciones en database.py
+**Fecha**: Junio 9, 2026  
+**Archivos afectados**: `database.py`
+
+**QUÉ**:
+- Se añadieron a la función `asegurar_migraciones_minimas()` las sentencias `ALTER TABLE` necesarias para añadir la columna `facultad` en `docentes` y las columnas `calendario_academico` y `periodo` en `ediciones_formativas` de manera automática al inicializar la base de datos de producción/desarrollo conectada en caliente.
+- Se agregó el bloque `CREATE TABLE IF NOT EXISTS reportes_generados` en `database.py` para sincronizar completamente el esquema que maneja el módulo de reportes.
+
+**POR QUÉ**:
+- El archivo `database.py` y `scripts/setup_bd.py` se habían desalineado. El servidor y los entornos locales que se inician por primera vez o dependen de `asegurar_migraciones_minimas()` no creaban las nuevas columnas/tablas requeridas para los reportes.
+
+**PARA QUÉ**:
+- Garantizar que la base de datos conectada (tanto localmente como en la base de datos remota de Amazon RDS) se actualice de forma transparente al iniciar o reiniciar la aplicación, eliminando errores de consultas por falta de campos de reportes.
+
+---
+
+**Última actualización**: Junio 9, 2026
+**Versión actual**: 1.26.0 (Optimización de Despliegue de Listas y Agrupación por Tipo de Acción)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
+
+---
+
+## 📊 Estabilización del Calendario Académico y Modernización de Reportes (v1.27.0)
+
+### Cambio 27.1: Estabilización de guardado y despliegue del Calendario Académico
+**Fecha**: Junio 9, 2026
+**Archivos afectados**: `services/admin_service.py`, `routes/admin.py`
+
+**QUÉ**:
+- Se agregó el campo `calendario_academico` a las consultas SQL en `listar_ediciones_catalogo` y `_construir_configuracion_sesiones` (`routes/admin.py`) para que los datos pasen al frontend.
+- Se actualizaron las reglas de validación en `generar_calendario` para aceptar la nueva nomenclatura de periodos (`I PAC`, `II PAC`, etc.) en lugar de fallar con error HTTP 400.
+
+**POR QUÉ**:
+- El formulario de edición no leía el valor de la base de datos y se quedaba fijo en "Trimestral". Al guardar un valor de semestre nuevo, el backend rechazaba el POST si no era "I", "II" o "III" tradicional.
+- En la tabla de ediciones, los periodos se quedaban congelados visualmente como Trimestrales debido a la falta de hidratación de este campo en el catálogo.
+
+**PARA QUÉ**:
+- Asegurar consistencia entre lo que el administrador guarda (Semestre/Trimestre) y lo que se visualiza en todos los listados de la plataforma.
+
+---
+
+### Cambio 27.2: Modernización del Dashboard de Reportes y Tarjetas KPI
+**Fecha**: Junio 9, 2026
+**Archivos afectados**: `templates/admin.html`, `services/admin_service.py`
+
+**QUÉ**:
+- Estandarización de la tipografía y botones del Panel de Inteligencia (Admin Reportes).
+- Inclusión de tarjetas dinámicas de resumen (KPI) calculadas con Jinja a partir de los datos jerárquicos (Catálogos Extraídos, Ediciones Evaluadas, Docentes Procesados y Aprobados).
+- Refinamiento y corrección de la función `periodo_actual` para alinearse a la nomenclatura `"I PAC"`, `"II PAC"`.
+
+**POR QUÉ**:
+- La interfaz de reportes se había rezagado en cuanto al diseño y carecía de una vista macro de los resultados.
+- La estética de los botones y titulares difería con el estándar del resto de la plataforma.
+
+**PARA QUÉ**:
+- Completar la transición de diseño premium y dar insights rápidos a los administradores al extraer reportes de notas.
+
+---
+
+**Última actualización**: Junio 9, 2026
+**Versión actual**: 1.27.0 (Estabilización del Calendario Académico y Modernización de Reportes)
 **Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.

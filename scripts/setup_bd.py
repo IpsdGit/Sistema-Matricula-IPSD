@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_db_connection():
-    # database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     return psycopg2.connect(database_url)
 
 def inicializar_bd():
@@ -31,6 +31,7 @@ def inicializar_bd():
             numero_empleado TEXT UNIQUE NOT NULL,
             nombre_completo TEXT NOT NULL,
             correo_institucional TEXT UNIQUE NOT NULL,
+            facultad TEXT NOT NULL DEFAULT '',
             activo INTEGER NOT NULL DEFAULT 1,
             fecha_sincronizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             centro_universitario_regional TEXT NOT NULL DEFAULT ''
@@ -87,7 +88,8 @@ def inicializar_bd():
             id TEXT PRIMARY KEY,
             catalogo_id TEXT,
             etiqueta_edicion TEXT DEFAULT '',
-            trimestre TEXT,
+            calendario_academico TEXT,
+            periodo TEXT,
             fecha_inicio DATE,
             fecha_limite_matricula TIMESTAMP,
             jornada TEXT,
@@ -250,6 +252,20 @@ def inicializar_bd():
     ''')
 
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reportes_generados (
+            id SERIAL PRIMARY KEY,
+            titulo_reporte TEXT NOT NULL,
+            admin_id INTEGER,
+            fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            parametros_extraccion JSONB,
+            formato TEXT NOT NULL,
+            total_registros_extraidos INTEGER NOT NULL,
+            ruta_archivo TEXT NOT NULL,
+            FOREIGN KEY (admin_id) REFERENCES admin_users (id) ON DELETE SET NULL
+        )
+    ''')
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS ediciones_invitaciones (
             id SERIAL PRIMARY KEY,
             edicion_id TEXT NOT NULL,
@@ -281,10 +297,16 @@ def inicializar_bd():
             (superadmin_username, generate_password_hash(superadmin_password), 'superadmin', 'GLOBAL')
         )
 
+    # === MIGRACIONES AUTOMÁTICAS (Para actualizar tablas existentes) ===
+    # Si las tablas ya existían antes, estas líneas inyectarán los nuevos campos sin borrar tus datos.
+    cursor.execute("ALTER TABLE docentes ADD COLUMN IF NOT EXISTS facultad TEXT NOT NULL DEFAULT '';")
+    cursor.execute("ALTER TABLE ediciones_formativas ADD COLUMN IF NOT EXISTS calendario_academico TEXT;")
+    cursor.execute("ALTER TABLE ediciones_formativas ADD COLUMN IF NOT EXISTS periodo TEXT;")
+    cursor.execute("ALTER TABLE ediciones_formativas DROP COLUMN IF EXISTS trimestre;")
  
     conexion.commit()
     conexion.close()
-    print("¡Base de datos lista con soporte de roles de administración!")
+    print("¡Base de datos lista y actualizada con las nuevas estructuras de Reportes!")
 
 if __name__ == '__main__':
     inicializar_bd()

@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function renderInfoCurso(curso) {
     const modalidad = curso.modalidad || 'No definida';
-    const periodo = `${curso.mes || ''} ${curso.anio || ''}`.trim() + (curso.trimestre ? ` · Trim. ${curso.trimestre}` : '');
+    const periodo = `${curso.mes || ''} ${curso.anio || ''}`.trim() + (curso.periodo ? ` · Período ${curso.periodo}` : '');
     const horario = curso.horario_matriculado || 'Por confirmar';
     const horasTotales = Number(curso.horas_totales || 0);
     const semanasDuracion = Number(curso.semanas_duracion || 1);

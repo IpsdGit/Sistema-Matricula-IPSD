@@ -175,10 +175,10 @@ def register_admin_routes(app):
             with conn.cursor() as cur:
                 cur.execute(
                     '''
-                      SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.trimestre, ef.fecha_inicio,
+                      SELECT ef.id, ef.catalogo_id, ef.etiqueta_edicion, ef.periodo, ef.fecha_inicio,
                           ef.fecha_limite_matricula, ef.cupos_maximos, ef.enlace_acceso,
                           ef.privacidad, ef.jornada, ef.hora, ef.docente_responsable, ef.persona_apoyo,
-                            ef.estado, ef.duracion_horas,
+                            ef.estado, ef.duracion_horas, ef.calendario_academico,
                           ca.id_plantilla_certificado,
                           COALESCE(NULLIF(ef.requisitos, ''), ca.requisitos) AS requisitos,
                           ca.requisitos AS requisitos_catalogo,
@@ -197,11 +197,11 @@ def register_admin_routes(app):
                 with conn.cursor() as cur:
                     cur.execute(
                         '''
-                              SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as trimestre, 
+                              SELECT NULL as id, id as catalogo_id, '' as etiqueta_edicion, NULL as periodo, 
                                   NULL as fecha_inicio, NULL as fecha_limite_matricula, NULL as cupos_maximos, 
                                   NULL as enlace_acceso, 'Abierta' as privacidad, 'UNICA' as jornada, 
                                   '' as hora, '' as docente_responsable, '' as persona_apoyo,
-                                  'En Edicion' as estado, NULL as duracion_horas,
+                                  'En Edicion' as estado, NULL as duracion_horas, NULL as calendario_academico,
                                   id_plantilla_certificado,
                                   requisitos as requisitos, requisitos as requisitos_catalogo,
                                   tipo_accion, modalidad, nombre
@@ -447,14 +447,14 @@ def register_admin_routes(app):
     def admin():
         vista_solicitada = request.args.get('view', '').strip().lower()
         anio_filtro = request.args.get('anio', '').strip()
-        trimestre_filtro = request.args.get('trimestre', '').strip()
+        periodo_filtro = request.args.get('periodo', '').strip()
         mes_filtro = request.args.get('mes', '').strip()
         resultado_filtro = request.args.get('resultado', '').strip().lower()
         admin_rol = session.get('admin_rol', 'admin')
         dashboard_payload = get_admin_dashboard_payload(
             vista_solicitada,
             anio_filtro,
-            trimestre_filtro,
+            periodo_filtro,
             mes_filtro,
             resultado_filtro,
             admin_rol,
@@ -468,6 +468,25 @@ def register_admin_routes(app):
             plantillas = obtener_plantillas_por_direccion(session.get('admin_direccion', 'IPSD'))
 
         centros_regionales = _obtener_centros_regionales_admin()
+
+        # --- Lógica para reportes (pestaña matriculas) ---
+        calendario_filtro = request.args.get('calendario', '').strip()
+        cur_filtro = request.args.get('cur', '').strip()
+        facultad_filtro = request.args.get('facultad', '').strip()
+        jerarquia = []
+        historial = []
+        
+        if vista_solicitada == 'matriculas':
+            from services.reportes_service import obtener_reporte_jerarquico, obtener_historial_reportes
+            res = obtener_reporte_jerarquico(anio_filtro, calendario_filtro, periodo_filtro, cur_filtro, facultad_filtro, admin_rol, session.get('admin_direccion', 'IPSD'))
+            jerarquia = res.get('jerarquia', [])
+            historial = obtener_historial_reportes()
+            
+            # Guardamos los filtros adicionales
+            dashboard_payload['filtros']['calendario'] = calendario_filtro
+            dashboard_payload['filtros']['cur'] = cur_filtro
+            dashboard_payload['filtros']['facultad'] = facultad_filtro
+        # -------------------------------------------------
 
         return render_template(
             'admin.html',
@@ -489,6 +508,8 @@ def register_admin_routes(app):
             horarios_base=HORARIOS_BASE,
             plantillas=plantillas,
             centros_regionales=centros_regionales,
+            jerarquia=jerarquia,
+            historial=historial
         )
 
     @app.route('/admin/ediciones/nueva')
@@ -503,7 +524,7 @@ def register_admin_routes(app):
 
         vista_solicitada = request.args.get('view', 'ediciones').strip().lower()
         anio_filtro = request.args.get('anio', '').strip()
-        trimestre_filtro = request.args.get('trimestre', '').strip()
+        periodo_filtro = request.args.get('periodo', '').strip()
         mes_filtro = request.args.get('mes', '').strip()
         resultado_filtro = request.args.get('resultado', '').strip().lower()
         admin_rol = session.get('admin_rol', 'admin')
@@ -511,7 +532,7 @@ def register_admin_routes(app):
         dashboard_payload = get_admin_dashboard_payload(
             vista_solicitada,
             anio_filtro,
-            trimestre_filtro,
+            periodo_filtro,
             mes_filtro,
             resultado_filtro,
             admin_rol,
@@ -575,7 +596,7 @@ def register_admin_routes(app):
 
         vista_solicitada = request.args.get('view', 'ediciones').strip().lower()
         anio_filtro = request.args.get('anio', '').strip()
-        trimestre_filtro = request.args.get('trimestre', '').strip()
+        periodo_filtro = request.args.get('periodo', '').strip()
         mes_filtro = request.args.get('mes', '').strip()
         resultado_filtro = request.args.get('resultado', '').strip().lower()
         admin_rol = session.get('admin_rol', 'admin')
@@ -583,7 +604,7 @@ def register_admin_routes(app):
         dashboard_payload = get_admin_dashboard_payload(
             vista_solicitada,
             anio_filtro,
-            trimestre_filtro,
+            periodo_filtro,
             mes_filtro,
             resultado_filtro,
             admin_rol,
@@ -620,7 +641,8 @@ def register_admin_routes(app):
                     'etiqueta_edicion': edicion['etiqueta_edicion'] or '',
                     'docente_responsable': edicion['docente_responsable'] or '',
                     'persona_apoyo': edicion['persona_apoyo'] or '',
-                    'trimestre': edicion['trimestre'] or '',
+                    'calendario_academico': edicion['calendario_academico'] or 'Trimestral',
+                    'periodo': edicion['periodo'] or '',
                     'cupos_maximos': edicion['cupos_maximos'] if edicion['cupos_maximos'] is not None else '',
                     'privacidad': (edicion['privacidad'] or 'Abierta'),
                     'estado': edicion['estado'] or 'En Edicion',
@@ -745,6 +767,7 @@ def register_admin_routes(app):
         fecha_fin = (payload.get('fecha_fin') or '').strip()
         enlace_virtual = (payload.get('enlace_virtual') or '').strip()
         requisitos_cal = (payload.get('requisitos') or '').strip()
+        calendario_academico_cal = (payload.get('calendario_academico') or '').strip()
         duracion_horas_cal_raw = payload.get('duracion_horas')
         try:
             duracion_horas_cal = int(duracion_horas_cal_raw) if duracion_horas_cal_raw not in (None, '') else None
@@ -846,7 +869,7 @@ def register_admin_routes(app):
             privacidad = (bloque.get('privacidad') or '').strip().title()
             estado = _normalizar_estado_edicion(bloque.get('estado'))
             fecha_limite_raw = (bloque.get('fecha_limite_matricula') or '').strip()
-            trimestre = (bloque.get('trimestre') or '').strip().upper()
+            periodo = (bloque.get('periodo') or '').strip().upper()
             cupos_raw = (bloque.get('cupos_maximos') or '').strip()
             edicion_id = (bloque.get('edicion_id') or '').strip().upper()
             req_bloque = (bloque.get('requisitos') or requisitos_cal or '').strip()
@@ -856,8 +879,8 @@ def register_admin_routes(app):
             except (TypeError, ValueError):
                 dur_horas = duracion_horas_cal
 
-            if trimestre not in {'I', 'II', 'III', 'IV'}:
-                return jsonify({'ok': False, 'error': 'Selecciona un trimestre valido.'}), 400
+            if periodo not in {'I PAC', 'II PAC', 'III PAC', 'I SEMESTRE', 'II SEMESTRE'}:
+                return jsonify({'ok': False, 'error': 'Selecciona un periodo valido.'}), 400
 
             try:
                 cupos_maximos = int(cupos_raw)
@@ -897,7 +920,7 @@ def register_admin_routes(app):
             if not edicion_id:
                 nuevo_result = crear_edicion_formativa(
                     catalogo_id,
-                    trimestre=trimestre,
+                    periodo=periodo,
                     fecha_inicio=fecha_inicio,
                     fecha_limite_matricula=fecha_limite_matricula or None,
                     jornada=jornada,
@@ -911,6 +934,7 @@ def register_admin_routes(app):
                     etiqueta_edicion=etiqueta_edicion,
                     requisitos=req_bloque,
                     duracion_horas=dur_horas,
+                    calendario_academico=calendario_academico_cal,
                 )
                 if not nuevo_result.get('ok'):
                     return jsonify({'ok': False, 'error': 'No se pudo crear la edicion.'}), 400
@@ -921,7 +945,7 @@ def register_admin_routes(app):
             else:
                 update_result = update_edicion_metadata(
                     edicion_id,
-                    trimestre=trimestre,
+                    periodo=periodo,
                     fecha_inicio=fecha_inicio,
                     cupos_maximos=cupos_maximos,
                     jornada=jornada,
@@ -935,6 +959,7 @@ def register_admin_routes(app):
                     enlace_acceso=enlace_virtual,
                     requisitos=req_bloque,
                     duracion_horas=dur_horas,
+                    calendario_academico=calendario_academico_cal,
                 )
                 if not update_result.get('ok'):
                     return jsonify({'ok': False, 'error': 'No se pudo actualizar la edicion.'}), 400
@@ -1041,7 +1066,8 @@ def register_admin_routes(app):
 
         etiqueta = (_get('etiqueta_edicion') or '').strip()
         docente = (_get('docente_responsable') or '').strip()
-        trimestre = (_get('trimestre') or '').strip().upper()
+        calendario = (_get('calendario_academico') or '').strip()
+        periodo = (_get('periodo') or '').strip().upper()
         jornada = (_get('jornada') or '').strip().upper()
         hora = (_get('hora') or '').strip()
         cupos_raw = _get('cupos_maximos')
@@ -1069,7 +1095,7 @@ def register_admin_routes(app):
 
         result = update_edicion_metadata(
             edicion_id,
-            trimestre=trimestre or None,
+            periodo=periodo or None,
             cupos_maximos=cupos,
             jornada=jornada or None,
             hora=hora or None,
@@ -1080,6 +1106,7 @@ def register_admin_routes(app):
             enlace_acceso=enlace,
             requisitos=requisitos,
             duracion_horas=dur_horas,
+            calendario_academico=calendario or None,
         )
 
         if not result.get('ok'):
@@ -1187,7 +1214,7 @@ def register_admin_routes(app):
 
         vista_solicitada = request.args.get('view', 'ediciones').strip().lower()
         anio_filtro = request.args.get('anio', '').strip()
-        trimestre_filtro = request.args.get('trimestre', '').strip()
+        periodo_filtro = request.args.get('periodo', '').strip()
         mes_filtro = request.args.get('mes', '').strip()
         resultado_filtro = request.args.get('resultado', '').strip().lower()
         admin_rol = session.get('admin_rol', 'admin')
@@ -1195,7 +1222,7 @@ def register_admin_routes(app):
         dashboard_payload = get_admin_dashboard_payload(
             vista_solicitada,
             anio_filtro,
-            trimestre_filtro,
+            periodo_filtro,
             mes_filtro,
             resultado_filtro,
             admin_rol,
@@ -1523,7 +1550,7 @@ def register_admin_routes(app):
         id_curso = (request.form.get('edicion_id') or request.form.get('id_curso') or '').strip()
         nombre_curso = request.form.get('nombre_curso', '').strip()
         fecha_curso = request.form.get('fecha_curso', '').strip()
-        trimestre = request.form.get('trimestre', '').strip()
+        periodo = request.form.get('periodo', '').strip()
         tipo_accion = request.form.get('tipo_accion', 'CURSO').strip().upper()
         horas_totales_raw = request.form.get('horas_totales', '').strip()
         semanas_duracion_raw = request.form.get('semanas_duracion', '').strip()
@@ -1541,7 +1568,7 @@ def register_admin_routes(app):
         if tipo_accion not in {'CONFERENCIA', 'SEMINARIO', 'SEMINARIO-TALLER', 'CURSO'}:
             tipo_accion = 'CURSO'
 
-        if not id_curso or not nombre_curso or trimestre not in ['I', 'II', 'III', 'IV']:
+        if not id_curso or not nombre_curso or periodo not in ['I', 'II', 'III', 'IV']:
             flash('Datos de catálogo/acción formativa inválidos o incompletos.', 'danger')
             return redireccion_admin_vista('cursos')
 
@@ -1589,7 +1616,7 @@ def register_admin_routes(app):
             id_curso=id_curso,
             nombre_curso=nombre_curso,
             anio=anio,
-            trimestre=trimestre,
+            periodo=periodo,
             mes=mes,
             dia=dia,
             modalidad=modalidad,
@@ -1932,13 +1959,13 @@ def register_admin_routes(app):
     @admin_requerido
     def exportar_csv():
         anio_filtro = request.args.get('anio', '').strip()
-        trimestre_filtro = request.args.get('trimestre', '').strip()
+        periodo_filtro = request.args.get('periodo', '').strip()
         mes_filtro = request.args.get('mes', '').strip()
         resultado_filtro = request.args.get('resultado', '').strip().lower()
 
         export_result = fetch_export_records(
             anio_filtro,
-            trimestre_filtro,
+            periodo_filtro,
             mes_filtro,
             resultado_filtro,
             session.get('admin_rol', 'admin'),
@@ -1957,7 +1984,7 @@ def register_admin_routes(app):
                 'ID Edicion',
                 'Nombre de la Accion',
                 'Anio',
-                'Trimestre',
+                'Periodo',
                 'Mes',
                 'Horario',
                 'Fecha de Matricula',
@@ -1984,7 +2011,7 @@ def register_admin_routes(app):
                     fila['edicion_id'],
                     fila['nombre'],
                     fila['anio'],
-                    fila['trimestre'],
+                    fila['periodo'],
                     fila.get('mes') or '',
                     horario,
                     fila['fecha_matricula'] or '',
@@ -1995,7 +2022,7 @@ def register_admin_routes(app):
         output = Response(si.getvalue(), mimetype='text/csv; charset=utf-8')
         nombre_archivo = (
             'listado_matriculas_filtrado.csv'
-            if (anio_filtro or trimestre_filtro or mes_filtro)
+            if (anio_filtro or periodo_filtro or mes_filtro)
             else 'listado_matriculas_general.csv'
         )
         output.headers['Content-Disposition'] = f'attachment; filename={nombre_archivo}'

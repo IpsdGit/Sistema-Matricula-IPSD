@@ -45,6 +45,7 @@ def asegurar_tabla_docentes(conn):
                 nombre_completo TEXT NOT NULL,
                 correo_institucional TEXT UNIQUE NOT NULL,
                 centro_universitario_regional TEXT NOT NULL DEFAULT '',
+                facultad TEXT NOT NULL DEFAULT '',
                 activo INTEGER NOT NULL DEFAULT 1,
                 fecha_sincronizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -81,6 +82,11 @@ def resolver_columnas(headers):
             'centro universitario',
             'centro regional',
             'cur',
+        },
+        'facultad': {
+            'facultad',
+            'facu',
+            'fac',
         },
     }
 
@@ -140,6 +146,11 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             centro_universitario_regional = normalizar_texto(
                 row[indices['centro_universitario_regional']] if indices['centro_universitario_regional'] < len(row) else ''
             )
+        facultad = ''
+        if 'facultad' in indices:
+            facultad = normalizar_texto(
+                row[indices['facultad']] if indices['facultad'] < len(row) else ''
+            )
 
         if not numero_empleado or not nombre_completo or not correo_institucional:
             print(f"[ERROR VALIDACIÓN] Fila {total_filas + 1}: Faltan campos obligatorios. Empleado: '{numero_empleado}', Nombre: '{nombre_completo}', Correo: '{correo_institucional}'")
@@ -157,7 +168,7 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             continue
 
         registros_validos.append(
-            (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional)
+            (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad)
         )
 
     wb.close()
@@ -173,23 +184,24 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
         upserts_ok = 0
         conflictos = 0
 
-        for numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional in registros_validos:
+        for numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad in registros_validos:
             try:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         '''
                         INSERT INTO docentes (
-                            numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, activo, fecha_sincronizacion
+                            numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, activo, fecha_sincronizacion
                         )
-                        VALUES (%s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
+                        VALUES (%s, %s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
                         ON CONFLICT(numero_empleado) DO UPDATE SET
                             nombre_completo = EXCLUDED.nombre_completo,
                             correo_institucional = EXCLUDED.correo_institucional,
                             centro_universitario_regional = EXCLUDED.centro_universitario_regional,
+                            facultad = EXCLUDED.facultad,
                             activo = 1,
                             fecha_sincronizacion = CURRENT_TIMESTAMP
                         ''',
-                        (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional),
+                        (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad),
                     )
                 upserts_ok += 1
                 # Hacemos commit por cada registro exitoso para no perder el progreso si uno falla

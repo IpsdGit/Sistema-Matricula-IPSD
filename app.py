@@ -10,6 +10,7 @@ from database import asegurar_migraciones_minimas
 from routes.admin import register_admin_routes
 from routes.chat import register_chat_routes
 from routes.portal import register_portal_routes
+from routes.reportes import reportes_bp
 from routes.certificados import certificados_bp
 from routes.validacion import validacion_bp
 from utils import generar_csrf_token
@@ -105,6 +106,7 @@ register_admin_routes(app)
 register_chat_routes(app)
 app.register_blueprint(certificados_bp)
 app.register_blueprint(validacion_bp)
+app.register_blueprint(reportes_bp)
 
 
 @app.route('/uploads/direcciones/<codigo_direccion>/<filename>')

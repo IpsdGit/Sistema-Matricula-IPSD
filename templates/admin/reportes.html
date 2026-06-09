@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% block title %}Panel de Reportes Avanzados - IPSD{% endblock %}
+
+{% block content %}
+<div class="px-4 md:px-8 max-w-7xl mx-auto py-8">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div>
+      <h2 class="font-display-xl text-display-xl text-primary dark:text-primary-fixed mb-2">Panel de Inteligencia y Reportes
+      </h2>
+      <p class="font-body-lg text-body-lg text-on-surface-variant dark:text-outline-variant" style="margin:0;">
+        Exploración jerárquica de acciones formativas.</p>
+    </div>
+    <a href="/admin" class="px-5 py-2.5 rounded-full border border-outline-variant/50 hover:bg-surface-variant transition-colors text-sm font-bold text-on-surface flex items-center gap-2 shadow-sm no-underline">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver al Dashboard
+    </a>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/30 mb-8">
+    <h3 class="font-bold text-lg mb-4 text-on-surface flex items-center gap-2">
+      <span class="material-symbols-outlined">filter_list</span> Filtros de Extracción
+    </h3>
+    <form action="{{ url_for('reportes.reportes_dashboard') }}" method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Año</label>
+        <select class="w-full bg-surface border border-outline-variant/50 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary" name="anio">
+          <option value="">Todos</option>
+          <option value="2026" {% if filtros.anio == '2026' %}selected{% endif %}>2026</option>
+          <option value="2027" {% if filtros.anio == '2027' %}selected{% endif %}>2027</option>
+          <option value="2028" {% if filtros.anio == '2028' %}selected{% endif %}>2028</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Calendario Académico</label>
+        <select class="w-full bg-surface border border-outline-variant/50 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary" name="calendario">
+          <option value="">Todos</option>
+          <option value="Trimestral" {% if filtros.calendario == 'Trimestral' %}selected{% endif %}>Trimestral</option>
+          <option value="Semestral" {% if filtros.calendario == 'Semestral' %}selected{% endif %}>Semestral</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Período</label>
+        <select class="w-full bg-surface border border-outline-variant/50 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary" name="periodo">
+          <option value="">Todos</option>
+          <option value="I PAC" {% if filtros.periodo == 'I PAC' %}selected{% endif %}>I PAC</option>
+          <option value="II PAC" {% if filtros.periodo == 'II PAC' %}selected{% endif %}>II PAC</option>
+          <option value="III PAC" {% if filtros.periodo == 'III PAC' %}selected{% endif %}>III PAC</option>
+          <option value="I Semestre" {% if filtros.periodo == 'I Semestre' %}selected{% endif %}>I Semestre</option>
+          <option value="II Semestre" {% if filtros.periodo == 'II Semestre' %}selected{% endif %}>II Semestre</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Centro Regional</label>
+        <select class="w-full bg-surface border border-outline-variant/50 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary" name="cur">
+          <option value="">Todos</option>
+          {% for centro in centros_regionales %}
+          <option value="{{ centro }}" {% if filtros.cur == centro %}selected{% endif %}>{{ centro }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-on-surface-variant mb-1">Facultad</label>
+        <input type="text" placeholder="Ej. Ingeniería" name="facultad" value="{{ filtros.facultad }}" class="w-full bg-surface border border-outline-variant/50 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+      </div>
+
+      <div class="md:col-span-5 flex justify-end gap-3 mt-4 border-t border-outline-variant/20 pt-4">
+        <a href="{{ url_for('reportes.reportes_dashboard') }}" class="px-6 py-2.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-colors text-sm font-semibold text-on-surface flex items-center gap-2 no-underline border-none">
+           <span class="material-symbols-outlined text-[18px]">clear_all</span> Limpiar
+        </a>
+        <button type="submit" class="px-6 py-2.5 rounded-full bg-primary text-on-primary font-semibold text-sm hover:bg-primary/90 hover:-translate-y-0.5 transition-all flex items-center gap-2 shadow-sm border-none cursor-pointer">
+           <span class="material-symbols-outlined text-[18px]">filter_alt</span> Filtrar Base
+        </button>
+        <a href="{{ url_for('reportes.exportar_reporte', **filtros) }}" class="px-6 py-2.5 rounded-full bg-[#107c41] text-white font-semibold text-sm hover:bg-[#185c37] hover:-translate-y-0.5 transition-all shadow-sm flex items-center gap-2 no-underline border-none">
+           <span class="material-symbols-outlined text-[18px]">download</span> Exportar Excel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  {% set stats = namespace(ediciones=0, matriculados=0, aprobados=0) %}
+  {% for catalogo in jerarquia %}
+    {% set stats.ediciones = stats.ediciones + catalogo.ediciones|length %}
+    {% set stats.matriculados = stats.matriculados + catalogo.total_matriculados %}
+    {% set stats.aprobados = stats.aprobados + catalogo.total_aprobados %}
+  {% endfor %}
+
+  <!-- TARJETAS DE MÉTRICAS -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Card 1: Acciones Formativas -->
+    <div class="organic-card metric-card-bg-1 p-6 shadow-sm border border-white/60 dark:border-white/10 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+      <div class="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-500">
+        <span class="material-symbols-outlined text-[100px] text-primary-container dark:text-primary-fixed-dim">menu_book</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm bg-primary/10 text-primary dark:text-primary-fixed">
+        <span class="material-symbols-outlined">menu_book</span>
+      </div>
+      <h3 class="font-headline-md text-sm text-on-surface-variant dark:text-outline-variant font-semibold mb-1" style="margin:0;">Catálogos Extraídos</h3>
+      <div class="font-display-xl text-4xl text-primary dark:text-primary-fixed font-extrabold" style="margin:0;">{{ jerarquia|length }}</div>
+    </div>
+
+    <!-- Card 2: Ediciones -->
+    <div class="organic-card metric-card-bg-2 p-6 shadow-sm border border-white/60 dark:border-white/10 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+      <div class="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-500">
+        <span class="material-symbols-outlined text-[100px] text-primary-container dark:text-primary-fixed-dim">event_available</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
+        <span class="material-symbols-outlined">event_available</span>
+      </div>
+      <h3 class="font-headline-md text-sm text-on-surface-variant dark:text-outline-variant font-semibold mb-1" style="margin:0;">Ediciones Evaluadas</h3>
+      <div class="font-display-xl text-4xl text-primary dark:text-primary-fixed font-extrabold" style="margin:0;">{{ stats.ediciones }}</div>
+    </div>
+
+    <!-- Card 3: Participantes -->
+    <div class="organic-card metric-card-bg-3 p-6 shadow-sm border border-white/60 dark:border-white/10 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+      <div class="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-500">
+        <span class="material-symbols-outlined text-[100px] text-primary-container dark:text-primary-fixed-dim">groups</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm bg-[#4395f3]/20 text-[#004785] dark:text-blue-300">
+        <span class="material-symbols-outlined">groups</span>
+      </div>
+      <h3 class="font-headline-md text-sm text-on-surface-variant dark:text-outline-variant font-semibold mb-1" style="margin:0;">Docentes Procesados</h3>
+      <div class="font-display-xl text-4xl text-primary dark:text-primary-fixed font-extrabold" style="margin:0;">{{ stats.matriculados }}</div>
+    </div>
+
+    <!-- Card 4: Aprobados -->
+    <div class="organic-card metric-card-bg-4 p-6 shadow-sm border border-white/60 dark:border-white/10 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+      <div class="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-500">
+        <span class="material-symbols-outlined text-[100px] text-primary-container dark:text-primary-fixed-dim">verified</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+        <span class="material-symbols-outlined">verified</span>
+      </div>
+      <h3 class="font-headline-md text-sm text-on-surface-variant dark:text-outline-variant font-semibold mb-1" style="margin:0;">Aprobados (Certificados)</h3>
+      <div class="font-display-xl text-4xl text-primary dark:text-primary-fixed font-extrabold" style="margin:0;">{{ stats.aprobados }}</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- PANEL IZQUIERDO: Jerarquía de Filtros -->
+    <div class="lg:col-span-2 space-y-4">
+      <h2 class="text-xl font-bold border-b border-surface-variant pb-2 mb-4">Jerarquía Formativa (Vista Previa)</h2>
+      
+      {% if not jerarquia %}
+         <div class="p-8 text-center bg-surface border border-dashed border-outline-variant/50 rounded-2xl">
+            <span class="material-symbols-outlined text-4xl text-outline mb-2">inbox</span>
+             <p class="text-on-surface-variant">No se encontraron resultados con los filtros actuales.</p>
+         </div>
+      {% endif %}
+
+      {% for accion in jerarquia %}
+      <details class="group bg-surface-container-lowest border border-outline-variant/30 rounded-2xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex items-center justify-between p-4 cursor-pointer bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+          <div class="flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+               <span class="material-symbols-outlined">folder_open</span>
+             </div>
+             <div>
+                <h3 class="font-bold text-on-surface m-0 leading-tight">{{ accion.accion_nombre }}</h3>
+                <p class="text-xs text-on-surface-variant">{{ accion.tipo_accion }} · {{ accion.total_aprobados }}/{{ accion.total_matriculados }} Aprobados</p>
+             </div>
+          </div>
+          <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180">expand_more</span>
+        </summary>
+        
+        <div class="p-4 bg-surface border-t border-outline-variant/20 space-y-4">
+            {% for _, edicion in accion.ediciones.items() %}
+            <div class="border border-outline-variant/30 rounded-xl overflow-hidden">
+                <div class="bg-surface-container-low px-4 py-2 border-b border-outline-variant/30 flex justify-between items-center">
+                    <div class="font-semibold text-sm">📅 {{ edicion.edicion_id }} | {{ edicion.calendario_academico }} - {{ edicion.periodo }}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary font-bold">{{ edicion.matriculados|length }} Matrículas</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-surface-container-lowest text-xs text-on-surface-variant border-b border-outline-variant/30">
+                            <tr>
+                                <th class="p-2 pl-4">Docente</th>
+                                <th class="p-2">Correo / No.</th>
+                                <th class="p-2">Ubicación</th>
+                                <th class="p-2 text-right pr-4">Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant/10">
+                            {% for mat in edicion.matriculados %}
+                            <tr class="hover:bg-surface-container-lowest/50">
+                                <td class="p-2 pl-4 font-medium">{{ mat.nombre_completo }}</td>
+                                <td class="p-2 text-xs text-on-surface-variant">
+                                    <div class="truncate max-w-[150px]">{{ mat.correo_institucional }}</div>
+                                    <div class="font-mono">{{ mat.numero_empleado }}</div>
+                                </td>
+                                <td class="p-2 text-xs">
+                                    {{ mat.centro_regional }}<br>
+                                    <span class="text-primary">{{ mat.facultad }}</span>
+                                </td>
+                                <td class="p-2 text-right pr-4">
+                                    {% if mat.aprobado == 1 %}
+                                      <span class="px-2 py-1 rounded-md bg-[#e8f5e9] text-[#2e7d32] text-xs font-bold w-full inline-block text-center mb-1">Aprobado</span>
+                                      <!-- Link imaginario como mockup de Certificado -->
+                                      <button class="text-[10px] text-primary hover:underline"><span class="material-symbols-outlined text-[10px] align-middle">verified</span> Ver Diploma</button>
+                                    {% elif mat.aprobado == 0 %}
+                                      <span class="px-2 py-1 rounded-md bg-[#ffebee] text-error text-xs font-bold w-full inline-block text-center">Reprobado</span>
+                                    {% else %}
+                                      <span class="px-2 py-1 rounded-md bg-surface-variant text-on-surface-variant text-xs font-bold w-full inline-block text-center">En Proceso</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+
+    <!-- PANEL DERECHO: Historial de Reportes Generados -->
+    <div class="lg:col-span-1">
+      <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/30 sticky top-4">
+        <h3 class="font-bold text-lg mb-4 text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+          <span class="material-symbols-outlined text-secondary">history</span> Bitácora de Extracciones
+        </h3>
+        
+        <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            {% for rep in historial %}
+            <div class="p-3 rounded-xl border border-outline-variant/40 hover:border-primary/50 transition-colors bg-surface relative group">
+                <div class="text-xs font-mono text-on-surface-variant mb-1">{{ rep.fecha_generacion.strftime('%Y-%m-%d %H:%M') }} | {{ rep.admin_username }}</div>
+                <div class="font-bold text-sm text-on-surface leading-tight mb-2">{{ rep.titulo_reporte }}</div>
+                
+                <div class="flex gap-2 mb-3 flex-wrap">
+                    <span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded">{{ rep.total_registros_extraidos }} filas</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded">{{ rep.formato }}</span>
+                </div>
+
+                <a href="{{ rep.ruta_archivo }}" target="_blank" class="w-full block text-center py-1.5 rounded-lg bg-[#107c41]/10 text-[#107c41] font-semibold text-xs hover:bg-[#107c41] hover:text-white transition-colors">
+                    Descargar Físico
+                </a>
+            </div>
+            {% else %}
+            <p class="text-sm text-on-surface-variant text-center py-4">No hay reportes físicos generados aún.</p>
+            {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+html.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+</style>
+{% endblock %}

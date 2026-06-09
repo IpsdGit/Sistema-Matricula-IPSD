@@ -327,7 +327,7 @@ def authenticate_admin(username, password):
         return {'ok': False, 'error': 'Error de conexión con la base de datos.'}
 
 
-def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro, mes_filtro, resultado_filtro, admin_rol, admin_direccion):
+def get_admin_dashboard_payload(vista_solicitada, anio_filtro, periodo_filtro, mes_filtro, resultado_filtro, admin_rol, admin_direccion):
     admin_direccion = normalizar_direccion(admin_direccion) or 'IPSD'
     es_superadmin = admin_rol == 'superadmin'
     vista_inicial = normalizar_vista_admin(vista_solicitada, es_superadmin)
@@ -341,7 +341,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 m.numero_empleado,
                 ef.id AS edicion_id,
                 ca.nombre,
-                ef.trimestre,
+                ef.periodo,
                 ef.fecha_inicio,
                 ef.jornada,
                 ef.hora,
@@ -364,9 +364,9 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
         if anio_filtro:
             query_matriculas += " AND EXTRACT(YEAR FROM ef.fecha_inicio) = %s"
             params.append(anio_filtro)
-        if trimestre_filtro:
-            query_matriculas += ' AND ef.trimestre = %s'
-            params.append(trimestre_filtro)
+        if periodo_filtro:
+            query_matriculas += ' AND ef.periodo = %s'
+            params.append(periodo_filtro)
         if mes_filtro:
             mes_num = _mes_numero_desde_nombre(mes_filtro)
             if mes_num:
@@ -398,7 +398,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 ca.nombre,
                 ca.modalidad,
                 ca.tipo_accion,
-                ef.trimestre,
+                ef.periodo,
                 ef.fecha_inicio,
                 ef.jornada,
                 ef.hora,
@@ -410,6 +410,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 ef.docente_responsable,
                 ef.requisitos,
                 ef.duracion_horas,
+                ef.calendario_academico,
                 ca.id_plantilla_certificado,
                 ca.requisitos AS requisitos_catalogo,
                 EXTRACT(YEAR FROM ef.fecha_inicio) AS anio,
@@ -560,25 +561,25 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             )
         )
 
-        trimestre_actual = ['I', 'II', 'III', 'IV'][(datetime.now().month - 1) // 3]
-        query_ediciones_trimestre = '''
+        periodo_actual = ['I PAC', 'II PAC', 'III PAC', 'III PAC'][(datetime.now().month - 1) // 3]
+        query_ediciones_periodo = '''
             SELECT COUNT(*)
             FROM ediciones_formativas ef
             JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
-            WHERE ef.trimestre = %s
+            WHERE ef.periodo = %s
               AND (ef.estado IS NULL OR ef.estado NOT IN ('Finalizada', 'Cancelada'))
         '''
-        trimestre_params = [trimestre_actual]
+        periodo_params = [periodo_actual]
         if not es_superadmin:
-            query_ediciones_trimestre += ' AND ca.direccion_codigo = %s'
-            trimestre_params.append(admin_direccion)
+            query_ediciones_periodo += ' AND ca.direccion_codigo = %s'
+            periodo_params.append(admin_direccion)
 
         with conn.cursor() as cur:
             cur.execute(
-                query_ediciones_trimestre,
-                trimestre_params,
+                query_ediciones_periodo,
+                periodo_params,
             )
-            ediciones_trimestre_actual = cur.fetchone()[0]
+            ediciones_periodo_actual = cur.fetchone()[0]
 
         if es_superadmin:
             with conn.cursor() as cur:
@@ -629,8 +630,8 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'total_matriculas': total_matriculas,
             'total_cursos': total_cursos,
             'total_profesores': total_profesores,
-            'ediciones_trimestre_actual': ediciones_trimestre_actual,
-            'trimestre_actual': trimestre_actual,
+            'ediciones_periodo_actual': ediciones_periodo_actual,
+            'periodo_actual': periodo_actual,
         }
 
         usuarios_admin = []
@@ -682,7 +683,7 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
             'direcciones_gestion': direcciones_gestion,
             'filtros': {
                 'anio': anio_filtro,
-                'trimestre': trimestre_filtro,
+                'periodo': periodo_filtro,
                 'mes': mes_filtro,
                 'resultado': resultado_filtro,
             },
@@ -702,14 +703,14 @@ def get_admin_dashboard_payload(vista_solicitada, anio_filtro, trimestre_filtro,
                 'total_matriculas': 0,
                 'total_cursos': 0,
                 'total_profesores': 0,
-                'ediciones_trimestre_actual': 0,
-                'trimestre_actual': 'I',
+                'ediciones_periodo_actual': 0,
+                'periodo_actual': 'I',
             },
             'usuarios_admin': [],
             'direcciones_gestion': [],
             'filtros': {
                 'anio': anio_filtro,
-                'trimestre': trimestre_filtro,
+                'periodo': periodo_filtro,
                 'mes': mes_filtro,
                 'resultado': resultado_filtro,
             },
@@ -776,7 +777,7 @@ def get_admin_stats_payload(admin_rol, admin_direccion):
         return {'ok': False, 'cursos': {'labels': [], 'data': []}, 'meses': {'labels': [], 'data': []}}
 
 
-def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_filtro, admin_rol, admin_direccion):
+def fetch_export_records(anio_filtro, periodo_filtro, mes_filtro, resultado_filtro, admin_rol, admin_direccion):
     admin_direccion = normalizar_direccion(admin_direccion) or 'IPSD'
 
     try:
@@ -786,7 +787,7 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
             SELECT m.numero_empleado,
                    ef.id AS edicion_id,
                    ca.nombre,
-                   ef.trimestre,
+                   ef.periodo,
                    ef.fecha_inicio,
                    ef.jornada,
                    ef.hora,
@@ -806,9 +807,9 @@ def fetch_export_records(anio_filtro, trimestre_filtro, mes_filtro, resultado_fi
         if anio_filtro:
             query += " AND EXTRACT(YEAR FROM ef.fecha_inicio) = %s"
             params.append(anio_filtro)
-        if trimestre_filtro:
-            query += ' AND ef.trimestre = %s'
-            params.append(trimestre_filtro)
+        if periodo_filtro:
+            query += ' AND ef.periodo = %s'
+            params.append(periodo_filtro)
         if mes_filtro:
             mes_num = _mes_numero_desde_nombre(mes_filtro)
             if mes_num:
@@ -1010,7 +1011,7 @@ def create_curso_records(
 
 def update_edicion_metadata(
     edicion_id,
-    trimestre=None,
+    periodo=None,
     fecha_inicio=None,
     cupos_maximos=None,
     jornada=None,
@@ -1024,6 +1025,7 @@ def update_edicion_metadata(
     requisitos=None,
     duracion_horas=None,
     estado=None,
+    calendario_academico=None,
 ):
     try:
         conn = get_db_connection()
@@ -1031,9 +1033,9 @@ def update_edicion_metadata(
         campos = []
         params = []
 
-        if trimestre:
-            campos.append('trimestre = %s')
-            params.append(trimestre)
+        if periodo:
+            campos.append('periodo = %s')
+            params.append(periodo)
 
         if fecha_inicio:
             campos.append('fecha_inicio = %s')
@@ -1088,6 +1090,10 @@ def update_edicion_metadata(
             campos.append('estado = %s')
             params.append(estado)
 
+        if calendario_academico is not None:
+            campos.append('calendario_academico = %s')
+            params.append(calendario_academico)
+
         if not campos:
             conn.close()
             return {'ok': True}
@@ -1138,9 +1144,9 @@ def listar_ediciones_catalogo(catalogo_id):
         with conn.cursor() as cur:
             cur.execute(
                 '''
-                SELECT id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula,
+                SELECT id, catalogo_id, etiqueta_edicion, periodo, fecha_inicio, fecha_limite_matricula,
                          jornada, hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo,
-                         privacidad, estado, requisitos, duracion_horas
+                         privacidad, estado, requisitos, duracion_horas, calendario_academico
                 FROM ediciones_formativas
                 WHERE catalogo_id = %s
                 ORDER BY id ASC
@@ -1156,7 +1162,7 @@ def listar_ediciones_catalogo(catalogo_id):
 
 def crear_edicion_formativa(
     catalogo_id,
-    trimestre=None,
+    periodo=None,
     fecha_inicio=None,
     fecha_limite_matricula=None,
     jornada='UNICA',
@@ -1170,6 +1176,7 @@ def crear_edicion_formativa(
     etiqueta_edicion='',
     requisitos='',
     duracion_horas=None,
+    calendario_academico=None,
 ):
     catalogo_id_limpio = (catalogo_id or '').strip().upper()
     if not catalogo_id_limpio:
@@ -1182,16 +1189,16 @@ def crear_edicion_formativa(
             cur.execute(
                 '''
                 INSERT INTO ediciones_formativas
-                (id, catalogo_id, etiqueta_edicion, trimestre, fecha_inicio, fecha_limite_matricula, jornada,
+                (id, catalogo_id, etiqueta_edicion, periodo, fecha_inicio, fecha_limite_matricula, jornada,
                  hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo, privacidad, estado,
-                 requisitos, duracion_horas)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 requisitos, duracion_horas, calendario_academico)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''',
                 (
                     edicion_id,
                     catalogo_id_limpio,
                     etiqueta_edicion,
-                    trimestre,
+                    periodo,
                     fecha_inicio,
                     fecha_limite_matricula,
                     _normalizar_jornada(jornada),
@@ -1204,6 +1211,7 @@ def crear_edicion_formativa(
                     estado or 'En Edicion',
                     requisitos or '',
                     duracion_horas,
+                    calendario_academico,
                 ),
             )
         conn.commit()
@@ -1217,7 +1225,7 @@ def update_curso_record(
     id_curso,
     nombre_curso,
     anio,
-    trimestre,
+    periodo,
     mes,
     dia,
     modalidad,
@@ -1257,7 +1265,7 @@ def update_curso_record(
                 cur.execute(
                     '''
                     UPDATE ediciones_formativas
-                    SET trimestre = %s,
+                    SET periodo = %s,
                         fecha_inicio = %s,
                         fecha_limite_matricula = %s,
                         cupos_maximos = %s,
@@ -1265,7 +1273,7 @@ def update_curso_record(
                     WHERE id = %s
                     ''',
                     (
-                        trimestre,
+                        periodo,
                         fecha_iso,
                         fecha_iso,
                         cupos_maximos,
@@ -1986,7 +1994,7 @@ def obtener_reporte_asistencia_curso(id_target):
         with conn.cursor() as cur:
             cur.execute(
                 '''
-                SELECT ef.id, ca.nombre, ef.trimestre, ef.fecha_inicio, ca.modalidad, ca.tipo_accion, ef.jornada, ef.hora, ca.id as catalogo_id
+                SELECT ef.id, ca.nombre, ef.periodo, ef.fecha_inicio, ca.modalidad, ca.tipo_accion, ef.jornada, ef.hora, ca.id as catalogo_id
                 FROM ediciones_formativas ef
                 JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
                 WHERE ef.id = %s
@@ -2002,7 +2010,7 @@ def obtener_reporte_asistencia_curso(id_target):
             with conn.cursor() as cur:
                 cur.execute(
                     '''
-                    SELECT id as catalogo_id, id, nombre, modalidad, tipo_accion, NULL as trimestre, NULL as fecha_inicio, 'UNICA' as jornada, '' as hora
+                    SELECT id as catalogo_id, id, nombre, modalidad, tipo_accion, NULL as periodo, NULL as fecha_inicio, 'UNICA' as jornada, '' as hora
                     FROM catalogo_acciones
                     WHERE id = %s
                     LIMIT 1
@@ -2327,7 +2335,7 @@ def obtener_reporte_asistencia_curso(id_target):
             'curso': {
                 'id': curso['id'],
                 'nombre': curso['nombre'],
-                'trimestre': curso['trimestre'],
+                'periodo': curso['periodo'],
                 'fecha_inicio': curso['fecha_inicio'],
                 'modalidad': curso['modalidad'],
                 'tipo_accion': curso['tipo_accion'],

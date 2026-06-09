@@ -414,7 +414,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
                 SELECT
                     ef.id,
                     ca.id AS catalogo_id,
-                    ef.trimestre,
+                    ef.periodo,
                     ef.fecha_inicio,
                     ef.jornada,
                     ef.hora,
@@ -567,7 +567,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
                 'catalogo_id': curso['catalogo_id'],
                 'nombre': curso['nombre'],
                 'anio': anio,
-                'trimestre': curso['trimestre'],
+                'periodo': curso['periodo'],
                 'mes': mes,
                 'dia': dia,
                 'fecha_inicio': curso['fecha_inicio'],
