@@ -2509,11 +2509,21 @@ function mostrarConfirmacion(mensaje, callback) {
                   class="form-select searchable w-full appearance-none bg-surface-container-low/50 border-b-2 border-outline-variant hover:bg-surface-container-low focus:bg-surface-container-lowest focus:border-primary-container rounded-t-xl pl-12 pr-10 py-3.5 font-body-md text-body-md text-on-surface focus:outline-none transition-all cursor-pointer"
                   id="select-catalogo-nueva-edicion">
                   <option disabled="" selected="" value="">-- Selecciona un catálogo --</option>
-                  {% for catalogo in catalogos %}
-                  <option value="{{ catalogo['id'] }}" data-nombre="{{ catalogo['nombre']|escape }}"
-                    data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}" data-modalidad="{{ catalogo['modalidad'] }}">
-                    {{ catalogo['id'] }} · {{ catalogo['nombre'] }}
-                  </option>
+                  {% for group in catalogos|groupby('tipo_accion') %}
+                    {% set raw_group = (group.grouper or 'CURSO')|upper %}
+                    {% set group_name = 'CURSOS' if raw_group == 'CURSO' 
+                                   else 'DIPLOMADOS' if raw_group == 'DIPLOMADO'
+                                   else 'TALLERES' if raw_group == 'TALLER'
+                                   else 'SEMINARIOS' if raw_group == 'SEMINARIO'
+                                   else raw_group ~ 'S' %}
+                    <optgroup label="{{ group_name }}">
+                      {% for catalogo in group.list %}
+                      <option value="{{ catalogo['id'] }}" data-nombre="{{ catalogo['nombre']|escape }}"
+                        data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}" data-modalidad="{{ catalogo['modalidad'] }}">
+                        {{ catalogo['id'] }} · {{ catalogo['nombre'] }}
+                      </option>
+                      {% endfor %}
+                    </optgroup>
                   {% endfor %}
                 </select>
               </div>
@@ -7799,7 +7809,8 @@ function mostrarConfirmacion(mensaje, callback) {
           placeholder: true,
           searchPlaceholderValue: 'Buscar...',
           noResultsText: 'No se encontraron resultados',
-          noChoicesText: 'No hay opciones disponibles'
+          noChoicesText: 'No hay opciones disponibles',
+          position: 'bottom'
         });
 
         element.choicesInstance = choices;
@@ -8010,6 +8021,26 @@ function mostrarConfirmacion(mensaje, callback) {
   html[data-theme="dark"] .choices__item--choice.is-selected, html.dark .choices__item--choice.is-selected {
     background-color: rgba(59, 130, 246, 0.35) !important;
     color: #ffffff !important;
+  }
+
+  /* Estilos para el separador/grupo en Choices.js */
+  .choices__group {
+    font-weight: 800 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #4b5563 !important;
+    background-color: rgba(243, 244, 246, 0.95) !important;
+    padding: 8px 16px !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  }
+
+  html[data-theme="dark"] .choices__group, html.dark .choices__group {
+    color: #9ca3af !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
   }
 </style>
 <script>

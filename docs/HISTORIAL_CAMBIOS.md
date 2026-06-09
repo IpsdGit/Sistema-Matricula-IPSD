@@ -5303,3 +5303,44 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Junio 8, 2026
 **Versión actual**: 1.25.0 (Rediseño Moderno de Login y Portal Docente)
 **Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
+
+---
+
+## 🛠️ Optimización de Despliegue de Listas y Agrupación por Tipo de Acción (v1.26.0)
+
+### Cambio 26.1: Ajuste de velocidad en animación Plexus
+**Fecha**: Junio 9, 2026  
+**Archivos afectados**: `templates/index.html`
+
+**QUÉ**:
+- Reducción del multiplicador de velocidad de las partículas en el canvas del login de `1.2` a `0.6` para lograr un movimiento más pausado y refinado.
+
+**POR QUÉ**:
+- Las partículas se movían demasiado rápido, lo cual podía distraer al usuario o sentirse demasiado frenético en lugar de un fondo ambiental premium y profesional.
+
+**PARA QUÉ**:
+- Mejorar la estética del portal y proveer una animación fluida que no interfiera negativamente en la experiencia de navegación.
+
+---
+
+### Cambio 26.2: Agrupación de catálogos y dirección de despliegue en Choices.js
+**Fecha**: Junio 9, 2026  
+**Archivos afectados**: `templates/admin.html`
+
+**QUÉ**:
+- Implementación de agrupación mediante `<optgroup>` utilizando el filtro `groupby` de Jinja2 en el select del modal de nueva edición. Las opciones ahora se separan por tipo de acción formativa (Cursos, Talleres, Diplomados, Seminarios).
+- Modificación de los parámetros de Choices.js en la inicialización global (`initChoices`) añadiendo `position: 'bottom'` para forzar que los menús desplegables siempre se abran hacia abajo, evitando superposiciones con los campos de búsqueda en modales compactos.
+- Diseño de reglas de estilo personalizadas para `.choices__group` (tanto en modo claro como en modo oscuro) para proveer un separador visual de alta calidad que encaje con el sistema de diseño.
+
+**POR QUÉ**:
+- La lista de catálogos en el modal de nueva edición aparecía sin clasificar y se desplegaba hacia arriba, tapando el campo de búsqueda e impidiendo una navegación intuitiva.
+- Se requería una separación clara para distinguir rápidamente los tipos de capacitación disponibles.
+
+**PARA QUÉ**:
+- Optimizar la experiencia de usuario y el flujo de trabajo del administrador al programar nuevas ediciones formativas.
+
+---
+
+**Última actualización**: Junio 9, 2026
+**Versión actual**: 1.26.0 (Optimización de Despliegue de Listas y Agrupación por Tipo de Acción)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
