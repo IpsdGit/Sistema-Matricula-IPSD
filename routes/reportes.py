@@ -6,11 +6,30 @@ import json
 
 reportes_bp = Blueprint('reportes', __name__)
 
+def _obtener_facultades():
+    """Obtiene la lista de facultades únicas de la BD de docentes."""
+    from database import get_db_connection
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT DISTINCT TRIM(facultad) AS facultad
+            FROM docentes
+            WHERE facultad IS NOT NULL AND TRIM(facultad) <> ''
+            ORDER BY facultad
+        """)
+        rows = cur.fetchall()
+        conn.close()
+        return [row['facultad'] for row in rows]
+    except Exception:
+        return []
+
 @reportes_bp.route('/admin/reportes')
 @admin_requerido
 def reportes_dashboard():
     from routes.admin import _obtener_centros_regionales_admin
     centros_regionales = _obtener_centros_regionales_admin()
+    facultades = _obtener_facultades()
     
     # Parámetros de filtro
     anio = request.args.get('anio', '').strip()
@@ -40,7 +59,8 @@ def reportes_dashboard():
                           jerarquia=jerarquia, 
                           filtros=filtros,
                           historial=historial,
-                          centros_regionales=centros_regionales)
+                          centros_regionales=centros_regionales,
+                          facultades=facultades)
 
 @reportes_bp.route('/admin/reportes/exportar')
 @admin_requerido
