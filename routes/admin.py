@@ -1,5 +1,6 @@
 import csv
 import os
+import json
 from datetime import datetime
 from io import StringIO
 
@@ -482,6 +483,21 @@ def register_admin_routes(app):
             jerarquia = res.get('jerarquia', [])
             historial = obtener_historial_reportes()
             
+            # Calcular datos para los gráficos
+            top_acciones = sorted(jerarquia, key=lambda x: x['total_matriculados'], reverse=True)[:5]
+            max_matriculados = max([a['total_matriculados'] for a in top_acciones]) if top_acciones else 1
+            
+            matriculas_por_mes = [0] * 12
+            filas_planas = res.get('filas_planas', [])
+            for r in filas_planas:
+                # Comprobar si hay matricula_id
+                matricula_id = r[7] if isinstance(r, tuple) else r['matricula_id']
+                if matricula_id:
+                    fecha_inicio = r[6] if isinstance(r, tuple) else r['fecha_inicio']
+                    if fecha_inicio:
+                        mes_index = fecha_inicio.month - 1
+                        matriculas_por_mes[mes_index] += 1
+            
             # Obtener facultades para el dropdown
             try:
                 conn_fac = get_db_connection()
@@ -498,6 +514,9 @@ def register_admin_routes(app):
             dashboard_payload['filtros']['facultad'] = facultad_filtro
         else:
             facultades = []
+            top_acciones = []
+            max_matriculados = 1
+            matriculas_por_mes = [0] * 12
         # -------------------------------------------------
 
         return render_template(
@@ -522,7 +541,10 @@ def register_admin_routes(app):
             centros_regionales=centros_regionales,
             jerarquia=jerarquia,
             historial=historial,
-            facultades=facultades
+            facultades=facultades,
+            top_acciones=top_acciones,
+            max_matriculados=max_matriculados,
+            matriculas_por_mes=json.dumps(matriculas_por_mes)
         )
 
 

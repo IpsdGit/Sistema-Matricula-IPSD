@@ -4753,6 +4753,182 @@
             </div>
           </div>
 
+          <!-- Charts Row -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Chart 1: Bar Chart -->
+            <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+              <h3 class="font-bold text-lg text-primary mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined">bar_chart</span>
+                Acciones Formativas con Mayor Matrícula
+              </h3>
+              <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
+                {% if top_acciones %}
+                <canvas id="chartTopAcciones"></canvas>
+                {% else %}
+                <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
+                  <span class="material-symbols-outlined text-4xl mb-2 opacity-50">analytics</span>
+                  No hay datos suficientes para graficar.
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <!-- Chart 2: Line Chart -->
+            <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+              <h3 class="font-bold text-lg text-primary mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined">trending_up</span>
+                Evolución Mensual de Matrículas
+              </h3>
+              <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
+                {% if max_matriculados > 0 %}
+                <canvas id="chartEvolucionMatriculas"></canvas>
+                {% else %}
+                <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
+                  <span class="material-symbols-outlined text-4xl mb-2 opacity-50">show_chart</span>
+                  No hay datos suficientes para graficar.
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              
+              Chart.defaults.font.family = "'Manrope', sans-serif";
+
+              // 1. Gráfico de Barras Horizontal (Top Acciones)
+              const ctxTop = document.getElementById('chartTopAcciones');
+              if (ctxTop) {
+                  const barLabels = [{% for a in top_acciones %}"{{ a.accion_nombre|replace('"', '\\"') }}",{% endfor %}];
+                  const barData = [{% for a in top_acciones %}{{ a.total_matriculados }},{% endfor %}];
+                  
+                  const gradientBar = ctxTop.getContext('2d').createLinearGradient(0, 0, 400, 0);
+                  gradientBar.addColorStop(0, '#002b5c');
+                  gradientBar.addColorStop(1, '#4395f3'); 
+
+                  new Chart(ctxTop, {
+                      type: 'bar',
+                      data: {
+                          labels: barLabels,
+                          datasets: [{
+                              label: 'Matriculados',
+                              data: barData,
+                              backgroundColor: gradientBar,
+                              borderRadius: 6,
+                              barThickness: 16,
+                              borderSkipped: false
+                          }]
+                      },
+                      options: {
+                          indexAxis: 'y', 
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                              legend: { display: false },
+                              tooltip: {
+                                  backgroundColor: '#001736',
+                                  padding: 12,
+                                  titleFont: { size: 13 },
+                                  bodyFont: { size: 14, weight: 'bold' },
+                                  displayColors: false,
+                                  callbacks: {
+                                      label: function(context) { return context.parsed.x + ' estudiantes matriculados'; }
+                                  }
+                              }
+                          },
+                          scales: {
+                              x: {
+                                  grid: { display: false, drawBorder: false },
+                                  ticks: { display: false }, 
+                                  border: { display: false },
+                                  beginAtZero: true
+                              },
+                              y: {
+                                  grid: { display: false, drawBorder: false },
+                                  border: { display: false },
+                                  ticks: { 
+                                      color: '#43474f',
+                                      font: { weight: '600' },
+                                      callback: function(value) {
+                                          let label = this.getLabelForValue(value);
+                                          return label.length > 25 ? label.substr(0, 25) + '...' : label;
+                                      }
+                                  }
+                              }
+                          },
+                          interaction: { mode: 'index', intersect: false },
+                      }
+                  });
+              }
+
+              // 2. Gráfico de Línea (Evolución Mensual)
+              const ctxEvolucion = document.getElementById('chartEvolucionMatriculas');
+              if(ctxEvolucion) {
+                const matriculasData = JSON.parse('{{ matriculas_por_mes | safe }}');
+                
+                const gradientLine = ctxEvolucion.getContext('2d').createLinearGradient(0, 0, 0, 250);
+                gradientLine.addColorStop(0, 'rgba(67, 149, 243, 0.4)'); 
+                gradientLine.addColorStop(1, 'rgba(67, 149, 243, 0.0)');
+
+                new Chart(ctxEvolucion, {
+                  type: 'line',
+                  data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                    datasets: [{
+                      label: 'Matrículas',
+                      data: matriculasData,
+                      borderColor: '#002b5c',
+                      backgroundColor: gradientLine,
+                      borderWidth: 3,
+                      fill: true,
+                      tension: 0.4,
+                      pointBackgroundColor: '#fff',
+                      pointBorderColor: '#002b5c',
+                      pointBorderWidth: 2,
+                      pointRadius: 4,
+                      pointHoverRadius: 6,
+                      pointHoverBackgroundColor: '#4395f3',
+                      pointHoverBorderColor: '#fff',
+                      pointHoverBorderWidth: 2
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                          backgroundColor: '#001736',
+                          padding: 12,
+                          titleFont: { size: 13 },
+                          bodyFont: { size: 14, weight: 'bold' },
+                          displayColors: false,
+                          callbacks: {
+                              label: function(context) { return context.parsed.y + ' matrículas'; }
+                          }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0, color: '#747780' },
+                        grid: { color: 'rgba(196, 198, 208, 0.3)', borderDash: [5, 5] },
+                        border: { display: false }
+                      },
+                      x: {
+                        grid: { display: false, drawBorder: false },
+                        border: { display: false },
+                        ticks: { font: { weight: '600' }, color: '#43474f' }
+                      }
+                    },
+                    interaction: { mode: 'index', intersect: false }
+                  }
+                });
+              }
+            });
+          </script>
+
           <!-- FILTROS -->
           <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/30 mb-6">
             <h3 class="font-bold text-lg mb-4 text-on-surface flex items-center gap-2">
