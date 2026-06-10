@@ -2571,7 +2571,7 @@
                     {% for catalogo in group.list %}
                     <option value="{{ catalogo['id'] }}" data-nombre="{{ catalogo['nombre']|escape }}"
                       data-tipo="{{ catalogo['tipo_accion'] or 'CURSO' }}" data-modalidad="{{ catalogo['modalidad'] }}">
-                      {{ catalogo['id'] }} · {{ catalogo['nombre'] }}
+                      {{ catalogo['nombre'] }}
                     </option>
                     {% endfor %}
                   </optgroup>
@@ -8795,23 +8795,28 @@
 
   /* Estilos para el separador/grupo en Choices.js */
   .choices__group {
-    font-weight: 800 !important;
-    font-size: 11px !important;
+    font-weight: 700 !important;
+    font-size: 10px !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-    color: #4b5563 !important;
-    background-color: rgba(243, 244, 246, 0.95) !important;
-    padding: 8px 16px !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-    border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+    letter-spacing: 0.1em !important;
+    color: #002b5c !important; /* Azul institucional */
+    background-color: transparent !important;
+    padding: 16px 16px 8px 16px !important;
+    border-bottom: none !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  .choices__list[role="listbox"] > .choices__group:first-child {
+    border-top: none !important;
+    padding-top: 8px !important;
   }
 
   html[data-theme="dark"] .choices__group,
   html.dark .choices__group {
     color: #9ca3af !important;
-    background-color: rgba(15, 23, 42, 0.95) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   }
 </style>
 <script>
