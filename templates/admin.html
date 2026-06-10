@@ -7611,6 +7611,7 @@
       if (!fechaInicioCal || !fechaFinCal) return;
       const minDate = fechaInicioCal.value || null;
       const maxDate = fechaFinCal.value || null;
+      
       document.querySelectorAll('.jornada-fechas-manuales').forEach(input => {
         const fp = input._flatpickr;
         if (!fp) return;
@@ -7626,6 +7627,22 @@
           });
           if (filtradas.length !== fp.selectedDates.length) {
             fp.setDate(filtradas, true);
+          }
+        }
+      });
+
+      // Alinear límites de la fecha de matrícula con el rango de la edición
+      document.querySelectorAll('.jornada-fecha-limite').forEach(input => {
+        if (minDate) {
+          input.min = minDate + 'T00:00';
+          if (input.value && input.value < input.min) {
+            input.value = input.min;
+          }
+        }
+        if (maxDate) {
+          input.max = maxDate + 'T23:59';
+          if (input.value && input.value > input.max) {
+            input.value = input.max;
           }
         }
       });
@@ -8361,7 +8378,11 @@
           });
           const data = await res.json();
           if (data.ok) {
-            window.location.href = data.redirect_url || window.location.href;
+            cerrarModal('modal-gestion-calendario');
+            mostrarNotificacion(data.mensaje || '¡Calendario y ediciones guardados correctamente!', 'success');
+            setTimeout(() => {
+              window.location.href = data.redirect_url || window.location.href;
+            }, 2500);
             return;
           }
           mostrarNotificacion(data.error || 'No se pudo generar el calendario.', 'error');
