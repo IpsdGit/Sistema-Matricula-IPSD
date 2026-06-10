@@ -482,10 +482,22 @@ def register_admin_routes(app):
             jerarquia = res.get('jerarquia', [])
             historial = obtener_historial_reportes()
             
+            # Obtener facultades para el dropdown
+            try:
+                conn_fac = get_db_connection()
+                cur_fac = conn_fac.cursor()
+                cur_fac.execute("SELECT DISTINCT TRIM(facultad) AS f FROM docentes WHERE facultad IS NOT NULL AND TRIM(facultad) <> '' ORDER BY f")
+                facultades = [r['f'] for r in cur_fac.fetchall()]
+                conn_fac.close()
+            except Exception:
+                facultades = []
+            
             # Guardamos los filtros adicionales
             dashboard_payload['filtros']['calendario'] = calendario_filtro
             dashboard_payload['filtros']['cur'] = cur_filtro
             dashboard_payload['filtros']['facultad'] = facultad_filtro
+        else:
+            facultades = []
         # -------------------------------------------------
 
         return render_template(
@@ -509,8 +521,10 @@ def register_admin_routes(app):
             plantillas=plantillas,
             centros_regionales=centros_regionales,
             jerarquia=jerarquia,
-            historial=historial
+            historial=historial,
+            facultades=facultades
         )
+
 
     @app.route('/admin/ediciones/nueva')
     @admin_requerido
