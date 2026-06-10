@@ -4868,7 +4868,7 @@
                               data: barData,
                               backgroundColor: gradientBar,
                               borderRadius: 6,
-                              barThickness: 16,
+                              maxBarThickness: 32,
                               borderSkipped: false
                           }]
                       },
@@ -4904,7 +4904,7 @@
                                       font: { weight: '600' },
                                       callback: function(value) {
                                           let label = this.getLabelForValue(value);
-                                          return label.length > 25 ? label.substr(0, 25) + '...' : label;
+                                          return label.length > 45 ? label.substr(0, 45) + '...' : label;
                                       }
                                   }
                               }
@@ -8799,7 +8799,8 @@
   }
 
   /* Personalización de la flecha (Chevron Moderno) */
-  .choices[data-type*='select-one']:after {
+  .choices[data-type*='select-one']:after,
+  .choices[data-type*='select-multiple']:after {
     content: '';
     height: 8px;
     width: 8px;
@@ -8811,11 +8812,13 @@
     transition: all 0.2s;
     right: 18px !important;
     top: 42% !important;
+    position: absolute;
     margin-top: 0 !important;
     border-color: #747780 !important;
   }
 
-  .choices[data-type*='select-one'].is-open:after {
+  .choices[data-type*='select-one'].is-open:after,
+  .choices[data-type*='select-multiple'].is-open:after {
     transform: rotate(-135deg);
     top: 55% !important;
   }
@@ -8890,6 +8893,7 @@
   
   .choices[data-type*='select-multiple'] .choices__inner {
     padding-bottom: 2px !important;
+    padding-right: 40px !important; /* Espacio para la flechita */
   }
 
   /* Estilos para el separador/grupo en Choices.js */
