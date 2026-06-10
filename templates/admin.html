@@ -4781,7 +4781,7 @@
                 Acciones Formativas con Mayor Matrícula
               </h3>
               <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
-                {% if top_acciones %}
+                {% if top_acciones|default([]) %}
                 <canvas id="chartTopAcciones"></canvas>
                 {% else %}
                 <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
@@ -4799,7 +4799,7 @@
                 Evolución Mensual de Matrículas
               </h3>
               <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
-                {% if max_matriculados > 0 %}
+                {% if max_matriculados|default(0) > 0 %}
                 <canvas id="chartEvolucionMatriculas"></canvas>
                 {% else %}
                 <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
@@ -4813,13 +4813,13 @@
           
           <!-- Data para Gráficos -->
           <script type="application/json" id="barLabelsJson">
-            {{ top_acciones | map(attribute='accion_nombre') | list | tojson | safe }}
+            {{ (top_acciones|default([])) | map(attribute='accion_nombre') | list | tojson | safe }}
           </script>
           <script type="application/json" id="barDataJson">
-            {{ top_acciones | map(attribute='total_matriculados') | list | tojson | safe }}
+            {{ (top_acciones|default([])) | map(attribute='total_matriculados') | list | tojson | safe }}
           </script>
           <script type="application/json" id="matriculasDataJson">
-            {{ matriculas_por_mes | safe }}
+            {{ (matriculas_por_mes|default('[]')) | safe }}
           </script>
           
           <script>
