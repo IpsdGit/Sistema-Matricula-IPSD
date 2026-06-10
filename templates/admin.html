@@ -8879,6 +8879,19 @@
     color: #ffffff !important;
   }
 
+  /* Ajustes para el input de búsqueda interno en select múltiple */
+  .choices__input, .choices__input--cloned {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background-color: transparent !important;
+    min-width: 220px !important;
+  }
+  
+  .choices[data-type*='select-multiple'] .choices__inner {
+    padding-bottom: 2px !important;
+  }
+
   /* Estilos para el separador/grupo en Choices.js */
   .choices__group {
     font-weight: 700 !important;
