@@ -18,15 +18,24 @@ def obtener_centros_regionales(conn):
     ''')
     return [row['centro_universitario_regional'] for row in cursor.fetchall()]
 
-def obtener_docentes_por_centro(conn, centro):
-    """Retorna la lista de docentes que pertenecen a un centro regional específico."""
+def obtener_docentes_por_centro(conn, centro_o_centros):
+    """Retorna la lista de docentes que pertenecen a uno o más centros regionales."""
     cursor = conn.cursor()
-    cursor.execute('''
+    if isinstance(centro_o_centros, str):
+        centros = [c.strip() for c in centro_o_centros.split(',') if c.strip()]
+    else:
+        centros = centro_o_centros
+
+    if not centros:
+        return []
+
+    placeholders = ', '.join(['%s'] * len(centros))
+    cursor.execute(f'''
         SELECT numero_empleado, nombre_completo, centro_universitario_regional 
         FROM docentes 
-        WHERE activo = 1 AND centro_universitario_regional = %s
+        WHERE activo = 1 AND centro_universitario_regional IN ({placeholders})
         ORDER BY nombre_completo
-    ''', (centro,))
+    ''', tuple(centros))
     return [dict(row) for row in cursor.fetchall()]
 
 def procesar_archivo_excel(file_stream):

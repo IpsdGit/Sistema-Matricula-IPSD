@@ -6684,8 +6684,8 @@
                   <label
                     class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Centro
                     Regional <span class="text-red-500">*</span></label>
-                  <select id="gc_centro_regional" name="centro_regional" class="form-select">
-                    <option value="">Buscar centro regional...</option>
+                  <select id="gc_centro_regional" name="centro_regional" class="form-select" multiple>
+                    <option value="">Buscar centros regionales...</option>
                     {% for centro in centros_regionales|default([]) %}
                     <option value="{{ centro }}">{{ centro }}</option>
                     {% endfor %}
@@ -8961,7 +8961,7 @@
   function gcInitChoicesCentro(selectEl) {
     if (!selectEl) return;
     try {
-      gcChoicesCentro = new Choices(selectEl, { searchEnabled: true, itemSelectText: '', placeholder: true, placeholderValue: 'Buscar centro regional...', removeItemButton: true });
+      gcChoicesCentro = new Choices(selectEl, { searchEnabled: true, itemSelectText: '', placeholder: true, placeholderValue: 'Buscar centros regionales...', removeItemButton: true });
       selectEl.addEventListener('change', onGcCentroChange);
       selectEl.addEventListener('addItem', onGcCentroChange);
       selectEl.addEventListener('removeItem', onGcCentroChange);
@@ -9301,13 +9301,19 @@
 
   function gcGetChoiceVal(choicesInst, fallbackId) {
     const el = document.getElementById(fallbackId);
-    if (el && el.value) return el.value;
     if (choicesInst) {
       const v = choicesInst.getValue(true);
-      if (Array.isArray(v)) return v.length > 0 ? v[0] : '';
+      if (Array.isArray(v)) {
+        if (el && el.multiple) return v.join(',');
+        return v.length > 0 ? v[0] : '';
+      }
       if (v && typeof v === 'object') return v.value || '';
       return v || '';
     }
+    if (el && el.multiple && el.selectedOptions) {
+      return Array.from(el.selectedOptions).map(o => o.value).join(',');
+    }
+    if (el && el.value) return el.value;
     return '';
   }
 
