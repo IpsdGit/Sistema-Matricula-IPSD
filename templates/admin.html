@@ -2704,7 +2704,7 @@
                 <thead>
                   <tr class="border-b border-outline-variant/30 bg-surface-container-lowest/50">
                     <th
-                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
+                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider whitespace-nowrap">
                       Código</th>
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
@@ -2719,8 +2719,8 @@
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Privacidad</th>
                     <th
-                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
-                      Horario</th>
+                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider whitespace-nowrap">
+                      Fecha / Horario</th>
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Período</th>
@@ -2728,7 +2728,7 @@
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider text-center">
                       Inscritos</th>
                     <th
-                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
+                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider whitespace-nowrap w-px">
                       Estado</th>
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider text-right">
@@ -2739,8 +2739,9 @@
                   {% for curso in cursos %}
                   <tr class="hover:bg-surface-container-low/50 transition-colors"
                     data-estado="{{ (curso['estado'] or 'En Edicion')|lower|trim }}">
-                    <td class="py-4 px-6 font-headline-md text-[14px] text-primary dark:text-primary-fixed">{{
-                      curso['id'] }}</td>
+                    <td class="py-4 px-6 font-headline-md text-[14px] text-primary dark:text-primary-fixed whitespace-nowrap">
+                      {{ curso['id'] }}
+                    </td>
                     <td class="py-4 px-6 font-medium">
                       {{ curso['nombre'] }}<br>
                       <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{ curso['modalidad'] }} ·
@@ -2765,7 +2766,25 @@
                         {{ curso.get('privacidad') or 'Abierta' }}
                       </span>
                     </td>
-                    <td class="py-4 px-6">{{ curso['hora'] or '—' }}</td>
+                    <td class="py-4 px-6 whitespace-nowrap">
+                      <div class="flex flex-col gap-1.5">
+                        {% if curso['fecha_inicio'] %}
+                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed">
+                          <span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                          {{ curso['fecha_inicio']|string }}
+                        </div>
+                        {% else %}
+                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed">
+                          <span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                          —
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center gap-1.5 text-xs text-on-surface-variant dark:text-outline-variant">
+                          <span class="material-symbols-outlined text-[14px]">schedule</span>
+                          {{ curso['hora'] or '—' }}
+                        </div>
+                      </div>
+                    </td>
                     <td class="py-4 px-6">
                       {% if curso.get('calendario_academico') == 'Semestral' %}Sem.{% else %}Trim.{% endif %} {{
                       curso['periodo'] or '—' }} {{ (curso['fecha_inicio']|string)[:4] if curso['fecha_inicio']
@@ -2778,7 +2797,7 @@
                         endif %}
                       </span>
                     </td>
-                    <td class="py-4 px-6">
+                    <td class="py-4 px-6 whitespace-nowrap w-px">
                       <span
                         class="inline-flex items-center px-3 py-1 rounded-full bg-[#e8f5e9] text-[#2e7d32] font-label-caps text-label-caps border border-[#c8e6c9]">
                         <span class="w-1.5 h-1.5 rounded-full bg-[#4caf50] mr-2"></span>{{ curso['estado'] or
@@ -4792,6 +4811,17 @@
             </div>
           </div>
           
+          <!-- Data para Gráficos -->
+          <script type="application/json" id="barLabelsJson">
+            {{ top_acciones | map(attribute='accion_nombre') | list | tojson | safe }}
+          </script>
+          <script type="application/json" id="barDataJson">
+            {{ top_acciones | map(attribute='total_matriculados') | list | tojson | safe }}
+          </script>
+          <script type="application/json" id="matriculasDataJson">
+            {{ matriculas_por_mes | safe }}
+          </script>
+          
           <script>
             document.addEventListener('DOMContentLoaded', function() {
               
@@ -4800,8 +4830,8 @@
               // 1. Gráfico de Barras Horizontal (Top Acciones)
               const ctxTop = document.getElementById('chartTopAcciones');
               if (ctxTop) {
-                  const barLabels = [{% for a in top_acciones %}"{{ a.accion_nombre|replace('"', '\\"') }}",{% endfor %}];
-                  const barData = [{% for a in top_acciones %}{{ a.total_matriculados }},{% endfor %}];
+                  const barLabels = JSON.parse(document.getElementById('barLabelsJson').textContent || '[]');
+                  const barData = JSON.parse(document.getElementById('barDataJson').textContent || '[]');
                   
                   const gradientBar = ctxTop.getContext('2d').createLinearGradient(0, 0, 400, 0);
                   gradientBar.addColorStop(0, '#002b5c');
@@ -4865,7 +4895,7 @@
               // 2. Gráfico de Línea (Evolución Mensual)
               const ctxEvolucion = document.getElementById('chartEvolucionMatriculas');
               if(ctxEvolucion) {
-                const matriculasData = JSON.parse('{{ matriculas_por_mes | safe }}');
+                const matriculasData = JSON.parse(document.getElementById('matriculasDataJson').textContent || '[]');
                 
                 const gradientLine = ctxEvolucion.getContext('2d').createLinearGradient(0, 0, 0, 250);
                 gradientLine.addColorStop(0, 'rgba(67, 149, 243, 0.4)'); 
