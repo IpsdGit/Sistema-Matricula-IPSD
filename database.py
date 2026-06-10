@@ -196,7 +196,8 @@ def asegurar_migraciones_minimas():
                 id TEXT PRIMARY KEY,
                 catalogo_id TEXT,
                 etiqueta_edicion TEXT DEFAULT '',
-                trimestre TEXT,
+                calendario_academico TEXT,
+                periodo TEXT,
                 fecha_inicio DATE,
                 fecha_limite_matricula TIMESTAMP,
                 jornada TEXT,
@@ -227,6 +228,8 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN calendario_academico TEXT')
         if 'periodo' not in columnas_ediciones:
             cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN periodo TEXT')
+        if 'trimestre' in columnas_ediciones:
+            cursor.execute('ALTER TABLE ediciones_formativas DROP COLUMN trimestre')
 
         cursor.execute("UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'")
 
