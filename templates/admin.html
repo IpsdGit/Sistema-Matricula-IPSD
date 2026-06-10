@@ -4773,7 +4773,7 @@
           </div>
 
           <!-- Charts Row -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Chart 1: Bar Chart -->
             <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <h3 class="font-bold text-lg text-primary mb-6 flex items-center gap-2">
@@ -4809,6 +4809,24 @@
                 {% endif %}
               </div>
             </div>
+
+            <!-- Chart 3: Donut Chart -->
+            <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+              <h3 class="font-bold text-lg text-primary mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined">donut_large</span>
+                Docentes por Centro Regional
+              </h3>
+              <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
+                {% if distribucion_centros|default('{}') != '{}' and distribucion_centros != 'null' %}
+                <canvas id="chartDistribucionCentros"></canvas>
+                {% else %}
+                <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
+                  <span class="material-symbols-outlined text-4xl mb-2 opacity-50">donut_large</span>
+                  No hay datos suficientes para graficar.
+                </div>
+                {% endif %}
+              </div>
+            </div>
           </div>
           
           <!-- Data para Gráficos -->
@@ -4820,6 +4838,9 @@
           </script>
           <script type="application/json" id="matriculasDataJson">
             {{ (matriculas_por_mes|default('[]')) | safe }}
+          </script>
+          <script type="application/json" id="donutDataJson">
+            {{ (distribucion_centros|default('{}')) | safe }}
           </script>
           
           <script>
@@ -4956,6 +4977,70 @@
                   }
                 });
               }
+
+              // 3. Gráfico de Anillo (Distribución por Centro)
+              const ctxDonut = document.getElementById('chartDistribucionCentros');
+              if(ctxDonut) {
+                const donutDataObj = JSON.parse(document.getElementById('donutDataJson').textContent || '{}');
+                const labels = Object.keys(donutDataObj);
+                const data = Object.values(donutDataObj);
+
+                new Chart(ctxDonut, {
+                  type: 'doughnut',
+                  data: {
+                    labels: labels,
+                    datasets: [{
+                      data: data,
+                      backgroundColor: [
+                        '#002b5c', '#4395f3', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6'
+                      ],
+                      borderWidth: 2,
+                      borderColor: '#ffffff',
+                      hoverOffset: 4
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                      legend: { 
+                        position: 'bottom',
+                        labels: { padding: 15, font: { family: "'Manrope', sans-serif", weight: '600' } }
+                      },
+                      tooltip: {
+                          backgroundColor: '#001736',
+                          padding: 12,
+                          titleFont: { size: 13 },
+                          bodyFont: { size: 14, weight: 'bold' },
+                          displayColors: true,
+                          callbacks: {
+                              label: function(context) { 
+                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((context.parsed / total) * 100);
+                                return ' ' + context.parsed + ' docentes (' + percentage + '%)'; 
+                              }
+                          }
+                      }
+                    }
+                  }
+                });
+              }
+
+              // Double click to expand/collapse charts
+              document.querySelectorAll('.organic-card canvas').forEach(canvas => {
+                const card = canvas.parentElement.parentElement;
+                card.style.cursor = 'pointer';
+                card.title = "Doble clic para ampliar/reducir";
+                card.addEventListener('dblclick', function() {
+                  this.classList.toggle('fixed');
+                  this.classList.toggle('inset-8');
+                  this.classList.toggle('z-[100]');
+                  this.classList.toggle('shadow-2xl');
+                  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                });
+              });
+
             });
           </script>
 

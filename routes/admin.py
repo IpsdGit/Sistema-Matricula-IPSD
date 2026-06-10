@@ -488,6 +488,7 @@ def register_admin_routes(app):
             max_matriculados = max([a['total_matriculados'] for a in top_acciones]) if top_acciones else 1
             
             matriculas_por_mes = [0] * 12
+            distribucion_centros = {}
             filas_planas = res.get('filas_planas', [])
             for r in filas_planas:
                 # Comprobar si hay matricula_id
@@ -497,6 +498,13 @@ def register_admin_routes(app):
                     if fecha_inicio:
                         mes_index = fecha_inicio.month - 1
                         matriculas_por_mes[mes_index] += 1
+                    
+                    centro = (r[12] if isinstance(r, tuple) else r['centro_universitario_regional']) or 'No Asignado'
+                    distribucion_centros[centro] = distribucion_centros.get(centro, 0) + 1
+            
+            # Ordenar de mayor a menor y tomar el top 8 para no saturar el grafico
+            distribucion_centros = dict(sorted(distribucion_centros.items(), key=lambda item: item[1], reverse=True)[:8])
+            
             
             # Obtener facultades para el dropdown
             try:
@@ -517,6 +525,7 @@ def register_admin_routes(app):
             top_acciones = []
             max_matriculados = 1
             matriculas_por_mes = [0] * 12
+            distribucion_centros = {}
         # -------------------------------------------------
 
         return render_template(
@@ -544,7 +553,8 @@ def register_admin_routes(app):
             facultades=facultades,
             top_acciones=top_acciones,
             max_matriculados=max_matriculados,
-            matriculas_por_mes=json.dumps(matriculas_por_mes)
+            matriculas_por_mes=json.dumps(matriculas_por_mes),
+            distribucion_centros=json.dumps(distribucion_centros)
         )
 
 
