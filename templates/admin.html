@@ -2718,9 +2718,7 @@
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Privacidad</th>
-                    <th
-                      class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider whitespace-nowrap">
-                      Fecha / Horario</th>
+
                     <th
                       class="py-4 px-6 font-label-caps text-label-caps text-on-surface-variant dark:text-outline-variant uppercase tracking-wider">
                       Período</th>
@@ -2755,26 +2753,21 @@
                       Sin requisitos
                       {% endif %}
                     </td>
-                    <td class="py-4 px-6">
-                      {{ curso['jornada'] or '—' }}<br>
-                      <span class="text-xs text-on-surface-variant dark:text-outline-variant">{{
-                        curso.get('etiqueta_edicion') or '—' }}</span>
-                    </td>
-                    <td class="py-4 px-6">
-                      <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ 'border-green-200 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' if (curso.get('privacidad') or 'Abierta') == 'Abierta' else 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400' }}">
-                        {{ curso.get('privacidad') or 'Abierta' }}
-                      </span>
-                    </td>
                     <td class="py-4 px-6 whitespace-nowrap">
                       <div class="flex flex-col gap-1.5">
+                        <div class="font-medium text-on-surface">
+                          {{ curso['jornada'] or '—' }}
+                          <span class="text-xs font-normal text-on-surface-variant dark:text-outline-variant ml-1">
+                            ({{ curso.get('etiqueta_edicion') or '—' }})
+                          </span>
+                        </div>
                         {% if curso['fecha_inicio'] %}
-                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed">
+                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed mt-1">
                           <span class="material-symbols-outlined text-[16px]">calendar_today</span>
                           {{ curso['fecha_inicio']|string }}
                         </div>
                         {% else %}
-                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed">
+                        <div class="flex items-center gap-1.5 text-sm font-bold text-primary dark:text-primary-fixed mt-1">
                           <span class="material-symbols-outlined text-[16px]">calendar_today</span>
                           —
                         </div>
@@ -2785,6 +2778,13 @@
                         </div>
                       </div>
                     </td>
+                    <td class="py-4 px-6">
+                      <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ 'border-green-200 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' if (curso.get('privacidad') or 'Abierta') == 'Abierta' else 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400' }}">
+                        {{ curso.get('privacidad') or 'Abierta' }}
+                      </span>
+                    </td>
+
                     <td class="py-4 px-6">
                       {% if curso.get('calendario_academico') == 'Semestral' %}Sem.{% else %}Trim.{% endif %} {{
                       curso['periodo'] or '—' }} {{ (curso['fecha_inicio']|string)[:4] if curso['fecha_inicio']
@@ -8799,7 +8799,7 @@
     font-size: 10px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.1em !important;
-    color: #002b5c !important; /* Azul institucional */
+    color: #111827 !important; /* Negro oscuro */
     background-color: transparent !important;
     padding: 16px 16px 8px 16px !important;
     border-bottom: none !important;
