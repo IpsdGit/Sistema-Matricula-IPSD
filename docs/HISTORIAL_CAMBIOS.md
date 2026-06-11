@@ -5425,3 +5425,49 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Junio 9, 2026
 **Versión actual**: 1.27.0 (Estabilización del Calendario Académico y Modernización de Reportes)
 **Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos administrativos y del docente probados y verificados.
+
+---
+
+## 🎯 Sistema de Control de Atención Activa para Conferencias (v1.28.0)
+
+### Cambio 28.1: Lógica de validación y cálculo de ventanas de atención (Backend)
+**Fecha**: Junio 11, 2026
+**Archivos afectados**: `services/clicks_asistencia.py`, `services/portal_service.py`, `routes/admin.py`
+
+**QUÉ**:
+- Se implementó un motor de validación basado en horas exactas (HH:MM) para ventanas de clics, con ventanas emergentes de 3 minutos.
+- Se ajustó la API (`get_estado_ventana`) para retornar dinámicamente el progreso (`total_ventanas`, `ventanas_completadas`, `segundos_restantes`) del control de atención y gestionar estados activos e inactivos.
+- Se configuró el `id_sesion_conferencia` en `portal_service.py` para estar disponible sin restricciones de fecha, permitiendo visualizar la UI antes del inicio.
+- Se robusteció el parseo y validación (Regex) en el punto de entrada de la configuración (`admin_guardar_ventanas`).
+
+**POR QUÉ**:
+- Para combatir el "ausentismo virtual", se requería un método de validación activa exclusivo para acciones formativas tipo "CONFERENCIA" (generalmente largas).
+- Se necesitaba una configuración más natural y precisa (horas exactas en lugar de rangos en minutos) para el usuario administrador.
+
+**PARA QUÉ**:
+- Garantizar que los docentes estén realmente conectados y prestando atención durante las conferencias para la emisión automatizada de certificados.
+
+---
+
+### Cambio 28.2: Integración Dinámica del Control de Atención y Rediseño (Frontend)
+**Fecha**: Junio 11, 2026
+**Archivos afectados**: `static/main.js`, `static/style.css`, `templates/admin.html`
+
+**QUÉ**:
+- Se inyectó dinámicamente vía JavaScript un panel interactivo (`ca-container`) en el Dashboard del Docente (sustituyendo el QR tradicional cuando la sesión es tipo Conferencia).
+- Se reubicó este panel de control a la columna derecha (`csd-right`), bajo las "Sesiones Pasadas".
+- Se rediseñó el componente con estilo "card premium" (fondo blanco, bordes redondeados, sombras sutiles) y se unificó la estética del bloque de certificados (`.csd-cert-block`) eliminando opacidades antiguas.
+- En el Panel Administrador, se reemplazaron los inputs genéricos por un diseño premium con integración de `Flatpickr` (Time picker) para mantener la consistencia con el formulario de jornadas. Además, se modernizó la paleta del modal usando un degradado dinámico de 3 paradas (amarillo institucional a ámbar).
+
+**POR QUÉ**:
+- Una validación estricta requiere una interfaz clara, moderna y fácil de usar tanto para quien asiste como para quien la administra.
+- Los inputs genéricos y colores antiguos daban aspecto descuidado, por lo que se requería alinear la presentación visual con la estética premium lograda en otras áreas.
+
+**PARA QUÉ**:
+- Ofrecer a los administradores un modal moderno para configurar las horas, y proporcionar al docente un tracker en tiempo real estético y funcional sin romper el diseño base del dashboard.
+
+---
+
+**Última actualización**: Junio 11, 2026
+**Versión actual**: 1.28.0 (Sistema de Control de Atención Activa para Conferencias)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos probados y verificados.

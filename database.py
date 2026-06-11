@@ -357,6 +357,26 @@ def asegurar_migraciones_minimas():
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_registro_asistencia_empleado ON registro_asistencia (numero_empleado)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_historial_chat_usuario ON historial_chat (usuario_tipo, usuario_id, id DESC)')
 
+        # ── Migraciones: clicks_asistencia (CONFERENCIA) ────────────────────────
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'sesiones_curso'")
+        columnas_sesiones = {row['column_name'] for row in cursor.fetchall()}
+        if 'ventanas_atencion' not in columnas_sesiones:
+            cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN ventanas_atencion JSONB")
+        if 'ventana_forzada_expira' not in columnas_sesiones:
+            cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN ventana_forzada_expira TIMESTAMP")
+        if 'ventana_forzada_idx' not in columnas_sesiones:
+            cursor.execute("ALTER TABLE sesiones_curso ADD COLUMN ventana_forzada_idx INTEGER")
+
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'registro_asistencia'")
+        columnas_registro = {row['column_name'] for row in cursor.fetchall()}
+        if 'tipo_registro' not in columnas_registro:
+            cursor.execute("ALTER TABLE registro_asistencia ADD COLUMN tipo_registro TEXT NOT NULL DEFAULT 'QR'")
+        if 'ventanas_completadas' not in columnas_registro:
+            cursor.execute("ALTER TABLE registro_asistencia ADD COLUMN ventanas_completadas JSONB NOT NULL DEFAULT '[]'")
+        if 'aprobado_automatico' not in columnas_registro:
+            cursor.execute("ALTER TABLE registro_asistencia ADD COLUMN aprobado_automatico BOOLEAN NOT NULL DEFAULT FALSE")
+
+
         estados_catalogo = [
             ('PENDIENTE', 'Pendiente', 'pendientes', 10),
             ('APROBADA', 'Aprobada', 'aprobadas', 20),

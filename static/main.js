@@ -496,9 +496,34 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function renderQrSesionAbierta(sesionesDisponibles, curso) {
-    const puedeMarcarAsistencia = curso && typeof curso.puede_marcar_asistencia === 'boolean'
+    var tipoAccion = ((curso && curso.tipo_accion) || '').toUpperCase();
+    var esConferencia = tipoAccion === 'CONFERENCIA';
+
+    var puedeMarcarAsistencia = curso && typeof curso.puede_marcar_asistencia === 'boolean'
       ? curso.puede_marcar_asistencia
       : !!(curso && curso.matricula_activa);
+
+    // ── CONFERENCIA: sistema de clics ─────────────────────────────────────
+    if (esConferencia) {
+      console.log('esConferencia TRUE', {puedeMarcarAsistencia, id_sesion_conferencia: curso.id_sesion_conferencia, curso});
+      if (qrCardEl) qrCardEl.style.display = 'none';
+      if (marcarBtn) marcarBtn.closest && marcarBtn.closest('.qr-card-section') &&
+        (marcarBtn.closest('.qr-card-section').style.display = 'none');
+        
+      if (curso.id_sesion_conferencia && window.iniciarSistemaClics) {
+        window.iniciarSistemaClics(curso.id_sesion_conferencia, qrCardEl);
+      } else {
+        console.warn('No se puede iniciar clics: id_sesion_conferencia o iniciarSistemaClics no disponible', {
+          id_sesion: curso.id_sesion_conferencia,
+          fn_iniciar: !!window.iniciarSistemaClics
+        });
+      }
+      return;
+    }
+
+    // Detener clics si venía de una conferencia anterior
+    if (window.detenerSistemaClics) window.detenerSistemaClics();
+
     sesionAbiertaActual = (sesionesDisponibles || []).find(s => s.estado === 1 && s.token_asistencia) || null;
     if (!puedeMarcarAsistencia || !sesionAbiertaActual || !qrCardEl || !qrInfoEl || !qrBoxEl || !marcarBtn) {
       if (qrCardEl) qrCardEl.style.display = 'none';
@@ -1013,4 +1038,285 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   activarVista('mes');
+})();
+
+
+// ─── SISTEMA DE CLICS DE ATENCIÓN — CONFERENCIA ───────────────────────────
+(function () {
+  'use strict';
+
+  var POLL_INTERVAL_MS = 25000;   // cada 25 segundos
+  var _pollTimer       = null;
+  var _idSesionConf    = null;    // sesion activa de conferencia
+  var _ventanaActiva   = null;    // objeto {ventana_id, segundos_restantes}
+  var _cuentaTimer     = null;    // setInterval del countdown
+
+  // ── Elementos del DOM ─────────────────────────────────────────────────────
+  function _el(id) { return document.getElementById(id); }
+
+  // ── CSS del stepper (inyectado una sola vez) ──────────────────────────────
+  (function injectCss() {
+    if (document.getElementById('ca-style')) return;
+    var s = document.createElement('style');
+    s.id = 'ca-style';
+    s.textContent = [
+      '#ca-container{background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;padding:1.5rem;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);margin-top:1.5rem;}',
+      '#ca-title{font-size:1.1rem;font-weight:700;color:#1e293b;margin:0 0 1.25rem 0;display:flex;align-items:center;gap:0.5rem;}',
+      '#ca-stepper{display:flex;align-items:center;gap:0;margin-bottom:1.1rem;}',
+      '.ca-step{display:flex;flex-direction:column;align-items:center;flex:1;}',
+      '.ca-step-circle{width:28px;height:28px;border-radius:50%;border:2.5px solid #d1d5db;background:#f9fafb;',
+        'display:flex;align-items:center;justify-content:center;',
+        'font-size:.7rem;font-weight:700;color:#9ca3af;transition:all .35s ease;position:relative;z-index:1;}',
+      '.ca-step.done .ca-step-circle{background:#10b981;border-color:#10b981;color:#fff;}',
+      '.ca-step.active .ca-step-circle{background:#f59e0b;border-color:#f59e0b;color:#fff;',
+        'box-shadow:0 0 0 5px rgba(245,158,11,.25);animation:ca-pulse 1.6s infinite;}',
+      '.ca-step-line{flex:1;height:2.5px;background:#e5e7eb;transition:background .35s;}',
+      '.ca-step.done + .ca-step-line,.ca-step.done ~ .ca-step .ca-step-line{background:#10b981;}',
+      '.ca-step-label{font-size:.62rem;color:#9ca3af;margin-top:.3rem;font-weight:600;letter-spacing:.02em;}',
+      '.ca-step.done .ca-step-label{color:#059669;}',
+      '.ca-step.active .ca-step-label{color:#d97706;}',
+      '#ca-progress-bar-wrap{background:#cbd5e1;border-radius:999px;height:8px;overflow:hidden;margin-bottom:1.2rem;box-shadow:inset 0 1px 2px rgba(0,0,0,0.1);}',
+      '#ca-progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#10b981);',
+        'width:0%;transition:width .6s ease;}',
+      '#ca-btn-clic{width:100%;padding:.65rem;border:none;border-radius:.85rem;font-size:.9rem;',
+        'font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;',
+        'justify-content:center;gap:.5rem;}',
+      '#ca-btn-clic.ca-estado-espera{background:#f3f4f6;color:#9ca3af;cursor:default;}',
+      '#ca-btn-clic.ca-estado-activo{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);',
+        'color:#fff;animation:ca-pulse 1.6s infinite;cursor:pointer;}',
+      '#ca-btn-clic.ca-estado-ok{background:#ecfdf5;color:#059669;cursor:default;}',
+      '#ca-btn-clic.ca-estado-aprobado{background:linear-gradient(135deg,#10b981,#059669);',
+        'color:#fff;cursor:default;}',
+      '#ca-feedback{font-size:.78rem;margin-top:.5rem;padding:.4rem .7rem;border-radius:.5rem;',
+        'display:none;text-align:center;}',
+      '#ca-feedback.ok{background:#ecfdf5;color:#065f46;display:block;}',
+      '#ca-feedback.err{background:#fef2f2;color:#991b1b;display:block;}',
+      '#ca-feedback.info{background:#fffbeb;color:#92400e;display:block;}',
+      '@keyframes ca-pulse{0%,100%{box-shadow:0 0 0 4px rgba(245,158,11,.25);}50%{box-shadow:0 0 0 8px rgba(245,158,11,.08);}}',
+    ].join('');
+    document.head.appendChild(s);
+  })();
+
+  // ── Crear / actualizar el contenedor del stepper ──────────────────────────
+  function _getOrCreateContainer(qrCardEl) {
+    var existing = _el('ca-container');
+    if (existing) return existing;
+
+    var div = document.createElement('div');
+    div.id = 'ca-container';
+    div.innerHTML = [
+      '<h4 id="ca-title"><span class="material-symbols-outlined" style="color:#d97706;font-size:1.4rem;">timer</span> Control de Atención</h4>',
+      '<div id="ca-stepper"></div>',
+      '<div id="ca-progress-bar-wrap"><div id="ca-progress-bar"></div></div>',
+      '<button id="ca-btn-clic" class="ca-estado-espera">',
+        '<span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">hourglass_empty</span>',
+        '<span id="ca-btn-label">Esperando siguiente confirmación...</span>',
+      '</button>',
+      '<div id="ca-feedback"></div>',
+    ].join('');
+
+    // Insertar al final de la columna derecha (debajo de sesiones pasadas)
+    var targetParent = document.querySelector('.csd-right');
+    if (targetParent) {
+      targetParent.appendChild(div);
+    } else if (qrCardEl) {
+      qrCardEl.parentNode.insertBefore(div, qrCardEl);
+    } else {
+      document.body.appendChild(div);
+    }
+    return div;
+  }
+
+  // ── Renderizar stepper según progreso ────────────────────────────────────
+  function _renderStepper(completadas, total, activa) {
+    var stepperEl = _el('ca-stepper');
+    var progressEl = _el('ca-progress-bar');
+    if (!stepperEl) return;
+
+    stepperEl.innerHTML = '';
+    for (var i = 1; i <= total; i++) {
+      var done  = completadas.indexOf(i) !== -1;
+      var isAct = activa && activa.ventana_id === i && !done;
+
+      var cls = done ? 'done' : (isAct ? 'active' : '');
+      var icon = done ? '✓' : (isAct ? '!' : i);
+
+      var step = document.createElement('div');
+      step.className = 'ca-step ' + cls;
+      step.innerHTML =
+        '<div class="ca-step-circle">' + icon + '</div>' +
+        '<div class="ca-step-label">' + (done ? 'OK' : (isAct ? '¡Ahora!' : 'V' + i)) + '</div>';
+
+      stepperEl.appendChild(step);
+
+      // Línea separadora
+      if (i < total) {
+        var line = document.createElement('div');
+        line.className = 'ca-step-line' + (done ? ' done' : '');
+        stepperEl.appendChild(line);
+      }
+    }
+
+    // Barra de progreso
+    if (progressEl) {
+      var pct = total > 0 ? Math.round((completadas.length / total) * 100) : 0;
+      progressEl.style.width = pct + '%';
+    }
+  }
+
+  // ── Actualizar el botón según el estado ──────────────────────────────────
+  function _actualizarBoton(estado) {
+    var btn   = _el('ca-btn-clic');
+    var label = _el('ca-btn-label');
+    if (!btn || !label) return;
+
+    _detenerCuenta();
+
+    if (estado.aprobado) {
+      btn.className = 'ca-estado-aprobado';
+      btn.onclick = null;
+      label.textContent = '¡Conferencia aprobada! 🎉';
+      _mostrarFeedback('ok', '¡Felicidades! Has cumplido el control de atención y tu matrícula ha sido aprobada.');
+      return;
+    }
+
+    if (!estado.conferencia_activa) {
+      btn.className = 'ca-estado-espera';
+      btn.onclick = null;
+      label.textContent = estado.motivo || 'La conferencia no está activa.';
+      return;
+    }
+
+    if (!estado.ventana_activa) {
+      btn.className = 'ca-estado-espera';
+      btn.onclick = null;
+      var restantes = (estado.total_ventanas || 5) - (estado.total_completadas || 0);
+      label.textContent = restantes > 0 ? 'Esperando siguiente confirmación...' : 'Todas las ventanas completadas';
+      return;
+    }
+
+    // Ventana activa
+    _ventanaActiva = estado.ventana_activa;
+    var seg = _ventanaActiva.segundos_restantes;
+
+    btn.className = 'ca-estado-activo';
+    btn.onclick = _onClickConfirmar;
+
+    _iniciarCuenta(seg);
+  }
+
+  function _iniciarCuenta(seg) {
+    _detenerCuenta();
+    var segundos = seg;
+    _actualizarLabelCuenta(segundos);
+    _cuentaTimer = setInterval(function () {
+      segundos--;
+      if (segundos <= 0) {
+        _detenerCuenta();
+        var btn = _el('ca-btn-clic');
+        var label = _el('ca-btn-label');
+        if (btn) { btn.className = 'ca-estado-espera'; btn.onclick = null; }
+        if (label) label.textContent = 'Ventana cerrada — espera la siguiente';
+        _ventanaActiva = null;
+      } else {
+        _actualizarLabelCuenta(segundos);
+      }
+    }, 1000);
+  }
+
+  function _actualizarLabelCuenta(s) {
+    var label = _el('ca-btn-label');
+    var mm = Math.floor(s / 60), ss = s % 60;
+    if (label) label.textContent =
+      '¡CONFIRMA ATENCIÓN! ' + mm + ':' + (ss < 10 ? '0' : '') + ss;
+  }
+
+  function _detenerCuenta() {
+    if (_cuentaTimer) { clearInterval(_cuentaTimer); _cuentaTimer = null; }
+  }
+
+  // ── Registrar el clic del docente ────────────────────────────────────────
+  function _onClickConfirmar() {
+    if (!_idSesionConf || !_ventanaActiva) return;
+    var btn = _el('ca-btn-clic');
+    if (btn) { btn.disabled = true; btn.onclick = null; }
+    _detenerCuenta();
+
+    fetch('/api/conferencia/' + _idSesionConf + '/clic', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ ventana_id: _ventanaActiva.ventana_id }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) {
+          _mostrarFeedback('ok', data.mensaje || '¡Confirmación registrada!');
+          _ventanaActiva = null;
+          // Forzar polling inmediato para actualizar el stepper
+          _poll();
+        } else {
+          _mostrarFeedback('err', data.error || 'No se pudo registrar el clic.');
+          if (btn) btn.disabled = false;
+        }
+      })
+      .catch(function () {
+        _mostrarFeedback('err', 'Error de conexión. Intenta de nuevo.');
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  // ── Polling ───────────────────────────────────────────────────────────────
+  function _poll() {
+    if (!_idSesionConf) return;
+    fetch('/api/conferencia/' + _idSesionConf + '/estado', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) return;
+        _renderStepper(
+          data.ventanas_completadas || [],
+          data.total_ventanas || 5,
+          data.ventana_activa
+        );
+        _actualizarBoton(data);
+      })
+      .catch(function () {});
+  }
+
+  function _mostrarFeedback(tipo, msg) {
+    var fb = _el('ca-feedback');
+    if (!fb) return;
+    fb.textContent = msg;
+    fb.className = tipo;
+    clearTimeout(fb._hideTimer);
+    // Auto-ocultar mensajes de éxito (no los de aprobación)
+    if (tipo === 'ok' && msg.indexOf('aprobada') === -1) {
+      fb._hideTimer = setTimeout(function () { fb.className = ''; }, 5000);
+    }
+  }
+
+  // ── Punto de entrada: llamado por cargarDetalleCurso cuando es CONFERENCIA ─
+  window.iniciarSistemaClics = function (idSesion, qrCardEl) {
+    // Limpiar poll anterior si cambió de curso
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    _detenerCuenta();
+    _idSesionConf   = idSesion;
+    _ventanaActiva  = null;
+
+    _getOrCreateContainer(qrCardEl);
+    _poll();
+    _pollTimer = setInterval(_poll, POLL_INTERVAL_MS);
+  };
+
+  window.detenerSistemaClics = function () {
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    _detenerCuenta();
+    _idSesionConf  = null;
+    _ventanaActiva = null;
+    var c = _el('ca-container');
+    if (c) c.remove();
+  };
 })();

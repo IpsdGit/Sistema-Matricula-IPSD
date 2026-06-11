@@ -560,6 +560,14 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
             and (curso['texto_certificado'] or '').strip()
         )
 
+        # ── Para CONFERENCIA: identificar la sesión ───────────
+        id_sesion_conferencia = None
+        tipo_accion_raw = (curso['tipo_accion'] or '').strip().upper()
+        if tipo_accion_raw == 'CONFERENCIA':
+            todas = sesiones_pasadas + sesiones_futuras
+            if todas:
+                id_sesion_conferencia = todas[0]['id_sesion']
+
         return {
             'ok': True,
             'curso': {
@@ -589,6 +597,7 @@ def fetch_curso_detalle_docente(numero_empleado, edicion_id):
                 'estado_matricula': historial_ultimo['estado_codigo'] if historial_ultimo else None,
                 'estado_matricula_nombre': historial_ultimo['estado_nombre'] if historial_ultimo else None,
                 'fecha_ultimo_estado': historial_ultimo['fecha_evento'] if historial_ultimo else None,
+                'id_sesion_conferencia': id_sesion_conferencia,
             },
             'sesiones_pasadas': sesiones_pasadas,
             'sesiones_futuras': sesiones_futuras,

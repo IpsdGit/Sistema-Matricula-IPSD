@@ -392,3 +392,50 @@ def register_portal_routes(app):
             return jsonify({'ok': False, 'error': str(e)}), 500
         finally:
             conn.close()
+
+    # ── Rutas: clicks de atención para CONFERENCIA (portal docente) ──────────
+
+    @app.route('/api/conferencia/<int:id_sesion>/estado', methods=['GET'])
+    def api_conferencia_estado(id_sesion):
+        """
+        Polling del docente ~cada 25s.
+        Retorna si hay ventana activa y el progreso de clics del docente.
+        """
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada.'}), 401
+
+        from services.clicks_asistencia import get_estado_ventana
+        conn = get_db_connection()
+        try:
+            result = get_estado_ventana(conn, id_sesion, docente['numero_empleado'])
+            status = 200 if result.get('ok') else result.get('status_code', 400)
+            return jsonify(result), status
+        finally:
+            conn.close()
+
+    @app.route('/api/conferencia/<int:id_sesion>/clic', methods=['POST'])
+    def api_conferencia_clic(id_sesion):
+        """
+        El docente confirma atención en una ventana activa.
+        Registra el clic y, si alcanza el mínimo, aprueba la matrícula automáticamente.
+        """
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada.'}), 401
+
+        payload = request.get_json(silent=True) or {}
+        ventana_id_raw = payload.get('ventana_id') or request.form.get('ventana_id', '')
+        try:
+            ventana_id = int(ventana_id_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'ventana_id inválido.'}), 400
+
+        from services.clicks_asistencia import registrar_clic
+        conn = get_db_connection()
+        try:
+            result = registrar_clic(conn, id_sesion, docente['numero_empleado'], ventana_id)
+            status = 200 if result.get('ok') else result.get('status_code', 409)
+            return jsonify(result), status
+        finally:
+            conn.close()

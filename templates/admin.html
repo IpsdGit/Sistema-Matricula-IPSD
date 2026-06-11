@@ -4247,33 +4247,51 @@
                           <div
                             class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
 
-                            {% if sesion['estado'] != 1 %}
-                            <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
-                              <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                              <button type="submit"
-                                class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none cursor-pointer"
-                                title="Habilitar asistencia">
-                                <span class="material-symbols-outlined text-[18px]">lock_open</span>
-                              </button>
-                            </form>
+                            {% set es_conferencia = curso_sesion_detalle and curso_sesion_detalle.get('tipo_accion','') == 'CONFERENCIA' %}
+
+                            {% if not es_conferencia %}
+                              {% if sesion['estado'] != 1 %}
+                              <form action="/admin/sesion/abrir" method="POST" style="display:inline; margin:0;">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                                <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                                <button type="submit"
+                                  class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none cursor-pointer"
+                                  title="Habilitar asistencia">
+                                  <span class="material-symbols-outlined text-[18px]">lock_open</span>
+                                </button>
+                              </form>
+                              {% endif %}
+
+                              {% if sesion['estado'] == 1 %}
+                              <form action="/admin/sesion/cerrar" method="POST" style="display:inline; margin:0;">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
+                                <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
+                                <button type="submit"
+                                  class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-error transition-colors bg-transparent border-none cursor-pointer"
+                                  title="Desactivar asistencia">
+                                  <span class="material-symbols-outlined text-[18px]">lock</span>
+                                </button>
+                              </form>
+                              {% endif %}
                             {% endif %}
 
-                            {% if sesion['estado'] == 1 %}
-                            <form action="/admin/sesion/cerrar" method="POST" style="display:inline; margin:0;">
-                              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                              <input type="hidden" name="id_curso" value="{{ curso_sesiones_id }}">
-                              <input type="hidden" name="id_sesion" value="{{ sesion['id_sesion'] }}">
-                              <button type="submit"
-                                class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-error transition-colors bg-transparent border-none cursor-pointer"
-                                title="Desactivar asistencia">
-                                <span class="material-symbols-outlined text-[18px]">lock</span>
-                              </button>
-                            </form>
+                            {# ── Botón CONFERENCIA: configurar ventanas de atención ── #}
+                            {% if es_conferencia %}
+                            <button type="button"
+                              class="w-8 h-8 rounded-full hover:bg-amber-50 dark:hover:bg-amber-500/10 flex items-center justify-center text-amber-500 transition-colors bg-transparent border-none cursor-pointer btn-conf-ventanas"
+                              title="Configurar ventanas de atención"
+                              data-id-sesion="{{ sesion['id_sesion'] }}"
+                              data-fecha="{{ sesion['fecha'] }}"
+                              data-hora-inicio="{{ sesion['hora_inicio'] }}"
+                              data-hora-fin="{{ sesion['hora_fin'] }}">
+                              <span class="material-symbols-outlined text-[18px]">timer</span>
+                            </button>
                             {% endif %}
 
-                            {% if sesion['estado'] == 1 and sesion['token_asistencia'] %}
+                            {% if sesion['estado'] == 1 and sesion['token_asistencia'] and not es_conferencia %}
+
                             <button type="button"
                               class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline hover:text-primary dark:text-primary-fixed transition-colors bg-transparent border-none cursor-pointer btn-view-qr-admin"
                               title="Ver y descargar QR" data-id-sesion="{{ sesion['id_sesion'] }}"
@@ -9529,4 +9547,343 @@
     </div>
   </div>
 </div>
-{% endblock %}
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL: Configurar Ventanas de Atención (CONFERENCIA)
+══════════════════════════════════════════════════════════ -->
+<style>
+  #modal-ventanas-conf {
+    position: fixed; inset: 0; z-index: 9998;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  #modal-ventanas-conf.active { opacity: 1; pointer-events: auto; }
+  .mvc-box {
+    background: var(--color-surface-container-lowest, #fff);
+    border-radius: 1.5rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,.2);
+    width: 100%; max-width: 540px;
+    max-height: 92vh; overflow-y: auto;
+    transform: translateY(18px) scale(.97);
+    transition: transform .26s cubic-bezier(.34,1.56,.64,1);
+  }
+  #modal-ventanas-conf.active .mvc-box { transform: translateY(0) scale(1); }
+  .mvc-header {
+    background: linear-gradient(135deg, #d97706 0%, #fcd34d 50%, #ffc72c 100%);
+    padding: 1.5rem 1.75rem 1.25rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    display: flex; align-items: center; gap: 1rem;
+    position: relative; overflow: hidden;
+  }
+  .mvc-header::before {
+    content: ''; position: absolute; top: -30px; right: -20px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,.2); border-radius: 50%;
+  }
+  .mvc-header-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0, 43, 92, .1); border: 2px solid rgba(0, 43, 92, .2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; color: #002b5c; flex-shrink: 0; position: relative; z-index: 1;
+  }
+  .mvc-header-text { flex: 1; position: relative; z-index: 1; }
+  .mvc-header-title { font-size: 1.05rem; font-weight: 800; color: #002b5c; margin: 0 0 .15rem; }
+  .mvc-header-sub   { font-size: .78rem; color: rgba(0, 43, 92, .85); margin: 0; }
+  .mvc-close {
+    background: rgba(0, 43, 92, .1); border: none; cursor: pointer;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #002b5c; position: relative; z-index: 1;
+    transition: background .2s;
+  }
+  .mvc-close:hover { background: rgba(255,255,255,.3); }
+  .mvc-body { padding: 1.5rem 1.75rem; }
+  .mvc-section-title {
+    font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+    color: #92400e; text-transform: uppercase; margin: 0 0 .75rem;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .mvc-ventana-row {
+    display: grid; grid-template-columns: 2rem 1fr auto;
+    align-items: center; gap: .75rem; margin-bottom: .6rem;
+  }
+  .mvc-ventana-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(245, 158, 11, .12); color: #d97706;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; font-weight: 800; flex-shrink: 0;
+  }
+  .mvc-ventana-input {
+    width: 100%; padding: .65rem 1rem;
+    border: 2px solid #e5e7eb; border-radius: .75rem;
+    font-size: .95rem; font-weight: 500; background: #f8fafc;
+    color: #0f172a; transition: all .25s ease;
+    outline: none; text-align: left;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .mvc-ventana-input:focus, .mvc-ventana-input.active { 
+    border-color: #f59e0b; 
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(245,158,11,.15), inset 0 2px 4px rgba(0,0,0,0.01); 
+  }
+  .mvc-ventana-label { font-size: .78rem; color: #6b7280; white-space: nowrap; }
+  .mvc-save-btn {
+    width: 100%; padding: .75rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: #002b5c; border: none; border-radius: .75rem;
+    font-size: .95rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    transition: all .2s ease;
+    box-shadow: 0 4px 6px rgba(245, 158, 11, .2);
+  }
+  .mvc-save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(245, 158, 11, .3);
+  }
+  .mvc-divider { border: 0; border-top: 1.5px solid #f3f4f6; margin: 1.25rem 0; }
+  .mvc-override-section { background: #fffbeb; border-radius: 1rem; padding: 1rem 1.25rem; }
+  .mvc-override-desc { font-size: .8rem; color: #78350f; margin: 0 0 .9rem; line-height: 1.5; }
+  .mvc-override-row { display: flex; align-items: center; gap: .75rem; }
+  .mvc-override-select {
+    flex: 1; padding: .45rem .75rem;
+    border: 1.5px solid #fde68a; border-radius: .6rem;
+    font-size: .875rem; background: #fff; color: #111827; outline: none;
+    transition: border-color .2s;
+  }
+  .mvc-override-select:focus { border-color: #ffc72c; }
+  .mvc-force-btn {
+    padding: .45rem 1rem; background: #ffc72c; color: #002b5c;
+    border: none; border-radius: .6rem; font-size: .82rem;
+    font-weight: 700; cursor: pointer; transition: background .2s;
+    display: flex; align-items: center; gap: .3rem;
+  }
+  .mvc-force-btn:hover { background: #d97706; }
+  .mvc-feedback {
+    margin-top: .75rem; font-size: .8rem; border-radius: .5rem;
+    padding: .45rem .75rem; display: none;
+  }
+  .mvc-feedback.ok  { background: #ecfdf5; color: #065f46; display: block; }
+  .mvc-feedback.err { background: #fef2f2; color: #991b1b; display: block; }
+  .dark .mvc-box { background: #1e293b; }
+  .dark .mvc-ventana-input, .dark .mvc-override-select { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+  .dark .mvc-override-section { background: rgba(245,158,11,.08); }
+</style>
+
+<div id="modal-ventanas-conf" onclick="if(event.target===this)cerrarModalVentanas()">
+  <div class="mvc-box">
+    <!-- Header -->
+    <div class="mvc-header">
+      <div class="mvc-header-icon">
+        <span class="material-symbols-outlined" style="font-size:1.2rem; vertical-align:middle;">timer</span>
+      </div>
+      <div class="mvc-header-text">
+        <div class="mvc-header-title">Control de Atención — Conferencia</div>
+        <div class="mvc-header-sub" id="mvc-sesion-info">Sesión —</div>
+      </div>
+      <button class="mvc-close" onclick="cerrarModalVentanas()" aria-label="Cerrar">
+        <span class="material-symbols-outlined" style="font-size:1rem;">close</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="mvc-body">
+      <!-- Configurar ventanas programadas -->
+      <p class="mvc-section-title">
+        <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">schedule</span>
+        Ventanas programadas (hora exacta HH:MM)
+      </p>
+      <div id="mvc-ventanas-form">
+        <!-- Se llena dinámicamente por JS -->
+      </div>
+      <button class="mvc-save-btn" id="mvc-btn-guardar" onclick="guardarVentanasConf()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">save</span>
+        Guardar configuración
+      </button>
+
+      <hr class="mvc-divider">
+
+      <!-- Override manual -->
+      <div class="mvc-override-section">
+        <p class="mvc-section-title" style="color:#b45309;">
+          <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">bolt</span>
+          Ventana de emergencia (override)
+        </p>
+        <p class="mvc-override-desc">
+          Activa una ventana de 3 minutos <strong>ahora mismo</strong> para un número de ventana específico.
+          Úsalo si el sistema no detectó la ventana automáticamente o en casos especiales.
+        </p>
+        <div class="mvc-override-row">
+          <select class="mvc-override-select" id="mvc-select-override">
+            <option value="1">Ventana 1</option>
+            <option value="2">Ventana 2</option>
+            <option value="3">Ventana 3</option>
+            <option value="4">Ventana 4</option>
+            <option value="5">Ventana 5</option>
+          </select>
+          <button class="mvc-force-btn" onclick="forzarVentanaConf()">
+            <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">bolt</span>
+            Forzar ahora
+          </button>
+        </div>
+        <div class="mvc-feedback" id="mvc-feedback-override"></div>
+      </div>
+
+      <div class="mvc-feedback" id="mvc-feedback-save" style="margin-top:.75rem;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var _idSesionActual = null;
+  var _csrfToken = '{{ csrf_token() }}';
+  var NUM_VENTANAS = 5;
+  var DEFAULTS = ['', '', '', '', ''];
+
+  function abrirModalVentanas(idSesion, fecha, horaInicio, horaFin) {
+    _idSesionActual = idSesion;
+    document.getElementById('mvc-sesion-info').textContent =
+      'Sesión #' + idSesion + ' · ' + fecha + ' · ' + horaInicio + ' – ' + horaFin;
+    _limpiarFeedback();
+    _renderInputs(DEFAULTS);
+    document.getElementById('modal-ventanas-conf').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Cargar config guardada
+    fetch('/admin/sesion/' + idSesion + '/ventanas', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok && data.ventanas && data.ventanas.length) {
+          _renderInputs(data.ventanas);
+        }
+      })
+      .catch(function () {});
+  }
+
+  window.abrirModalVentanas = abrirModalVentanas;
+
+  window.cerrarModalVentanas = function () {
+    document.getElementById('modal-ventanas-conf').classList.remove('active');
+    document.body.style.overflow = '';
+    _idSesionActual = null;
+  };
+
+  function _renderInputs(ventanas) {
+    var container = document.getElementById('mvc-ventanas-form');
+    container.innerHTML = '';
+    for (var i = 0; i < NUM_VENTANAS; i++) {
+      var val = ventanas[i] !== undefined ? ventanas[i] : DEFAULTS[i];
+      var row = document.createElement('div');
+      row.className = 'mvc-ventana-row';
+      row.innerHTML =
+        '<div class="mvc-ventana-num">' + (i + 1) + '</div>' +
+        '<input type="time" class="mvc-ventana-input flatpickr-time" id="mvc-v' + i + '" ' +
+        'value="' + val + '" placeholder="HH:MM" required>';
+      container.appendChild(row);
+    }
+    
+    // Inicializar Flatpickr si est disponible
+    if (typeof flatpickr !== "undefined") {
+      flatpickr(container.querySelectorAll(".flatpickr-time"), {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true
+      });
+    }
+  }
+
+  window.guardarVentanasConf = function () {
+    if (!_idSesionActual) return;
+    var ventanas = [];
+    for (var i = 0; i < NUM_VENTANAS; i++) {
+      var el = document.getElementById('mvc-v' + i);
+      if (el && el.value) ventanas.push(el.value);
+    }
+
+    var btn = document.getElementById('mvc-btn-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    fetch('/admin/sesion/' + _idSesionActual + '/ventanas', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ _csrf_token: _csrfToken, ventanas: ventanas }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        _mostrarFeedback('mvc-feedback-save', data.ok
+          ? '✓ Configuración guardada correctamente.'
+          : '✕ ' + (data.error || 'Error al guardar.'), data.ok);
+      })
+      .catch(function () {
+        _mostrarFeedback('mvc-feedback-save', '✕ Error de conexión.', false);
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">save</span> Guardar configuración';
+      });
+  };
+
+  window.forzarVentanaConf = function () {
+    if (!_idSesionActual) return;
+    var idx = parseInt(document.getElementById('mvc-select-override').value, 10);
+
+    fetch('/admin/sesion/' + _idSesionActual + '/forzar_ventana', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ _csrf_token: _csrfToken, ventana_idx: idx }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        _mostrarFeedback('mvc-feedback-override', data.ok
+          ? '⚡ Ventana ' + idx + ' activada. Los docentes tienen 3 minutos para confirmar.'
+          : '✕ ' + (data.error || 'Error.'), data.ok);
+      })
+      .catch(function () {
+        _mostrarFeedback('mvc-feedback-override', '✕ Error de conexión.', false);
+      });
+  };
+
+  function _mostrarFeedback(id, msg, ok) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'mvc-feedback ' + (ok ? 'ok' : 'err');
+  }
+
+  function _limpiarFeedback() {
+    ['mvc-feedback-save', 'mvc-feedback-override'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.className = 'mvc-feedback';
+    });
+  }
+
+  // Bind botones timer de la tabla de sesiones
+  document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-conf-ventanas');
+      if (!btn) return;
+      abrirModalVentanas(
+        btn.dataset.idSesion,
+        btn.dataset.fecha,
+        btn.dataset.horaInicio,
+        btn.dataset.horaFin
+      );
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var m = document.getElementById('modal-ventanas-conf');
+        if (m && m.classList.contains('active')) cerrarModalVentanas();
+      }
+    });
+  });
+})();
+</script>
+
+{% endblock %}

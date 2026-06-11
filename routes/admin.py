@@ -2073,3 +2073,121 @@ def register_admin_routes(app):
         )
         output.headers['Content-Disposition'] = f'attachment; filename={nombre_archivo}'
         return output
+
+    # ── Rutas: Sistema de Clicks de Atención (CONFERENCIA) ─────────────────
+
+    @app.route('/admin/sesion/<int:id_sesion>/ventanas', methods=['GET'])
+    @admin_requerido
+    def admin_get_ventanas(id_sesion):
+        """Obtiene la configuración actual de ventanas de una sesión de conferencia."""
+        from services.clicks_asistencia import get_config_ventanas
+        conn = get_db_connection()
+        try:
+            result = get_config_ventanas(conn, id_sesion)
+            status = 200 if result.get('ok') else result.get('status_code', 400)
+            return jsonify(result), status
+        finally:
+            conn.close()
+
+    @app.route('/admin/sesion/<int:id_sesion>/ventanas', methods=['POST'])
+    @admin_requerido
+    def admin_guardar_ventanas(id_sesion):
+        """Guarda la configuración de ventanas de atención (admin)."""
+        if not validar_csrf(request.form.get('_csrf_token') or (request.get_json(silent=True) or {}).get('_csrf_token')):
+            return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+
+        payload = request.get_json(silent=True) or {}
+        ventanas_raw = payload.get('ventanas') or request.form.getlist('ventanas[]')
+
+        try:
+            ventanas = [str(v).strip() for v in ventanas_raw if str(v).strip()]
+        except Exception:
+            return jsonify({'ok': False, 'error': 'Formato de ventanas inválido.'}), 400
+
+        # Verificar que el admin puede gestionar esta sesión
+        id_curso = _obtener_curso_de_sesion(id_sesion)
+        if not id_curso or not _admin_puede_gestionar_curso(id_curso):
+            return jsonify({'ok': False, 'error': 'Sin permiso para esta sesión.'}), 403
+
+        from services.clicks_asistencia import guardar_ventanas
+        conn = get_db_connection()
+        try:
+            result = guardar_ventanas(conn, id_sesion, ventanas)
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+        finally:
+            conn.close()
+
+    @app.route('/admin/sesion/<int:id_sesion>/forzar_ventana', methods=['POST'])
+    @admin_requerido
+    def admin_forzar_ventana(id_sesion):
+        """Admin fuerza una ventana activa por 3 minutos (override para casos especiales)."""
+        payload = request.get_json(silent=True) or {}
+        csrf = payload.get('_csrf_token') or request.form.get('_csrf_token')
+        if not validar_csrf(csrf):
+            return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+
+        ventana_idx_raw = payload.get('ventana_idx') or request.form.get('ventana_idx', '')
+        try:
+            ventana_idx = int(ventana_idx_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'ventana_idx inválido.'}), 400
+
+        id_curso = _obtener_curso_de_sesion(id_sesion)
+        if not id_curso or not _admin_puede_gestionar_curso(id_curso):
+            return jsonify({'ok': False, 'error': 'Sin permiso para esta sesión.'}), 403
+
+        from services.clicks_asistencia import forzar_ventana
+        conn = get_db_connection()
+        try:
+            result = forzar_ventana(conn, id_sesion, ventana_idx)
+            status = 200 if result.get('ok') else 400
+            return jsonify(result), status
+        finally:
+            conn.close()
+
+    @app.route('/admin/sesion/<int:id_sesion>/progreso_clicks', methods=['GET'])
+    @admin_requerido
+    def admin_progreso_clicks(id_sesion):
+        """Resumen del progreso de clics de todos los docentes en una sesión (vista admin)."""
+        id_curso = _obtener_curso_de_sesion(id_sesion)
+        if not id_curso or not _admin_puede_gestionar_curso(id_curso):
+            return jsonify({'ok': False, 'error': 'Sin permiso.'}), 403
+
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT
+                        ra.numero_empleado,
+                        d.nombre_completo,
+                        ra.ventanas_completadas,
+                        ra.aprobado_automatico,
+                        ra.fecha_marcado
+                    FROM registro_asistencia ra
+                    JOIN docentes d ON d.numero_empleado = ra.numero_empleado
+                    WHERE ra.id_sesion = %s AND ra.tipo_registro = 'CONFERENCIA'
+                    ORDER BY ra.aprobado_automatico DESC, array_length(ra.ventanas_completadas::jsonb::text::text[], 1) DESC NULLS LAST
+                    ''',
+                    (id_sesion,)
+                )
+                filas = cur.fetchall()
+
+            import json as _json
+            progreso = []
+            for f in filas:
+                vc = f['ventanas_completadas']
+                completadas = _json.loads(vc) if isinstance(vc, str) else (vc or [])
+                progreso.append({
+                    'numero_empleado': f['numero_empleado'],
+                    'nombre_completo': f['nombre_completo'],
+                    'ventanas_completadas': completadas,
+                    'total_completadas': len(completadas),
+                    'aprobado_automatico': bool(f['aprobado_automatico']),
+                    'fecha': str(f['fecha_marcado']),
+                })
+
+            return jsonify({'ok': True, 'progreso': progreso, 'total_docentes': len(progreso)})
+        finally:
+            conn.close()
