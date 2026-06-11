@@ -316,3 +316,79 @@ def register_portal_routes(app):
             return jsonify({'ok': False, 'error': str(e)}), 500
         finally:
             conn.close()
+
+    @app.route('/api/mis-certificados', methods=['GET'])
+    def api_mis_certificados():
+        docente = docente_activo_desde_sesion()
+        if not docente:
+            return jsonify({'ok': False, 'error': 'Sesión expirada. Inicia sesión nuevamente.'}), 401
+
+        numero_empleado = docente['numero_empleado']
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''
+                    SELECT
+                        m.id AS matricula_id,
+                        m.aprobado,
+                        ef.id AS edicion_id,
+                        ef.periodo,
+                        ef.fecha_inicio,
+                        ca.nombre AS nombre_accion,
+                        ca.tipo_accion,
+                        ca.modalidad,
+                        ca.id_plantilla_certificado,
+                        p.activo AS plantilla_activa,
+                        p.tipo_documento,
+                        ddir.ruta_firma_img,
+                        p.texto_certificado
+                    FROM matriculas m
+                    JOIN ediciones_formativas ef ON ef.id = m.edicion_id
+                    JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                    LEFT JOIN plantillas_certificados p ON p.id = ca.id_plantilla_certificado
+                    LEFT JOIN direcciones ddir ON ddir.codigo = p.direccion_codigo
+                    WHERE m.numero_empleado = %s AND m.aprobado = 1
+                    ORDER BY ef.fecha_inicio DESC, m.id DESC
+                    ''',
+                    (numero_empleado,),
+                )
+                filas = cur.fetchall()
+
+            certificados = []
+            for f in filas:
+                cert_disponible = bool(
+                    f['id_plantilla_certificado']
+                    and int(f['plantilla_activa'] or 0) == 1
+                    and (f['ruta_firma_img'] or '').strip()
+                    and (f['texto_certificado'] or '').strip()
+                )
+                fecha_str = ''
+                if f['fecha_inicio']:
+                    try:
+                        from datetime import datetime as _dt
+                        d = f['fecha_inicio']
+                        if hasattr(d, 'strftime'):
+                            fecha_str = d.strftime('%d/%m/%Y')
+                        else:
+                            fecha_str = str(d)[:10]
+                    except Exception:
+                        fecha_str = str(f['fecha_inicio'])[:10]
+
+                certificados.append({
+                    'matricula_id': f['matricula_id'],
+                    'edicion_id': f['edicion_id'],
+                    'nombre_accion': f['nombre_accion'] or 'Acción Formativa',
+                    'tipo_accion': (f['tipo_accion'] or 'CURSO').title(),
+                    'modalidad': f['modalidad'] or '',
+                    'periodo': f['periodo'] or '',
+                    'fecha_inicio': fecha_str,
+                    'tipo_documento': (f['tipo_documento'] or 'Certificado').title(),
+                    'cert_disponible': cert_disponible,
+                })
+
+            return jsonify({'ok': True, 'certificados': certificados, 'total': len(certificados)})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
