@@ -604,7 +604,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  document.querySelectorAll('.curso-modal-trigger').forEach(activarInteraccionCurso);
+  window.bindCursoModals = function() {
+    document.querySelectorAll('.curso-modal-trigger').forEach(function(el) {
+      if (!el.dataset.interaccionBound) {
+        el.dataset.interaccionBound = 'true';
+        activarInteraccionCurso(el);
+      }
+    });
+  };
+
+  window.bindCursoModals();
 })();
 
 

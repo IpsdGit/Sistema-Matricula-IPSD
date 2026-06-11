@@ -215,7 +215,6 @@
   [data-theme='dark'] .mcert-btn-locked {
     background: #1e293b; border-color: #334155; color: #475569;
   }
-</style>
 
   .portal-catalog-grid .choices__inner {
     border-radius: 0.5rem !important;
@@ -1328,6 +1327,7 @@
                 }
             }
             bindAjaxForms();
+            if (window.bindCursoModals) window.bindCursoModals();
         } catch (e) {
             console.error("Error bg update", e);
         }
