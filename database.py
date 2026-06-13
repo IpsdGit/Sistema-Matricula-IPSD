@@ -39,7 +39,7 @@ class PooledConnectionWrapper:
 def get_db_connection():
     global _pool
     database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-   # database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
+    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     if _pool is None:
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=2,
@@ -55,6 +55,9 @@ def asegurar_migraciones_minimas():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Bloqueo consultivo a nivel de transacción para evitar deadlocks con gunicorn (múltiples workers)
+        cursor.execute("SELECT pg_advisory_xact_lock(1001)")
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS admin_users (
