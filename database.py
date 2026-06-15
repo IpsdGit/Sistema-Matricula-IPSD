@@ -38,8 +38,8 @@ class PooledConnectionWrapper:
 
 def get_db_connection():
     global _pool
-    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
+    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     if _pool is None:
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=2,
@@ -134,6 +134,8 @@ def asegurar_migraciones_minimas():
             cursor.execute("ALTER TABLE docentes ADD COLUMN notificaciones_leidas TEXT NOT NULL DEFAULT '[]'")
         if 'facultad' not in columnas_docentes:
             cursor.execute("ALTER TABLE docentes ADD COLUMN facultad TEXT NOT NULL DEFAULT ''")
+        if 'departamento' not in columnas_docentes:
+            cursor.execute("ALTER TABLE docentes ADD COLUMN departamento TEXT NOT NULL DEFAULT ''")
 
         cursor.execute('''
             SELECT DISTINCT direccion

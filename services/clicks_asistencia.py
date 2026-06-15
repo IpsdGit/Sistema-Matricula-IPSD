@@ -17,7 +17,7 @@ import psycopg2
 from utils import registrar_evento_matricula
 
 # ── Constantes configurables ───────────────────────────────────────────────
-MINIMO_CLICKS = 4            # clics mínimos para aprobar
+# MINIMO_CLICKS = 4            # Eliminado: ahora se calcula dinámicamente según ventanas configuradas
 DURACION_VENTANA_SEG = 180   # 3 minutos de ventana por clic
 MAX_VENTANAS = 5             # máximo de ventanas configurables
 DURACION_CONFERENCIA_MIN = 120  # duración estándar de una conferencia
@@ -215,9 +215,12 @@ def registrar_clic(conn, id_sesion: int, numero_empleado: str, ventana_id: int) 
     if ventana_id in estado['ventanas_completadas']:
         return {'ok': False, 'error': 'Ya confirmaste esta ventana de atención.', 'status_code': 409}
 
+    total_ventanas_conf = estado.get('total_ventanas', 5)
+    minimo_clicks = max(1, total_ventanas_conf - 1) if total_ventanas_conf > 1 else 1
+
     nuevas_completadas = estado['ventanas_completadas'] + [ventana_id]
     total = len(nuevas_completadas)
-    aprobado_auto = total >= MINIMO_CLICKS
+    aprobado_auto = total >= minimo_clicks
 
     ahora = datetime.now()
     fecha_str = ahora.strftime('%Y-%m-%d')
@@ -243,7 +246,7 @@ def registrar_clic(conn, id_sesion: int, numero_empleado: str, ventana_id: int) 
             )
 
         if aprobado_auto:
-            _aprobar_matricula_automatica(conn, id_sesion, numero_empleado)
+            _aprobar_matricula_automatica(conn, id_sesion, numero_empleado, minimo_clicks)
 
         conn.commit()
         return {
@@ -358,7 +361,7 @@ def _estado_inactivo(motivo: str, ventanas_completadas=None, total_ventanas=0, a
     }
 
 
-def _aprobar_matricula_automatica(conn, id_sesion: int, numero_empleado: str):
+def _aprobar_matricula_automatica(conn, id_sesion: int, numero_empleado: str, minimo_clicks: int):
     """Busca la matrícula pendiente y la marca como aprobada."""
     with conn.cursor() as cur:
         cur.execute(
@@ -394,7 +397,7 @@ def _aprobar_matricula_automatica(conn, id_sesion: int, numero_empleado: str):
             (
                 ahora.strftime('%Y-%m-%d'),
                 'Aprobado automáticamente por control de atención en conferencia '
-                f'(≥{MINIMO_CLICKS}/{MAX_VENTANAS} ventanas respondidas)',
+                f'(≥{minimo_clicks} ventanas respondidas)',
                 matricula['id'],
             )
         )
@@ -407,7 +410,7 @@ def _aprobar_matricula_automatica(conn, id_sesion: int, numero_empleado: str):
         estado_codigo='APROBADA',
         matricula_id=matricula['id'],
         detalle=(
-            f'Aprobado automáticamente: completó ≥{MINIMO_CLICKS}/{MAX_VENTANAS} '
+            f'Aprobado automáticamente: completó ≥{minimo_clicks} '
             'ventanas de atención en conferencia'
         ),
     )

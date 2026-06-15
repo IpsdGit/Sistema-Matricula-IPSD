@@ -14,8 +14,8 @@ if PROJECT_ROOT not in sys.path:
 
 from database import get_db_connection
 
-#DEFAULT_EXCEL_PATH = r"C:\Users\Carlo\Desktop\Base de Prueba.xlsx"
-DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
+DEFAULT_EXCEL_PATH = r"C:\Users\Carlo\Desktop\Base de Prueba.xlsx"
+#DEFAULT_EXCEL_PATH = r"C:\Users\ipsd4\Desktop\Base de Prueba.xlsx"
 
 def normalizar_texto(valor):
     return str(valor or '').strip()
@@ -88,6 +88,11 @@ def resolver_columnas(headers):
             'facu',
             'fac',
         },
+        'departamento': {
+            'departamento',
+            'depto',
+            'dep',
+        },
     }
 
     indices = {}
@@ -151,6 +156,11 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             facultad = normalizar_texto(
                 row[indices['facultad']] if indices['facultad'] < len(row) else ''
             )
+        departamento = ''
+        if 'departamento' in indices:
+            departamento = normalizar_texto(
+                row[indices['departamento']] if indices['departamento'] < len(row) else ''
+            )
 
         if not numero_empleado or not nombre_completo or not correo_institucional:
             print(f"[ERROR VALIDACIÓN] Fila {total_filas + 1}: Faltan campos obligatorios. Empleado: '{numero_empleado}', Nombre: '{nombre_completo}', Correo: '{correo_institucional}'")
@@ -168,7 +178,7 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
             continue
 
         registros_validos.append(
-            (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad)
+            (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, departamento)
         )
 
     wb.close()
@@ -184,24 +194,25 @@ def sincronizar_docentes(excel_path, sheet_name=None, desactivar_ausentes=True):
         upserts_ok = 0
         conflictos = 0
 
-        for numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad in registros_validos:
+        for numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, departamento in registros_validos:
             try:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         '''
                         INSERT INTO docentes (
-                            numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, activo, fecha_sincronizacion
+                            numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, departamento, activo, fecha_sincronizacion
                         )
-                        VALUES (%s, %s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
+                        VALUES (%s, %s, %s, %s, %s, %s, 1, CURRENT_TIMESTAMP)
                         ON CONFLICT(numero_empleado) DO UPDATE SET
                             nombre_completo = EXCLUDED.nombre_completo,
                             correo_institucional = EXCLUDED.correo_institucional,
                             centro_universitario_regional = EXCLUDED.centro_universitario_regional,
                             facultad = EXCLUDED.facultad,
+                            departamento = EXCLUDED.departamento,
                             activo = 1,
                             fecha_sincronizacion = CURRENT_TIMESTAMP
                         ''',
-                        (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad),
+                        (numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional, facultad, departamento),
                     )
                 upserts_ok += 1
                 # Hacemos commit por cada registro exitoso para no perder el progreso si uno falla

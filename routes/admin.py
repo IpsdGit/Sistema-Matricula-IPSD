@@ -474,12 +474,13 @@ def register_admin_routes(app):
         calendario_filtro = request.args.get('calendario', '').strip()
         cur_filtro = request.args.get('cur', '').strip()
         facultad_filtro = request.args.get('facultad', '').strip()
+        departamento_filtro = request.args.get('departamento', '').strip()
         jerarquia = []
         historial = []
         
         if vista_solicitada == 'matriculas':
             from services.reportes_service import obtener_reporte_jerarquico, obtener_historial_reportes
-            res = obtener_reporte_jerarquico(anio_filtro, calendario_filtro, periodo_filtro, cur_filtro, facultad_filtro, admin_rol, session.get('admin_direccion', 'IPSD'))
+            res = obtener_reporte_jerarquico(anio_filtro, calendario_filtro, periodo_filtro, cur_filtro, facultad_filtro, departamento_filtro, admin_rol, session.get('admin_direccion', 'IPSD'))
             jerarquia = res.get('jerarquia', [])
             historial = obtener_historial_reportes()
             
@@ -512,16 +513,22 @@ def register_admin_routes(app):
                 cur_fac = conn_fac.cursor()
                 cur_fac.execute("SELECT DISTINCT TRIM(facultad) AS f FROM docentes WHERE facultad IS NOT NULL AND TRIM(facultad) <> '' ORDER BY f")
                 facultades = [r['f'] for r in cur_fac.fetchall()]
+                
+                cur_fac.execute("SELECT DISTINCT TRIM(departamento) AS d FROM docentes WHERE departamento IS NOT NULL AND TRIM(departamento) <> '' ORDER BY d")
+                departamentos = [r['d'] for r in cur_fac.fetchall()]
                 conn_fac.close()
             except Exception:
                 facultades = []
+                departamentos = []
             
             # Guardamos los filtros adicionales
             dashboard_payload['filtros']['calendario'] = calendario_filtro
             dashboard_payload['filtros']['cur'] = cur_filtro
             dashboard_payload['filtros']['facultad'] = facultad_filtro
+            dashboard_payload['filtros']['departamento'] = departamento_filtro
         else:
             facultades = []
+            departamentos = []
             top_acciones = []
             max_matriculados = 1
             matriculas_por_mes = [0] * 12
@@ -551,6 +558,7 @@ def register_admin_routes(app):
             jerarquia=jerarquia,
             historial=historial,
             facultades=facultades,
+            departamentos=departamentos,
             top_acciones=top_acciones,
             max_matriculados=max_matriculados,
             matriculas_por_mes=json.dumps(matriculas_por_mes),

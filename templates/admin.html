@@ -4792,24 +4792,7 @@
           </div>
 
           <!-- Charts Row -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <!-- Chart 1: Bar Chart -->
-            <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-              <h3 class="font-bold text-lg text-primary mb-6 flex items-center gap-2">
-                <span class="material-symbols-outlined">bar_chart</span>
-                Acciones Formativas con Mayor Matrícula
-              </h3>
-              <div class="flex-grow flex flex-col justify-center relative w-full h-full min-h-[250px]">
-                {% if top_acciones|default([]) %}
-                <canvas id="chartTopAcciones"></canvas>
-                {% else %}
-                <div class="text-center text-on-surface-variant p-4 italic flex flex-col items-center justify-center h-full">
-                  <span class="material-symbols-outlined text-4xl mb-2 opacity-50">analytics</span>
-                  No hay datos suficientes para graficar.
-                </div>
-                {% endif %}
-              </div>
-            </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             
             <!-- Chart 2: Line Chart -->
             <div class="organic-card bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
@@ -4866,71 +4849,6 @@
             document.addEventListener('DOMContentLoaded', function() {
               
               Chart.defaults.font.family = "'Manrope', sans-serif";
-
-              // 1. Gráfico de Barras Horizontal (Top Acciones)
-              const ctxTop = document.getElementById('chartTopAcciones');
-              if (ctxTop) {
-                  const barLabels = JSON.parse(document.getElementById('barLabelsJson').textContent || '[]');
-                  const barData = JSON.parse(document.getElementById('barDataJson').textContent || '[]');
-                  
-                  const gradientBar = ctxTop.getContext('2d').createLinearGradient(0, 0, 400, 0);
-                  gradientBar.addColorStop(0, '#002b5c');
-                  gradientBar.addColorStop(1, '#4395f3'); 
-
-                  new Chart(ctxTop, {
-                      type: 'bar',
-                      data: {
-                          labels: barLabels,
-                          datasets: [{
-                              label: 'Matriculados',
-                              data: barData,
-                              backgroundColor: gradientBar,
-                              borderRadius: 6,
-                              maxBarThickness: 32,
-                              borderSkipped: false
-                          }]
-                      },
-                      options: {
-                          indexAxis: 'y', 
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                              legend: { display: false },
-                              tooltip: {
-                                  backgroundColor: '#001736',
-                                  padding: 12,
-                                  titleFont: { size: 13 },
-                                  bodyFont: { size: 14, weight: 'bold' },
-                                  displayColors: false,
-                                  callbacks: {
-                                      label: function(context) { return context.parsed.x + ' estudiantes matriculados'; }
-                                  }
-                              }
-                          },
-                          scales: {
-                              x: {
-                                  grid: { display: false, drawBorder: false },
-                                  ticks: { display: false }, 
-                                  border: { display: false },
-                                  beginAtZero: true
-                              },
-                              y: {
-                                  grid: { display: false, drawBorder: false },
-                                  border: { display: false },
-                                  ticks: { 
-                                      color: '#43474f',
-                                      font: { weight: '600' },
-                                      callback: function(value) {
-                                          let label = this.getLabelForValue(value);
-                                          return label.length > 45 ? label.substr(0, 45) + '...' : label;
-                                      }
-                                  }
-                              }
-                          },
-                          interaction: { mode: 'index', intersect: false },
-                      }
-                  });
-              }
 
               // 2. Gráfico de Línea (Evolución Mensual)
               const ctxEvolucion = document.getElementById('chartEvolucionMatriculas');
@@ -5068,7 +4986,7 @@
             <h3 class="font-bold text-lg mb-4 text-on-surface flex items-center gap-2">
               <span class="material-symbols-outlined">filter_list</span> Filtros de Extracción
             </h3>
-            <form action="/admin" method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <form action="/admin" method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
               <input type="hidden" name="view" value="matriculas">
               <div>
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">Año</label>
@@ -5121,7 +5039,16 @@
                   {% endfor %}
                 </select>
               </div>
-              <div class="md:col-span-5 flex justify-end gap-3 mt-4 border-t border-outline-variant/20 pt-4">
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Departamento</label>
+                <select id="rpt-departamento" name="departamento">
+                  <option value="">Todos</option>
+                  {% for dep in departamentos %}
+                  <option value="{{ dep }}" {% if filtros.departamento==dep %}selected{% endif %}>{{ dep }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="md:col-span-6 flex justify-end gap-3 mt-4 border-t border-outline-variant/20 pt-4">
                 <a href="/admin?view=matriculas"
                   class="px-5 py-2.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest border border-transparent transition-colors text-sm font-semibold text-on-surface flex items-center gap-2 no-underline">
                   <span class="material-symbols-outlined text-[18px]">clear_all</span> Limpiar
@@ -5136,6 +5063,66 @@
                 </a>
               </div>
             </form>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const calSelect = document.getElementById('rpt-calendario');
+                const perSelect = document.getElementById('rpt-periodo');
+                if (!calSelect || !perSelect) return;
+
+                const opcionesOriginales = Array.from(perSelect.options).map(o => ({
+                  value: o.value,
+                  label: o.text,
+                  selected: o.selected
+                }));
+
+                function sincronizarPeriodo() {
+                  const cal = calSelect.value;
+                  let currVal = perSelect.value;
+                  let found = false;
+                  let newOptions = [];
+
+                  opcionesOriginales.forEach(opt => {
+                    let isMatch = false;
+                    if (opt.value === '') {
+                      isMatch = true;
+                    } else if (cal === 'Trimestral' && opt.value.includes('PAC')) {
+                      isMatch = true;
+                    } else if (cal === 'Semestral' && opt.value.includes('Semestre')) {
+                      isMatch = true;
+                    } else if (cal === '') {
+                      isMatch = true;
+                    }
+
+                    if (isMatch) {
+                      if (currVal === opt.value) found = true;
+                      newOptions.push({
+                        value: opt.value,
+                        label: opt.label,
+                        selected: currVal === opt.value
+                      });
+                    }
+                  });
+
+                  if (!found && newOptions.length > 0) {
+                     newOptions[0].selected = true;
+                  }
+
+                  if (perSelect.choicesInstance) {
+                    perSelect.choicesInstance.setChoices(newOptions, 'value', 'label', true);
+                  } else {
+                    perSelect.innerHTML = '';
+                    newOptions.forEach(opt => {
+                       let el = new Option(opt.label, opt.value);
+                       if (opt.selected) el.selected = true;
+                       perSelect.appendChild(el);
+                    });
+                  }
+                }
+
+                calSelect.addEventListener('change', sincronizarPeriodo);
+                setTimeout(sincronizarPeriodo, 200);
+              });
+            </script>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -8723,7 +8710,7 @@
 
       // Init Choices.js para los filtros de Reportes
       setTimeout(function () {
-        ['rpt-anio', 'rpt-calendario', 'rpt-periodo', 'rpt-cur', 'rpt-facultad'].forEach(function (id) {
+        ['rpt-anio', 'rpt-calendario', 'rpt-periodo', 'rpt-cur', 'rpt-facultad', 'rpt-departamento'].forEach(function (id) {
           var el = document.getElementById(id);
           if (el) initChoices(el);
         });
@@ -9774,13 +9761,21 @@
     var container = document.getElementById('mvc-ventanas-form');
     container.innerHTML = '';
     for (var i = 0; i < NUM_VENTANAS; i++) {
-      var val = ventanas[i] !== undefined ? ventanas[i] : DEFAULTS[i];
+      var val = ventanas[i] !== undefined ? ventanas[i] : '';
+      var isChecked = (ventanas === DEFAULTS) ? true : (val !== '');
       var row = document.createElement('div');
       row.className = 'mvc-ventana-row';
       row.innerHTML =
         '<div class="mvc-ventana-num">' + (i + 1) + '</div>' +
-        '<input type="time" class="mvc-ventana-input flatpickr-time" id="mvc-v' + i + '" ' +
-        'value="' + val + '" placeholder="HH:MM" required>';
+        '<div style="flex:1; display:flex; gap:12px; align-items:center;">' +
+          '<input type="time" class="mvc-ventana-input flatpickr-time" id="mvc-v' + i + '" ' +
+          'value="' + val + '" placeholder="HH:MM" ' + (isChecked ? 'required' : 'disabled') + ' style="flex:1;">' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:#4b5563; cursor:pointer;">' +
+            '<input type="checkbox" id="mvc-v-chk' + i + '" ' + (isChecked ? 'checked' : '') + 
+            ' onchange="var inp = document.getElementById(\'mvc-v\' + ' + i + '); inp.disabled = !this.checked; if(!this.checked) inp.value = \'\';">' +
+            ' Activa' +
+          '</label>' +
+        '</div>';
       container.appendChild(row);
     }
     
@@ -9800,7 +9795,10 @@
     var ventanas = [];
     for (var i = 0; i < NUM_VENTANAS; i++) {
       var el = document.getElementById('mvc-v' + i);
-      if (el && el.value) ventanas.push(el.value);
+      var chk = document.getElementById('mvc-v-chk' + i);
+      if (chk && chk.checked && el && el.value) {
+        ventanas.push(el.value);
+      }
     }
 
     var btn = document.getElementById('mvc-btn-guardar');

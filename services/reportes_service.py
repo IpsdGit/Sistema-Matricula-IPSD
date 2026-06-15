@@ -5,7 +5,7 @@ from datetime import datetime
 from database import get_db_connection
 import psycopg2
 
-def obtener_reporte_jerarquico(anio=None, calendario=None, periodo=None, centro_regional=None, facultad=None, admin_rol='admin', admin_direccion='IPSD'):
+def obtener_reporte_jerarquico(anio=None, calendario=None, periodo=None, centro_regional=None, facultad=None, departamento=None, admin_rol='admin', admin_direccion='IPSD'):
     try:
         conn = get_db_connection()
         
@@ -39,6 +39,9 @@ def obtener_reporte_jerarquico(anio=None, calendario=None, periodo=None, centro_
         if facultad:
             where_matricula += " AND d.facultad ILIKE %s"
             params.append(f'%{facultad}%')
+        if departamento:
+            where_matricula += " AND d.departamento ILIKE %s"
+            params.append(f'%{departamento}%')
 
         # Consulta unificada
         query = f'''
@@ -46,7 +49,7 @@ def obtener_reporte_jerarquico(anio=None, calendario=None, periodo=None, centro_
                 ca.id as catalogo_id, ca.nombre as accion_nombre, ca.tipo_accion,
                 ef.id as edicion_id, ef.calendario_academico, ef.periodo, ef.fecha_inicio,
                 m.id as matricula_id, m.aprobado,
-                d.numero_empleado, d.nombre_completo, d.correo_institucional, d.centro_universitario_regional, d.facultad
+                d.numero_empleado, d.nombre_completo, d.correo_institucional, d.centro_universitario_regional, d.facultad, d.departamento
             FROM catalogo_acciones ca
             JOIN ediciones_formativas ef ON ca.id = ef.catalogo_id
             LEFT JOIN matriculas m ON ef.id = m.edicion_id
@@ -97,6 +100,7 @@ def obtener_reporte_jerarquico(anio=None, calendario=None, periodo=None, centro_
                     'correo_institucional': row[11] if isinstance(row, tuple) else row['correo_institucional'],
                     'centro_regional': row[12] if isinstance(row, tuple) else row['centro_universitario_regional'],
                     'facultad': row[13] if isinstance(row, tuple) else row['facultad'],
+                    'departamento': row[14] if isinstance(row, tuple) else row['departamento'],
                 }
                 jerarquia[cat_id]['ediciones'][ed_id]['matriculados'].append(mat_obj)
                 jerarquia[cat_id]['total_matriculados'] += 1
@@ -122,7 +126,7 @@ def generar_excel_y_registrar(filas_planas, titulo_reporte, admin_id, admin_user
                     'ID Edición': r[3], 'Calendario': r[4], 'Período': r[5], 'Fecha Inicio': r[6],
                     'Matrícula ID': r[7], 'Resultado': 'Aprobado' if r[8]==1 else 'Reprobado' if r[8]==0 else 'Abandonó' if r[8]==2 else 'Pendiente',
                     'Nº Empleado': r[9], 'Nombre Completo': r[10], 'Correo': r[11], 
-                    'Centro Regional': r[12], 'Facultad': r[13]
+                    'Centro Regional': r[12], 'Facultad': r[13], 'Departamento': r[14]
                  })
             else:
                  data.append({
@@ -130,7 +134,7 @@ def generar_excel_y_registrar(filas_planas, titulo_reporte, admin_id, admin_user
                     'ID Edición': r['edicion_id'], 'Calendario': r['calendario_academico'], 'Período': r['periodo'], 'Fecha Inicio': r['fecha_inicio'],
                     'Matrícula ID': r['matricula_id'], 'Resultado': 'Aprobado' if r['aprobado']==1 else 'Reprobado' if r['aprobado']==0 else 'Abandonó' if r['aprobado']==2 else 'Pendiente',
                     'Nº Empleado': r['numero_empleado'], 'Nombre Completo': r['nombre_completo'], 'Correo': r['correo_institucional'], 
-                    'Centro Regional': r['centro_universitario_regional'], 'Facultad': r['facultad']
+                    'Centro Regional': r['centro_universitario_regional'], 'Facultad': r['facultad'], 'Departamento': r['departamento']
                  })
                  
         df = pd.DataFrame(data)

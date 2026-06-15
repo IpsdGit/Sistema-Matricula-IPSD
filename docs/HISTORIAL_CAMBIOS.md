@@ -5471,3 +5471,29 @@ Inicio: Lunes, 22 de Abril de 2026
 **Última actualización**: Junio 11, 2026
 **Versión actual**: 1.28.0 (Sistema de Control de Atención Activa para Conferencias)
 **Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos probados y verificados.
+
+---
+
+### Cambio 28.3: Flexibilidad en Control de Atención y Filtros Dinámicos
+**Fecha**: Junio 14, 2026
+**Archivos afectados**: `templates/admin.html`, `services/clicks_asistencia.py`, `scripts/sync_docentes_excel.py`, `database.py`, `routes/admin.py`, `services/reportes_service.py`
+
+**QUÉ**:
+- Configuración dinámica del número de ventanas en Conferencias: Ahora es posible desactivar ventanas individuales (menos de 5) usando un checkbox visual (toggle). El requisito de clics mínimos para aprobar automáticamente se ajusta matemáticamente (`ventanas_activas - 1`) en lugar de ser fijo (4).
+- Carga de la columna `departamento` en la base de datos a partir del Excel `sync_docentes_excel.py`.
+- Integración de nuevo filtro "Departamento" en el Panel de Extracción de Reportes.
+- Corrección de sincronización de dropdowns `Choices.js`: Las opciones "Periodo" se filtran correctamente en vivo usando la API `.setChoices()` en lugar de manipulación directa del DOM, garantizando que "Trimestral" solo muestre los PAC y "Semestral" muestre los semestres.
+
+**POR QUÉ**:
+- Flexibilidad para el coordinador: No todas las conferencias necesitan 5 clics forzosos; se requería una vía fácil para reducir la cantidad sin reprogramar la plataforma.
+- Escalabilidad de reportes: Faltaba registrar y filtrar a los docentes por el "Departamento", lo cual es clave para el área administrativa.
+- Usabilidad: Los filtros dinámicos entre "Calendario Académico" y "Período" presentaban conflictos con la librería Choices.js, mostrando opciones inconsistentes.
+
+**PARA QUÉ**:
+- Brindar una interfaz más configurable al administrador sin comprometer las reglas de negocio de aprobación automática y expandir el detalle de los reportes extraídos.
+
+---
+
+**Última actualización**: Junio 14, 2026
+**Versión actual**: 1.28.1 (Mejoras en Filtros y Flexibilidad en Conferencias)
+**Estado**: Listo para despliegue en servidor de desarrollo y producción. Todos los flujos probados y verificados.

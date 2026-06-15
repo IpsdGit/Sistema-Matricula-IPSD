@@ -75,7 +75,12 @@ def generar_qr_base64(url_validacion: str) -> str:
 
         img = qr.make_image(fill_color='black', back_color='white')
         buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
+        try:
+            # Silenciamos la advertencia estricta del linter sobre 'format'
+            img.save(buffer, format='PNG')  # type: ignore
+        except TypeError:
+            # Fallback para qrcode.image.pure.PyPNGImage que no acepta 'format'
+            img.save(buffer)
 
         img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
         return f"data:image/png;base64,{img_str}"
