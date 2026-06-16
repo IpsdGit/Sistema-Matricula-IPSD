@@ -2314,7 +2314,7 @@ def register_admin_routes(app):
                     SELECT 
                         e.id, 
                         c.nombre as curso_nombre,
-                        e.modalidad,
+                        c.modalidad,
                         e.fecha_inicio,
                         e.jornada,
                         e.enlace_acceso,
