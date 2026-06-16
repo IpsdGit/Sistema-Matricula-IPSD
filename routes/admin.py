@@ -2225,7 +2225,16 @@ def register_admin_routes(app):
             from services.email_service import enviar_mensaje_docente
 
             # Obtener datos de la edición para resolver tags
-            contexto_edicion_base = {}
+            contexto_edicion_base = {
+                '{{nombre_accion}}': '[Nombre de la Acción]',
+                '{{modalidad}}': '[Modalidad]',
+                '{{duracion_horas}}': '[Horas]',
+                '{{fecha_inicio}}': '[Fecha Inicio]',
+                '{{fecha_fin}}': '[Fecha Fin]',
+                '{{periodo}}': '[Periodo]',
+                '{{enlace_acceso}}': '[Enlace]',
+                '{{direccion}}': 'IPSD – UNAH',
+            }
             if edicion_id:
                 with conn.cursor() as cur:
                     cur.execute("""
@@ -2274,11 +2283,16 @@ def register_admin_routes(app):
                     if es_bienvenida:
                         cur.execute('UPDATE ediciones_formativas SET mensaje_bienvenida = %s WHERE id = %s', (mensaje, edicion_id))
                 else:
-                    cur.execute('SELECT numero_empleado, correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
-                    docente = cur.fetchone()
-                    if not docente:
-                        return jsonify({'ok': False, 'error': 'Docente no encontrado.'}), 404
-                    destinatarios = [docente]
+                    numeros = [n.strip() for n in numero_empleado.replace(',', ' ').split() if n.strip()]
+                    if not numeros:
+                        return jsonify({'ok': False, 'error': 'No se proporcionaron números de empleado válidos.'}), 400
+                    
+                    # Para evitar "docente no encontrado" y bloquear a todos, filtramos los que sí existen
+                    placeholders = ','.join(['%s'] * len(numeros))
+                    cur.execute(f'SELECT numero_empleado, correo_institucional, nombre_completo FROM docentes WHERE numero_empleado IN ({placeholders}) AND activo = 1', tuple(numeros))
+                    destinatarios = cur.fetchall()
+                    if not destinatarios:
+                        return jsonify({'ok': False, 'error': 'Ningún docente encontrado con los números proporcionados.'}), 404
 
                 enviados_correctamente = 0
                 for dest in destinatarios:

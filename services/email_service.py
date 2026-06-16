@@ -69,8 +69,11 @@ def construir_plantilla_html(nombre_docente, asunto, cuerpo_mensaje):
     El cuerpo_mensaje ya tiene los tags resueltos.
     """
     año_actual = date.today().year
-    # Convertir saltos de línea a <br> y envolver en párrafos si hay bloques
+    import re
+    # Convertir saltos de línea a <br>
     cuerpo_html = cuerpo_mensaje.replace(chr(10), '<br>')
+    # Convertir URLs en enlaces clickeables si no lo son ya
+    cuerpo_html = re.sub(r'(?<!href=")(https?://[^\s<]+)', r'<a href="\1" style="color:#0052cc;text-decoration:underline;">\1</a>', cuerpo_html)
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -89,10 +92,10 @@ def construir_plantilla_html(nombre_docente, asunto, cuerpo_mensaje):
 
           <!-- Header institucional -->
           <tr>
-            <td style="background:linear-gradient(135deg,#003087 0%,#0052cc 60%,#0066ff 100%);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+            <td style="background-color:#003087;background:linear-gradient(135deg,#003087 0%,#0052cc 60%,#0066ff 100%);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
               <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:600;">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</p>
-              <h1 style="margin:8px 0 4px;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Sistema de Acciones Formativas</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.8);font-size:13px;">Instituto de Profesionalización y Superación Docente</p>
+              <h1 style="margin:8px 0 4px;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Portal de Acciones Formativas UNAH</h1>
+              <p style="margin:0;color:rgba(255,255,255,0.8);font-size:13px;">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</p>
               <div style="margin-top:16px;display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:6px 18px;">
                 <p style="margin:0;color:#ffffff;font-size:12px;font-weight:500;">✉ {asunto}</p>
               </div>
@@ -120,7 +123,7 @@ def construir_plantilla_html(nombre_docente, asunto, cuerpo_mensaje):
               </p>
               <div style="text-align:center;margin-bottom:8px;">
                 <a href="https://portaldeaccionesformativasunah.duckdns.org"
-                   style="display:inline-block;background:linear-gradient(135deg,#003087,#0052cc);color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:50px;letter-spacing:0.3px;">
+                   style="display:inline-block;background-color:#0052cc;background:linear-gradient(135deg,#003087,#0052cc);color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:50px;letter-spacing:0.3px;">
                   Ingresar al Portal Docente →
                 </a>
               </div>
@@ -130,9 +133,9 @@ def construir_plantilla_html(nombre_docente, asunto, cuerpo_mensaje):
 
           <!-- Footer -->
           <tr>
-            <td style="background:#1e3a5f;border-radius:0 0 16px 16px;padding:20px 40px;text-align:center;">
+            <td style="background-color:#1e3a5f;background:#1e3a5f;border-radius:0 0 16px 16px;padding:20px 40px;text-align:center;">
               <p style="margin:0 0 4px;color:rgba(255,255,255,0.9);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
-                UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS
+                UNAH
               </p>
               <p style="margin:0;color:rgba(255,255,255,0.5);font-size:11px;">
                 © {año_actual} · Este es un mensaje automático, por favor no respondas a este correo.
