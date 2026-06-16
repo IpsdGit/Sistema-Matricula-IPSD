@@ -38,8 +38,8 @@ class PooledConnectionWrapper:
 
 def get_db_connection():
     global _pool
-    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
-    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:Postgre202625@localhost:5434/sistema_unah')
+    #database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:PGS2025.@localhost:5435/sistema_unah')
     if _pool is None:
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=2,
@@ -235,6 +235,8 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE ediciones_formativas ADD COLUMN periodo TEXT')
         if 'trimestre' in columnas_ediciones:
             cursor.execute('ALTER TABLE ediciones_formativas DROP COLUMN trimestre')
+        if 'mensaje_bienvenida' not in columnas_ediciones:
+            cursor.execute("ALTER TABLE ediciones_formativas ADD COLUMN mensaje_bienvenida TEXT DEFAULT ''")
 
         cursor.execute("UPDATE ediciones_formativas SET estado = 'Programado' WHERE estado = 'Programada'")
 
@@ -283,6 +285,21 @@ def asegurar_migraciones_minimas():
             cursor.execute('ALTER TABLE matriculas ADD COLUMN fecha_aprobacion TEXT')
         if 'comentario_validacion' not in columnas_matriculas:
             cursor.execute('ALTER TABLE matriculas ADD COLUMN comentario_validacion TEXT')
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS mensajes_personalizados (
+                id SERIAL PRIMARY KEY,
+                numero_empleado TEXT NOT NULL,
+                asunto TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                leido BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado) ON DELETE CASCADE
+            )
+            '''
+        )
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_mensajes_docente ON mensajes_personalizados (numero_empleado)')
 
         cursor.execute(
             '''

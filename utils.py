@@ -684,6 +684,7 @@ def construir_notificaciones_docente(
     cursos_matriculados,
     avisos_oportunidades,
     historial_todas,
+    mensajes_bd=None,
     ids_notificaciones_leidas=None,
 ):
     notificaciones = []
@@ -856,6 +857,26 @@ def construir_notificaciones_docente(
             clave=f"opp-{aviso['curso']}-{aviso['bloqueado']}",
         )
 
+    if mensajes_bd:
+        for msg in mensajes_bd:
+            fecha_val = msg['fecha_envio']
+            if hasattr(fecha_val, 'strftime'):
+                fecha_msg = fecha_val.strftime('%Y-%m-%d %H:%M')
+            else:
+                fecha_msg = (fecha_val or '').strip()[:16] if fecha_val else 'Reciente'
+
+            agregar(
+                tipo='mensaje',
+                titulo=msg['asunto'],
+                mensaje=msg['mensaje'],
+                nivel='info',
+                icono='✉️',
+                fecha=fecha_msg,
+                clave=f"msg-pers-{msg['id']}",
+                accion_url='#',
+                accion_label='Leer Mensaje',
+            )
+
     return notificaciones[:18]
 
 
@@ -870,6 +891,7 @@ def filtrar_notificaciones(notificaciones, filtro_notificacion):
         'resultados': {'resultado'},
         'oportunidades': {'oportunidades'},
         'certificados': {'certificado'},
+        'mensajes': {'mensaje'},
     }
     tipos = mapa_tipo.get(filtro_notificacion, set())
     return [n for n in notificaciones if n['tipo'] in tipos]
@@ -1051,11 +1073,26 @@ def construir_contexto_dashboard(
     else:
         historial_acciones = [h for h in historial_todas if h['estado_categoria'] == filtro_historial]
 
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                '''
+                SELECT id, asunto, mensaje, fecha_envio, leido 
+                FROM mensajes_personalizados 
+                WHERE numero_empleado = %s 
+                ORDER BY fecha_envio DESC
+                ''', (numero_empleado,)
+            )
+            mensajes_bd = cur.fetchall()
+    except Exception:
+        mensajes_bd = []
+
     notificaciones = construir_notificaciones_docente(
         cursos_disponibles,
         cursos_matriculados,
         avisos_oportunidades,
         historial_todas,
+        mensajes_bd=mensajes_bd,
         ids_notificaciones_leidas=ids_notificaciones_leidas,
     )
     notificaciones_filtradas = filtrar_notificaciones(notificaciones, filtro_notificacion)

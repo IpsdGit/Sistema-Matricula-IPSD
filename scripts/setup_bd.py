@@ -103,6 +103,7 @@ def inicializar_bd():
             duracion_horas INTEGER,       
             privacidad TEXT DEFAULT 'Abierta',
             estado TEXT DEFAULT 'En Edicion',
+            mensaje_bienvenida TEXT DEFAULT '',
             FOREIGN KEY (catalogo_id) REFERENCES catalogo_acciones (id) ON DELETE CASCADE
         )
     ''')
@@ -139,6 +140,19 @@ def inicializar_bd():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion ON matriculas (edicion_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_numero ON matriculas (numero_empleado)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_matriculas_edicion_empleado ON matriculas (edicion_id, numero_empleado)')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS mensajes_personalizados (
+            id SERIAL PRIMARY KEY,
+            numero_empleado TEXT NOT NULL,
+            asunto TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            leido BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY(numero_empleado) REFERENCES docentes(numero_empleado) ON DELETE CASCADE
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_mensajes_docente ON mensajes_personalizados (numero_empleado)')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sesiones_curso (

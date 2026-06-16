@@ -1046,6 +1046,7 @@ def register_admin_routes(app):
             'ok': True,
             'sesiones_creadas': sesiones_creadas_total,
             'ediciones_creadas': ediciones_creadas,
+            'ediciones_creadas_ids': ediciones_creadas_ids,
             'redirect_url': redirect_url,
         }
         if es_ajax:
@@ -2199,3 +2200,101 @@ def register_admin_routes(app):
             return jsonify({'ok': True, 'progreso': progreso, 'total_docentes': len(progreso)})
         finally:
             conn.close()
+
+    @app.route('/admin/enviar_mensaje', methods=['POST'])
+    @admin_requerido
+    def admin_enviar_mensaje():
+        token = request.form.get('_csrf_token') or request.form.get('csrf_token')
+        if not validar_csrf(token):
+            return jsonify({'ok': False, 'error': 'Token de seguridad inválido.'}), 403
+
+        numero_empleado = request.form.get('numero_empleado', '').strip()
+        edicion_id = request.form.get('edicion_id', '').strip()
+        asunto = request.form.get('asunto', '').strip()
+        mensaje = request.form.get('mensaje', '').strip()
+
+        if not asunto or not mensaje:
+            return jsonify({'ok': False, 'error': 'El asunto y el mensaje son obligatorios.'}), 400
+        
+        if not numero_empleado and not edicion_id:
+            return jsonify({'ok': False, 'error': 'Debe especificar un empleado o una edición.'}), 400
+
+        try:
+            conn = get_db_connection()
+            from services.email_service import enviar_mensaje_docente
+            
+            with conn.cursor() as cur:
+                destinatarios = []
+                if edicion_id:
+                    cur.execute('''
+                        SELECT d.numero_empleado, d.correo_institucional, d.nombre_completo 
+                        FROM matriculas m
+                        JOIN docentes d ON m.numero_empleado = d.numero_empleado
+                        WHERE m.edicion_id = %s
+                    ''', (edicion_id,))
+                    destinatarios = cur.fetchall()
+                    if not destinatarios:
+                        return jsonify({'ok': False, 'error': 'No hay docentes matriculados en esta edición.'}), 404
+                else:
+                    cur.execute('SELECT numero_empleado, correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
+                    docente = cur.fetchone()
+                    if not docente:
+                        return jsonify({'ok': False, 'error': 'Docente no encontrado.'}), 404
+                    destinatarios = [docente]
+
+                enviados_correctamente = 0
+                for dest in destinatarios:
+                    correo_docente = dest['correo_institucional']
+                    nombre_docente = dest['nombre_completo']
+                    num_emp = dest['numero_empleado']
+                    
+                    cur.execute(
+                        '''
+                        INSERT INTO mensajes_personalizados (numero_empleado, asunto, mensaje) 
+                        VALUES (%s, %s, %s)
+                        ''', (num_emp, asunto, mensaje)
+                    )
+                    
+                    if enviar_mensaje_docente(correo_docente, nombre_docente, asunto, mensaje):
+                        enviados_correctamente += 1
+            
+            conn.commit()
+            
+            if edicion_id:
+                return jsonify({'ok': True, 'mensaje': f'Mensaje enviado a {len(destinatarios)} participante(s).'})
+            else:
+                if enviados_correctamente > 0:
+                    return jsonify({'ok': True, 'mensaje': 'Mensaje enviado y notificado correctamente.'})
+                else:
+                    return jsonify({'ok': True, 'mensaje': 'Notificación guardada, pero el correo no pudo ser enviado (revisar configuración o logs).'})
+        except Exception as e:
+            if 'conn' in locals() and conn:
+                conn.rollback()
+            return jsonify({'ok': False, 'error': f'Error interno: {e}'}), 500
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()
+
+    @app.route('/admin/api/ediciones_activas', methods=['GET'])
+    @admin_requerido
+    def api_ediciones_activas():
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT 
+                        e.id, 
+                        c.nombre as curso_nombre,
+                        (SELECT COUNT(*) FROM matriculas m WHERE m.edicion_id = e.id AND m.aprobado IS NULL) as total_matriculados
+                    FROM ediciones_formativas e
+                    JOIN catalogo_acciones c ON e.catalogo_id = c.id
+                    WHERE e.estado != 'Cerrado'
+                    ORDER BY e.fecha_inicio DESC
+                """)
+                ediciones = cur.fetchall()
+            return jsonify({'ok': True, 'ediciones': [dict(ed) for ed in ediciones]})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()

@@ -1177,6 +1177,7 @@ def crear_edicion_formativa(
     requisitos='',
     duracion_horas=None,
     calendario_academico=None,
+    mensaje_bienvenida=''
 ):
     catalogo_id_limpio = (catalogo_id or '').strip().upper()
     if not catalogo_id_limpio:
@@ -1191,8 +1192,8 @@ def crear_edicion_formativa(
                 INSERT INTO ediciones_formativas
                 (id, catalogo_id, etiqueta_edicion, periodo, fecha_inicio, fecha_limite_matricula, jornada,
                  hora, cupos_maximos, enlace_acceso, docente_responsable, persona_apoyo, privacidad, estado,
-                 requisitos, duracion_horas, calendario_academico)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 requisitos, duracion_horas, calendario_academico, mensaje_bienvenida)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''',
                 (
                     edicion_id,
@@ -1212,6 +1213,7 @@ def crear_edicion_formativa(
                     requisitos or '',
                     duracion_horas,
                     calendario_academico,
+                    mensaje_bienvenida or '',
                 ),
             )
         conn.commit()

@@ -1682,11 +1682,11 @@
 
       <!-- Actions -->
       <div class="hidden lg:flex items-center gap-2 pr-1">
-        <a href="/exportar?anio={{ filtros.anio or '' }}&periodo={{ filtros.periodo or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
+        <button type="button" onclick="abrirModalMensaje()"
           class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
-          title="Exportar CSV" style="text-decoration:none;">
-          <span class="material-symbols-outlined text-[20px]">download</span>
-        </a>
+          title="Enviar Mensaje" style="border:none; cursor:pointer; background:transparent;">
+          <span class="material-symbols-outlined text-[20px]">mail</span>
+        </button>
         <button type="button"
           class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
           id="theme-toggle" data-theme-toggle-btn aria-label="Cambiar tema"
@@ -1714,6 +1714,8 @@
               Ver
               asistencias</a>
             {% endif %}
+            <a href="#" onclick="abrirModalMensaje()"><span class="material-symbols-outlined"
+                style="vertical-align: middle; font-size: inherit;">mail</span> Enviar Mensaje</a>
             <a href="/logout_admin"><span class="material-symbols-outlined"
                 style="vertical-align: middle; font-size: inherit;">logout</span> Cerrar sesión</a>
           </div>
@@ -1761,11 +1763,11 @@
         {% endif %}
       </div>
       <div class="flex items-center gap-2 px-2">
-        <a href="/exportar?anio={{ filtros.anio or '' }}&periodo={{ filtros.periodo or '' }}&mes={{ filtros.mes or '' }}&resultado={{ filtros.resultado or '' }}"
+        <button type="button" onclick="abrirModalMensaje()"
           class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
-          title="Exportar CSV" style="text-decoration:none;">
-          <span class="material-symbols-outlined text-[20px]">download</span>
-        </a>
+          title="Enviar Mensaje" style="border:none; cursor:pointer; background:transparent;">
+          <span class="material-symbols-outlined text-[20px]">mail</span>
+        </button>
         <button type="button"
           class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 transition-colors rounded-full relative flex items-center justify-center"
           data-theme-toggle-btn aria-label="Cambiar tema" style="border:none; cursor:pointer; background:transparent;">
@@ -1787,6 +1789,11 @@
           <span class="material-symbols-outlined text-[18px]">bar_chart</span> Ver asistencias
         </a>
         {% endif %}
+        <a href="#" onclick="abrirModalMensaje()"
+          class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
+          style="text-decoration:none;">
+          <span class="material-symbols-outlined text-[18px]">mail</span> Enviar Mensaje
+        </a>
         <a href="/logout_admin"
           class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-variant/50 hover:text-primary dark:text-primary-fixed font-medium text-sm transition-colors whitespace-nowrap w-full justify-start"
           style="text-decoration:none;">
@@ -8385,9 +8392,17 @@
           if (data.ok) {
             cerrarModal('modal-gestion-calendario');
             mostrarNotificacion(data.mensaje || '¡Calendario y ediciones guardados correctamente!', 'success');
+            
+            let finalRedirect = data.redirect_url || window.location.href;
+            if (data.ediciones_creadas_ids && data.ediciones_creadas_ids.length > 0) {
+              const urlObj = new URL(finalRedirect, window.location.origin);
+              urlObj.searchParams.set('prompt_msg', data.ediciones_creadas_ids[0]);
+              finalRedirect = urlObj.toString();
+            }
+
             setTimeout(() => {
-              window.location.href = data.redirect_url || window.location.href;
-            }, 2500);
+              window.location.href = finalRedirect;
+            }, 1000);
             return;
           }
           mostrarNotificacion(data.error || 'No se pudo generar el calendario.', 'error');
@@ -9884,4 +9899,255 @@
 })();
 </script>
 
-{% endblock %}
+<!-- Modal Enviar Mensaje -->
+<div id="modal-enviar-mensaje" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-scrim/40 backdrop-blur-sm opacity-0 transition-opacity duration-300" style="background-color: rgba(0,0,0,0.5);">
+  <div class="bg-surface-container-lowest dark:bg-surface-container-low rounded-[1.5rem] shadow-2xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300 border border-outline-variant/30 flex flex-col overflow-hidden">
+    
+    <div class="flex justify-between items-center px-6 py-5 border-b border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container">
+      <h3 class="text-lg font-headline-md font-bold text-on-surface flex items-center gap-2 m-0">
+        <span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-size: 1.5rem;">mail</span> Enviar Mensaje
+      </h3>
+      <button type="button" onclick="cerrarModalMensaje()" class="text-on-surface-variant hover:bg-surface-variant/50 p-1.5 rounded-full transition-colors flex items-center justify-center border-none cursor-pointer bg-transparent">
+        <span class="material-symbols-outlined" style="font-size: 1.25rem;">close</span>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[75vh]">
+      <form id="form-enviar-mensaje" onsubmit="enviarMensajeDocente(event)">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-5">
+          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Destinatario</label>
+          <div class="flex gap-2 mb-4 bg-surface-container dark:bg-surface-container-high p-1 rounded-lg">
+            <label class="flex-1 text-center cursor-pointer relative">
+              <input type="radio" name="tipo_destinatario" value="empleado" checked onchange="toggleDestinatarioMsg()" class="peer sr-only">
+              <div class="px-3 py-2 text-sm font-medium rounded-md transition-colors peer-checked:bg-primary peer-checked:text-on-primary text-on-surface-variant hover:bg-surface-variant/50">
+                Empleado específico
+              </div>
+            </label>
+            <label class="flex-1 text-center cursor-pointer relative">
+              <input type="radio" name="tipo_destinatario" value="edicion" onchange="toggleDestinatarioMsg()" class="peer sr-only">
+              <div class="px-3 py-2 text-sm font-medium rounded-md transition-colors peer-checked:bg-primary peer-checked:text-on-primary text-on-surface-variant hover:bg-surface-variant/50">
+                Por edición
+              </div>
+            </label>
+          </div>
+
+          <div id="wrap-msg-empleado">
+            <input type="text" name="numero_empleado" id="msg_numero_empleado"
+                   class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                   placeholder="Nº de Empleado (Ej. 0801199012345)">
+          </div>
+
+          <div id="wrap-msg-edicion" class="hidden">
+            <select name="edicion_id" id="msg_edicion_id" onchange="actualizarInfoEdicion(this)"
+                   class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm">
+              <option value="">Cargando ediciones...</option>
+            </select>
+            <p id="msg_edicion_info" class="text-sm font-medium text-primary mt-2 mb-3">Seleccione una edición.</p>
+            <label class="flex items-center gap-2 text-sm text-on-surface cursor-pointer">
+              <input type="checkbox" name="es_bienvenida" value="1" class="rounded border-outline-variant text-primary focus:ring-primary">
+              Establecer como mensaje automático (Se enviará a futuros matriculados en esta edición)
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Asunto</label>
+          <input type="text" name="asunto" required
+                 class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                 placeholder="Escribe el asunto del correo">
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Mensaje</label>
+          <textarea name="mensaje" required rows="4"
+                    class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                    placeholder="Escribe aquí el cuerpo del mensaje..."></textarea>
+          <p class="text-xs text-on-surface-variant mt-2 mb-0 flex gap-1.5 items-start">
+            <span class="material-symbols-outlined" style="font-size: 1rem;">info</span>
+            El mensaje será enviado al correo institucional y aparecerá en el portal del docente.
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="cerrarModalMensaje()" class="px-4 py-2 rounded-full text-sm font-bold text-on-surface hover:bg-surface-variant/50 transition-colors border-none bg-transparent cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-enviar-msg" class="px-4 py-2 rounded-full text-sm font-bold text-white bg-primary hover:bg-primary/90 shadow-sm transition-colors flex items-center gap-2 border-none cursor-pointer" style="background-color: var(--primary);">
+            <span class="material-symbols-outlined" style="font-size: 1.1rem; color: white;">send</span>
+            <span style="color: white;">Enviar Mensaje</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+let edicionesCargadas = false;
+
+function toggleDestinatarioMsg() {
+  const tipo = document.querySelector('input[name="tipo_destinatario"]:checked').value;
+  const wrapEmp = document.getElementById('wrap-msg-empleado');
+  const wrapEdi = document.getElementById('wrap-msg-edicion');
+  const inEmp = document.getElementById('msg_numero_empleado');
+  const inEdi = document.getElementById('msg_edicion_id');
+
+  if(tipo === 'empleado') {
+    wrapEmp.classList.remove('hidden');
+    wrapEdi.classList.add('hidden');
+    inEmp.required = true;
+    inEdi.required = false;
+    inEdi.value = '';
+  } else {
+    wrapEmp.classList.add('hidden');
+    wrapEdi.classList.remove('hidden');
+    inEmp.required = false;
+    inEmp.value = '';
+    inEdi.required = true;
+    
+    if(!edicionesCargadas) {
+      cargarEdicionesSelect();
+    }
+  }
+}
+
+function actualizarInfoEdicion(select) {
+  const info = document.getElementById('msg_edicion_info');
+  const opt = select.options[select.selectedIndex];
+  if(opt && opt.value) {
+    const total = opt.getAttribute('data-count') || '0';
+    info.innerHTML = `Mensaje se enviará a <strong>${total}</strong> participante(s) actualmente matriculado(s).`;
+  } else {
+    info.innerHTML = 'Seleccione una edición.';
+  }
+}
+
+function cargarEdicionesSelect() {
+  const select = document.getElementById('msg_edicion_id');
+  select.innerHTML = '<option value="">Cargando ediciones...</option>';
+  fetch('/admin/api/ediciones_activas')
+    .then(res => res.json())
+    .then(data => {
+      if(data.ok) {
+        select.innerHTML = '<option value="">Seleccione una edición</option>';
+        data.ediciones.forEach(ed => {
+          select.innerHTML += `<option value="${ed.id}" data-count="${ed.total_matriculados}">${ed.id} - ${ed.curso_nombre}</option>`;
+        });
+        edicionesCargadas = true;
+        actualizarInfoEdicion(select);
+      } else {
+        select.innerHTML = '<option value="">Error al cargar ediciones</option>';
+      }
+    })
+    .catch(err => {
+      select.innerHTML = '<option value="">Error de conexión</option>';
+    });
+}
+
+function abrirModalMensaje(numeroEmpleado = '', edicionId = '') {
+  const modal = document.getElementById('modal-enviar-mensaje');
+  
+  if(edicionId) {
+    document.querySelector('input[name="tipo_destinatario"][value="edicion"]').checked = true;
+    toggleDestinatarioMsg();
+    if(edicionesCargadas) {
+      const select = document.getElementById('msg_edicion_id');
+      select.value = edicionId;
+      actualizarInfoEdicion(select);
+    } else {
+      // Intentar seleccionarla despues de cargar
+      const interval = setInterval(() => {
+        if(edicionesCargadas) {
+          const select = document.getElementById('msg_edicion_id');
+          select.value = edicionId;
+          actualizarInfoEdicion(select);
+          clearInterval(interval);
+        }
+      }, 100);
+    }
+  } else if(numeroEmpleado) {
+    document.querySelector('input[name="tipo_destinatario"][value="empleado"]').checked = true;
+    toggleDestinatarioMsg();
+    document.getElementById('msg_numero_empleado').value = numeroEmpleado;
+  } else {
+    toggleDestinatarioMsg();
+  }
+  
+  modal.classList.remove('hidden');
+  setTimeout(() => {
+    modal.classList.remove('opacity-0');
+    modal.firstElementChild.classList.remove('scale-95');
+  }, 10);
+}
+
+function cerrarModalMensaje() {
+  const modal = document.getElementById('modal-enviar-mensaje');
+  modal.classList.add('opacity-0');
+  modal.firstElementChild.classList.add('scale-95');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    document.getElementById('form-enviar-mensaje').reset();
+    document.querySelector('input[name="tipo_destinatario"][value="empleado"]').checked = true;
+    toggleDestinatarioMsg();
+  }, 300);
+}
+
+function enviarMensajeDocente(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById('btn-enviar-msg');
+  const formData = new FormData(form);
+  
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size: 1.1rem; color: white;">sync</span><span style="color: white;">Enviando...</span>';
+
+  fetch('/admin/enviar_mensaje', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.ok) {
+      if(typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion(data.mensaje, 'success');
+      } else {
+        alert(data.mensaje);
+      }
+      cerrarModalMensaje();
+    } else {
+      if(typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion(data.error || 'Ocurrió un error.', 'error');
+      } else {
+        alert(data.error || 'Ocurrió un error.');
+      }
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    if(typeof mostrarNotificacion === 'function') {
+      mostrarNotificacion('Error de conexión al enviar el mensaje.', 'error');
+    } else {
+      alert('Error de conexión al enviar el mensaje.');
+    }
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1.1rem; color: white;">send</span><span style="color: white;">Enviar Mensaje</span>';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const promptMsg = urlParams.get('prompt_msg');
+  if(promptMsg) {
+    abrirModalMensaje('', promptMsg);
+    // Remove parameter from URL to avoid re-triggering on refresh
+    const newUrl = window.location.pathname + window.location.search.replace(/[\?&]prompt_msg=[^&]+/, '').replace(/^&/, '?');
+    window.history.replaceState({}, document.title, newUrl || window.location.pathname);
+  }
+});
+</script>
+
+{% endblock %}
