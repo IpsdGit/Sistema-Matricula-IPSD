@@ -9901,80 +9901,166 @@
 
 <!-- Modal Enviar Mensaje -->
 <div id="modal-enviar-mensaje" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-scrim/40 backdrop-blur-sm opacity-0 transition-opacity duration-300" style="background-color: rgba(0,0,0,0.5);">
-  <div class="bg-surface-container-lowest dark:bg-surface-container-low rounded-[1.5rem] shadow-2xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300 border border-outline-variant/30 flex flex-col overflow-hidden">
+  <div class="bg-surface-container-lowest dark:bg-surface-container-low rounded-[1.5rem] shadow-2xl w-full max-w-2xl mx-4 transform scale-95 transition-transform duration-300 border border-outline-variant/30 flex flex-col overflow-hidden">
     
-    <div class="flex justify-between items-center px-6 py-5 border-b border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container">
+    <!-- Header -->
+    <div class="flex justify-between items-center px-6 py-4 border-b border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container">
       <h3 class="text-lg font-headline-md font-bold text-on-surface flex items-center gap-2 m-0">
-        <span class="material-symbols-outlined text-primary dark:text-primary-fixed" style="font-size: 1.5rem;">mail</span> Enviar Mensaje
+        <span class="material-symbols-outlined text-primary" style="font-size: 1.5rem;">mail</span> Enviar Mensaje
       </h3>
       <button type="button" onclick="cerrarModalMensaje()" class="text-on-surface-variant hover:bg-surface-variant/50 p-1.5 rounded-full transition-colors flex items-center justify-center border-none cursor-pointer bg-transparent">
         <span class="material-symbols-outlined" style="font-size: 1.25rem;">close</span>
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto max-h-[75vh]">
+    <!-- Tabs: Redactar / Vista previa -->
+    <div class="flex bg-surface-container dark:bg-surface-container-high border-b border-outline-variant/20">
+      <button type="button" id="tab-redactar" onclick="switchMsgTab('redactar')"
+              class="flex-1 py-3 text-sm font-semibold transition-colors border-b-2 border-primary text-primary">
+        <span class="material-symbols-outlined align-middle" style="font-size:1rem;">edit</span> Redactar
+      </button>
+      <button type="button" id="tab-preview" onclick="switchMsgTab('preview')"
+              class="flex-1 py-3 text-sm font-semibold transition-colors border-b-2 border-transparent text-on-surface-variant hover:text-on-surface">
+        <span class="material-symbols-outlined align-middle" style="font-size:1rem;">visibility</span> Vista Previa
+      </button>
+    </div>
+
+    <div class="overflow-y-auto max-h-[72vh]">
       <form id="form-enviar-mensaje" onsubmit="enviarMensajeDocente(event)">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        
-        <div class="mb-5">
-          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Destinatario</label>
-          <div class="flex gap-2 mb-4 bg-surface-container dark:bg-surface-container-high p-1 rounded-lg">
-            <label class="flex-1 text-center cursor-pointer relative">
-              <input type="radio" name="tipo_destinatario" value="empleado" checked onchange="toggleDestinatarioMsg()" class="peer sr-only">
-              <div class="px-3 py-2 text-sm font-medium rounded-md transition-colors peer-checked:bg-primary peer-checked:text-on-primary text-on-surface-variant hover:bg-surface-variant/50">
-                Empleado específico
-              </div>
-            </label>
-            <label class="flex-1 text-center cursor-pointer relative">
-              <input type="radio" name="tipo_destinatario" value="edicion" onchange="toggleDestinatarioMsg()" class="peer sr-only">
-              <div class="px-3 py-2 text-sm font-medium rounded-md transition-colors peer-checked:bg-primary peer-checked:text-on-primary text-on-surface-variant hover:bg-surface-variant/50">
-                Por edición
-              </div>
-            </label>
+
+        <!-- TAB REDACTAR -->
+        <div id="panel-redactar" class="p-6">
+
+          <!-- Destinatario toggle pills -->
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Destinatario</label>
+            <div class="flex gap-2 bg-surface-container dark:bg-surface-container-high p-1 rounded-xl">
+              <label class="flex-1 text-center cursor-pointer">
+                <input type="radio" name="tipo_destinatario" value="empleado" checked onchange="toggleDestinatarioMsg()" class="peer sr-only">
+                <div class="flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:shadow-md text-on-surface-variant hover:bg-surface-variant/40">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">person</span> Empleado
+                </div>
+              </label>
+              <label class="flex-1 text-center cursor-pointer">
+                <input type="radio" name="tipo_destinatario" value="edicion" onchange="toggleDestinatarioMsg()" class="peer sr-only">
+                <div class="flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:shadow-md text-on-surface-variant hover:bg-surface-variant/40">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">groups</span> Por Edición
+                </div>
+              </label>
+            </div>
           </div>
 
-          <div id="wrap-msg-empleado">
-            <input type="text" name="numero_empleado" id="msg_numero_empleado"
-                   class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-                   placeholder="Nº de Empleado (Ej. 0801199012345)">
+          <!-- Empleado específico -->
+          <div id="wrap-msg-empleado" class="mb-4">
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-size:1.1rem;">badge</span>
+              <input type="text" name="numero_empleado" id="msg_numero_empleado"
+                     class="w-full pl-9 pr-3 py-2.5 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                     placeholder="Nº de Empleado (Ej. 0801199012345)"
+                     oninput="buscarDocenteMsg(this.value)">
+            </div>
+            <!-- Card del docente encontrado -->
+            <div id="msg-docente-card" class="hidden mt-3 bg-primary/8 dark:bg-primary/15 border border-primary/30 rounded-xl p-3 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white" style="font-size:1.1rem;">person</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p id="msg-docente-nombre" class="text-sm font-semibold text-on-surface m-0 truncate"></p>
+                <p id="msg-docente-correo" class="text-xs text-on-surface-variant m-0 truncate"></p>
+              </div>
+              <span class="material-symbols-outlined text-primary" style="font-size:1.2rem;">check_circle</span>
+            </div>
+            <div id="msg-docente-notfound" class="hidden mt-2 text-xs text-error flex items-center gap-1">
+              <span class="material-symbols-outlined" style="font-size:0.95rem;">error</span> Docente no encontrado en el sistema.
+            </div>
           </div>
 
-          <div id="wrap-msg-edicion" class="hidden">
+          <!-- Por edición -->
+          <div id="wrap-msg-edicion" class="mb-4 hidden">
             <select name="edicion_id" id="msg_edicion_id" onchange="actualizarInfoEdicion(this)"
-                   class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm">
+                   class="w-full px-3 py-2.5 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm">
               <option value="">Cargando ediciones...</option>
             </select>
-            <p id="msg_edicion_info" class="text-sm font-medium text-primary mt-2 mb-3">Seleccione una edición.</p>
-            <label class="flex items-center gap-2 text-sm text-on-surface cursor-pointer">
+            <!-- Chip de total -->
+            <div id="msg-edicion-chip" class="hidden mt-2 inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full border border-primary/20">
+              <span class="material-symbols-outlined" style="font-size:0.95rem;">group</span>
+              <span id="msg_edicion_info">0 participantes</span>
+            </div>
+            <label class="flex items-center gap-2 text-sm text-on-surface cursor-pointer mt-3">
               <input type="checkbox" name="es_bienvenida" value="1" class="rounded border-outline-variant text-primary focus:ring-primary">
-              Establecer como mensaje automático (Se enviará a futuros matriculados en esta edición)
+              <span>Guardar como mensaje automático de bienvenida</span>
             </label>
           </div>
-        </div>
 
-        <div class="mb-5">
-          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Asunto</label>
-          <input type="text" name="asunto" required
-                 class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-                 placeholder="Escribe el asunto del correo">
-        </div>
+          <!-- Asunto -->
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Asunto</label>
+            <input type="text" name="asunto" id="msg_asunto" required
+                   class="w-full px-3 py-2.5 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                   placeholder="Escribe el asunto del correo">
+          </div>
 
-        <div class="mb-5">
-          <label class="block text-sm font-bold text-on-surface mb-2 font-body-md">Mensaje</label>
-          <textarea name="mensaje" required rows="4"
-                    class="w-full px-3 py-2 border border-outline-variant/50 rounded-lg bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-                    placeholder="Escribe aquí el cuerpo del mensaje..."></textarea>
-          <p class="text-xs text-on-surface-variant mt-2 mb-0 flex gap-1.5 items-start">
-            <span class="material-symbols-outlined" style="font-size: 1rem;">info</span>
-            El mensaje será enviado al correo institucional y aparecerá en el portal del docente.
+          <!-- Tags disponibles -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Mensaje</label>
+              <button type="button" onclick="toggleTagsPanel()" class="flex items-center gap-1 text-xs text-primary font-medium hover:underline border-none bg-transparent cursor-pointer p-0">
+                <span class="material-symbols-outlined" style="font-size:0.9rem;">code</span> Insertar etiqueta
+              </button>
+            </div>
+            <!-- Panel de tags colapsable -->
+            <div id="msg-tags-panel" class="hidden mb-3 p-3 bg-surface-container dark:bg-surface-container-high rounded-xl border border-outline-variant/30">
+              <p class="text-xs text-on-surface-variant mb-2 m-0">Haz clic en una etiqueta para insertarla en el mensaje:</p>
+              <div class="flex flex-wrap gap-1.5" id="msg-tags-list">
+                <!-- populated by JS -->
+              </div>
+            </div>
+            <textarea name="mensaje" id="msg_mensaje" required rows="6"
+                      class="w-full px-3 py-2.5 border border-outline-variant/50 rounded-xl bg-surface dark:bg-surface-container text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm font-mono"
+                      placeholder="Escribe aquí el cuerpo del mensaje...&#10;&#10;Usa las etiquetas {{nombre_docente}}, {{nombre_accion}}, etc. para personalizar el mensaje."></textarea>
+          </div>
+
+          <p class="text-xs text-on-surface-variant flex gap-1.5 items-start mt-1 mb-0">
+            <span class="material-symbols-outlined" style="font-size:1rem;">info</span>
+            El mensaje se enviará al correo institucional y aparecerá en el portal del docente.
           </p>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
+        <!-- TAB PREVIEW -->
+        <div id="panel-preview" class="hidden p-6">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-sm text-on-surface-variant m-0">Vista previa con datos de ejemplo o de la edición seleccionada.</p>
+            <button type="button" onclick="actualizarPreview()" class="flex items-center gap-1.5 text-sm font-semibold text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg border-none cursor-pointer transition-colors">
+              <span class="material-symbols-outlined" style="font-size:1rem;">refresh</span> Actualizar
+            </button>
+          </div>
+          <!-- Preview card -->
+          <div class="border border-outline-variant/40 rounded-xl overflow-hidden shadow-sm">
+            <!-- mini header email -->
+            <div class="p-4 text-white text-center" style="background:linear-gradient(135deg,#003087,#0052cc);">
+              <p class="text-xs uppercase tracking-widest m-0 opacity-75">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</p>
+              <p class="font-bold text-base mt-1 mb-0">Sistema de Acciones Formativas</p>
+            </div>
+            <!-- body -->
+            <div class="p-5 bg-white dark:bg-surface-container-low">
+              <div id="preview-body" class="text-sm text-gray-700 dark:text-on-surface leading-relaxed whitespace-pre-wrap font-sans">
+                <span class="text-on-surface-variant italic">Escribe un mensaje y haz clic en "Actualizar" para ver la vista previa.</span>
+              </div>
+            </div>
+            <!-- footer -->
+            <div class="px-5 py-3 text-center text-xs text-gray-400 dark:text-on-surface-variant" style="background:#1e3a5f;color:rgba(255,255,255,0.6);">
+              UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS · Este es un mensaje automático.
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer botones -->
+        <div class="flex justify-end gap-3 px-6 pb-5 pt-2 border-t border-outline-variant/20">
           <button type="button" onclick="cerrarModalMensaje()" class="px-4 py-2 rounded-full text-sm font-bold text-on-surface hover:bg-surface-variant/50 transition-colors border-none bg-transparent cursor-pointer">
             Cancelar
           </button>
-          <button type="submit" id="btn-enviar-msg" class="px-4 py-2 rounded-full text-sm font-bold text-white bg-primary hover:bg-primary/90 shadow-sm transition-colors flex items-center gap-2 border-none cursor-pointer" style="background-color: var(--primary);">
+          <button type="submit" id="btn-enviar-msg" class="px-5 py-2 rounded-full text-sm font-bold text-white shadow-sm transition-colors flex items-center gap-2 border-none cursor-pointer" style="background:linear-gradient(135deg,#003087,#0052cc);">
             <span class="material-symbols-outlined" style="font-size: 1.1rem; color: white;">send</span>
             <span style="color: white;">Enviar Mensaje</span>
           </button>
@@ -9986,15 +10072,135 @@
 
 <script>
 let edicionesCargadas = false;
+let _docenteBuscarTimer = null;
+let _tagsData = [];
 
+// ── Tab switching ───────────────────────────────────────────────────────────
+function switchMsgTab(tab) {
+  const panelR = document.getElementById('panel-redactar');
+  const panelP = document.getElementById('panel-preview');
+  const tabR   = document.getElementById('tab-redactar');
+  const tabP   = document.getElementById('tab-preview');
+  if (tab === 'redactar') {
+    panelR.classList.remove('hidden');
+    panelP.classList.add('hidden');
+    tabR.classList.add('border-primary','text-primary');
+    tabR.classList.remove('border-transparent','text-on-surface-variant');
+    tabP.classList.add('border-transparent','text-on-surface-variant');
+    tabP.classList.remove('border-primary','text-primary');
+  } else {
+    panelP.classList.remove('hidden');
+    panelR.classList.add('hidden');
+    tabP.classList.add('border-primary','text-primary');
+    tabP.classList.remove('border-transparent','text-on-surface-variant');
+    tabR.classList.add('border-transparent','text-on-surface-variant');
+    tabR.classList.remove('border-primary','text-primary');
+    actualizarPreview();
+  }
+}
+
+// ── Tags panel ──────────────────────────────────────────────────────────────
+function toggleTagsPanel() {
+  const panel = document.getElementById('msg-tags-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden') && _tagsData.length === 0) {
+    cargarTags();
+  }
+}
+
+function cargarTags() {
+  fetch('/admin/api/msg_tags')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      _tagsData = data.tags;
+      const list = document.getElementById('msg-tags-list');
+      list.innerHTML = '';
+      data.tags.forEach(t => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = t.desc;
+        btn.textContent = t.tag;
+        btn.className = 'px-2 py-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 font-mono cursor-pointer transition-colors';
+        btn.onclick = () => insertarTag(t.tag);
+        list.appendChild(btn);
+      });
+    });
+}
+
+function insertarTag(tag) {
+  const ta = document.getElementById('msg_mensaje');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+}
+
+// ── Preview ─────────────────────────────────────────────────────────────────
+function actualizarPreview() {
+  const msg = (document.getElementById('msg_mensaje') || {}).value || '';
+  const edicionId = (document.getElementById('msg_edicion_id') || {}).value || '';
+  const numEmp = (document.getElementById('msg_numero_empleado') || {}).value || '';
+  const body = document.getElementById('preview-body');
+  if (!msg.trim()) {
+    body.innerHTML = '<span class="text-on-surface-variant italic">Escribe un mensaje y haz clic en "Actualizar" para ver la vista previa.</span>';
+    return;
+  }
+  body.innerHTML = '<span class="text-on-surface-variant italic">Cargando vista previa...</span>';
+  fetch('/admin/api/msg_preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mensaje: msg, edicion_id: edicionId, numero_empleado: numEmp })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      body.style.whiteSpace = 'pre-wrap';
+      body.textContent = data.preview;
+    } else {
+      body.textContent = msg;
+    }
+  })
+  .catch(() => { body.textContent = msg; });
+}
+
+// ── Buscar docente ──────────────────────────────────────────────────────────
+function buscarDocenteMsg(valor) {
+  clearTimeout(_docenteBuscarTimer);
+  const card      = document.getElementById('msg-docente-card');
+  const notfound  = document.getElementById('msg-docente-notfound');
+  card.classList.add('hidden');
+  notfound.classList.add('hidden');
+  if (valor.length < 7) return;
+  _docenteBuscarTimer = setTimeout(() => {
+    fetch('/admin/api/buscar_docente?numero=' + encodeURIComponent(valor))
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && data.docente) {
+          document.getElementById('msg-docente-nombre').textContent = data.docente.nombre_completo;
+          document.getElementById('msg-docente-correo').textContent = data.docente.correo_institucional;
+          card.classList.remove('hidden');
+          notfound.classList.add('hidden');
+        } else {
+          card.classList.add('hidden');
+          notfound.classList.remove('hidden');
+        }
+      })
+      .catch(() => { card.classList.add('hidden'); });
+  }, 450);
+}
+
+// ── Edición ─────────────────────────────────────────────────────────────────
 function toggleDestinatarioMsg() {
-  const tipo = document.querySelector('input[name="tipo_destinatario"]:checked').value;
+  const tipo    = document.querySelector('input[name="tipo_destinatario"]:checked').value;
   const wrapEmp = document.getElementById('wrap-msg-empleado');
   const wrapEdi = document.getElementById('wrap-msg-edicion');
-  const inEmp = document.getElementById('msg_numero_empleado');
-  const inEdi = document.getElementById('msg_edicion_id');
+  const inEmp   = document.getElementById('msg_numero_empleado');
+  const inEdi   = document.getElementById('msg_edicion_id');
 
-  if(tipo === 'empleado') {
+  if (tipo === 'empleado') {
     wrapEmp.classList.remove('hidden');
     wrapEdi.classList.add('hidden');
     inEmp.required = true;
@@ -10005,22 +10211,23 @@ function toggleDestinatarioMsg() {
     wrapEdi.classList.remove('hidden');
     inEmp.required = false;
     inEmp.value = '';
+    document.getElementById('msg-docente-card').classList.add('hidden');
+    document.getElementById('msg-docente-notfound').classList.add('hidden');
     inEdi.required = true;
-    
-    if(!edicionesCargadas) {
-      cargarEdicionesSelect();
-    }
+    if (!edicionesCargadas) cargarEdicionesSelect();
   }
 }
 
 function actualizarInfoEdicion(select) {
-  const info = document.getElementById('msg_edicion_info');
-  const opt = select.options[select.selectedIndex];
-  if(opt && opt.value) {
+  const chip  = document.getElementById('msg-edicion-chip');
+  const info  = document.getElementById('msg_edicion_info');
+  const opt   = select.options[select.selectedIndex];
+  if (opt && opt.value) {
     const total = opt.getAttribute('data-count') || '0';
-    info.innerHTML = `Mensaje se enviará a <strong>${total}</strong> participante(s) actualmente matriculado(s).`;
+    info.textContent = `${total} participante(s) matriculado(s)`;
+    chip.classList.remove('hidden');
   } else {
-    info.innerHTML = 'Seleccione una edición.';
+    chip.classList.add('hidden');
   }
 }
 
@@ -10030,10 +10237,14 @@ function cargarEdicionesSelect() {
   fetch('/admin/api/ediciones_activas')
     .then(res => res.json())
     .then(data => {
-      if(data.ok) {
+      if (data.ok) {
         select.innerHTML = '<option value="">Seleccione una edición</option>';
         data.ediciones.forEach(ed => {
-          select.innerHTML += `<option value="${ed.id}" data-count="${ed.total_matriculados}">${ed.id} - ${ed.curso_nombre}</option>`;
+          const opt = document.createElement('option');
+          opt.value = ed.id;
+          opt.setAttribute('data-count', ed.total_matriculados);
+          opt.textContent = `${ed.id} · ${ed.curso_nombre}`;
+          select.appendChild(opt);
         });
         edicionesCargadas = true;
         actualizarInfoEdicion(select);
@@ -10041,7 +10252,7 @@ function cargarEdicionesSelect() {
         select.innerHTML = '<option value="">Error al cargar ediciones</option>';
       }
     })
-    .catch(err => {
+    .catch(() => {
       select.innerHTML = '<option value="">Error de conexión</option>';
     });
 }
@@ -10049,17 +10260,21 @@ function cargarEdicionesSelect() {
 function abrirModalMensaje(numeroEmpleado = '', edicionId = '') {
   const modal = document.getElementById('modal-enviar-mensaje');
   
-  if(edicionId) {
+  // Reset tabs
+  switchMsgTab('redactar');
+  document.getElementById('msg-docente-card').classList.add('hidden');
+  document.getElementById('msg-docente-notfound').classList.add('hidden');
+
+  if (edicionId) {
     document.querySelector('input[name="tipo_destinatario"][value="edicion"]').checked = true;
     toggleDestinatarioMsg();
-    if(edicionesCargadas) {
+    if (edicionesCargadas) {
       const select = document.getElementById('msg_edicion_id');
       select.value = edicionId;
       actualizarInfoEdicion(select);
     } else {
-      // Intentar seleccionarla despues de cargar
       const interval = setInterval(() => {
-        if(edicionesCargadas) {
+        if (edicionesCargadas) {
           const select = document.getElementById('msg_edicion_id');
           select.value = edicionId;
           actualizarInfoEdicion(select);
@@ -10067,11 +10282,14 @@ function abrirModalMensaje(numeroEmpleado = '', edicionId = '') {
         }
       }, 100);
     }
-  } else if(numeroEmpleado) {
+  } else if (numeroEmpleado) {
     document.querySelector('input[name="tipo_destinatario"][value="empleado"]').checked = true;
     toggleDestinatarioMsg();
-    document.getElementById('msg_numero_empleado').value = numeroEmpleado;
+    const inEmp = document.getElementById('msg_numero_empleado');
+    inEmp.value = numeroEmpleado;
+    buscarDocenteMsg(numeroEmpleado);
   } else {
+    document.querySelector('input[name="tipo_destinatario"][value="empleado"]').checked = true;
     toggleDestinatarioMsg();
   }
   
@@ -10089,18 +10307,19 @@ function cerrarModalMensaje() {
   setTimeout(() => {
     modal.classList.add('hidden');
     document.getElementById('form-enviar-mensaje').reset();
-    document.querySelector('input[name="tipo_destinatario"][value="empleado"]').checked = true;
-    toggleDestinatarioMsg();
-  }, 300);
+    document.getElementById('msg-docente-card').classList.add('hidden');
+    document.getElementById('msg-docente-notfound').classList.add('hidden');
+    document.getElementById('msg-edicion-chip').classList.add('hidden');
+    switchMsgTab('redactar');
+  }, 250);
 }
 
-function enviarMensajeDocente(e) {
-  e.preventDefault();
-  const form = e.target;
-  const btn = document.getElementById('btn-enviar-msg');
+function enviarMensajeDocente(event) {
+  event.preventDefault();
+  const form    = document.getElementById('form-enviar-mensaje');
+  const btn     = document.getElementById('btn-enviar-msg');
   const formData = new FormData(form);
-  
-  btn.disabled = true;
+  btn.disabled  = true;
   btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size: 1.1rem; color: white;">sync</span><span style="color: white;">Enviando...</span>';
 
   fetch('/admin/enviar_mensaje', {
@@ -10109,15 +10328,15 @@ function enviarMensajeDocente(e) {
   })
   .then(res => res.json())
   .then(data => {
-    if(data.ok) {
-      if(typeof mostrarNotificacion === 'function') {
+    if (data.ok) {
+      if (typeof mostrarNotificacion === 'function') {
         mostrarNotificacion(data.mensaje, 'success');
       } else {
         alert(data.mensaje);
       }
       cerrarModalMensaje();
     } else {
-      if(typeof mostrarNotificacion === 'function') {
+      if (typeof mostrarNotificacion === 'function') {
         mostrarNotificacion(data.error || 'Ocurrió un error.', 'error');
       } else {
         alert(data.error || 'Ocurrió un error.');
@@ -10126,7 +10345,7 @@ function enviarMensajeDocente(e) {
   })
   .catch(err => {
     console.error(err);
-    if(typeof mostrarNotificacion === 'function') {
+    if (typeof mostrarNotificacion === 'function') {
       mostrarNotificacion('Error de conexión al enviar el mensaje.', 'error');
     } else {
       alert('Error de conexión al enviar el mensaje.');
@@ -10141,9 +10360,8 @@ function enviarMensajeDocente(e) {
 document.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
   const promptMsg = urlParams.get('prompt_msg');
-  if(promptMsg) {
+  if (promptMsg) {
     abrirModalMensaje('', promptMsg);
-    // Remove parameter from URL to avoid re-triggering on refresh
     const newUrl = window.location.pathname + window.location.search.replace(/[\?&]prompt_msg=[^&]+/, '').replace(/^&/, '?');
     window.history.replaceState({}, document.title, newUrl || window.location.pathname);
   }

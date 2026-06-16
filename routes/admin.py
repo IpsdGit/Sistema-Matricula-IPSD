@@ -2212,6 +2212,7 @@ def register_admin_routes(app):
         edicion_id = request.form.get('edicion_id', '').strip()
         asunto = request.form.get('asunto', '').strip()
         mensaje = request.form.get('mensaje', '').strip()
+        es_bienvenida = request.form.get('es_bienvenida') == 'true'
 
         if not asunto or not mensaje:
             return jsonify({'ok': False, 'error': 'El asunto y el mensaje son obligatorios.'}), 400
@@ -2222,6 +2223,30 @@ def register_admin_routes(app):
         try:
             conn = get_db_connection()
             from services.email_service import enviar_mensaje_docente
+
+            # Obtener datos de la edición para resolver tags
+            contexto_edicion_base = {}
+            if edicion_id:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo, ef.mensaje_bienvenida,
+                               ca.nombre, ca.modalidad
+                        FROM ediciones_formativas ef
+                        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                        WHERE ef.id = %s LIMIT 1
+                    """, (edicion_id,))
+                    ed_data = cur.fetchone()
+                    if ed_data:
+                        fi = ed_data['fecha_inicio']
+                        fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10]
+                        contexto_edicion_base = {
+                            '{{nombre_accion}}': ed_data['nombre'] or '',
+                            '{{modalidad}}': ed_data['modalidad'] or '',
+                            '{{fecha_inicio}}': fecha_str,
+                            '{{periodo}}': ed_data['periodo'] or '',
+                            '{{enlace_acceso}}': ed_data['enlace_acceso'] or 'N/D',
+                            '{{direccion}}': 'IPSD – UNAH',
+                        }
             
             with conn.cursor() as cur:
                 destinatarios = []
@@ -2233,8 +2258,10 @@ def register_admin_routes(app):
                         WHERE m.edicion_id = %s
                     ''', (edicion_id,))
                     destinatarios = cur.fetchall()
-                    if not destinatarios:
+                    if not destinatarios and not es_bienvenida:
                         return jsonify({'ok': False, 'error': 'No hay docentes matriculados en esta edición.'}), 404
+                    if es_bienvenida:
+                        cur.execute('UPDATE ediciones_formativas SET mensaje_bienvenida = %s WHERE id = %s', (mensaje, edicion_id))
                 else:
                     cur.execute('SELECT numero_empleado, correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
                     docente = cur.fetchone()
@@ -2248,6 +2275,8 @@ def register_admin_routes(app):
                     nombre_docente = dest['nombre_completo']
                     num_emp = dest['numero_empleado']
                     
+                    contexto_tags = {**contexto_edicion_base, '{{nombre_docente}}': nombre_docente}
+
                     cur.execute(
                         '''
                         INSERT INTO mensajes_personalizados (numero_empleado, asunto, mensaje) 
@@ -2255,7 +2284,7 @@ def register_admin_routes(app):
                         ''', (num_emp, asunto, mensaje)
                     )
                     
-                    if enviar_mensaje_docente(correo_docente, nombre_docente, asunto, mensaje):
+                    if enviar_mensaje_docente(correo_docente, nombre_docente, asunto, mensaje, contexto_tags):
                         enviados_correctamente += 1
             
             conn.commit()
@@ -2285,6 +2314,10 @@ def register_admin_routes(app):
                     SELECT 
                         e.id, 
                         c.nombre as curso_nombre,
+                        e.modalidad,
+                        e.fecha_inicio,
+                        e.jornada,
+                        e.enlace_acceso,
                         (SELECT COUNT(*) FROM matriculas m WHERE m.edicion_id = e.id AND m.aprobado IS NULL) as total_matriculados
                     FROM ediciones_formativas e
                     JOIN catalogo_acciones c ON e.catalogo_id = c.id
@@ -2298,3 +2331,92 @@ def register_admin_routes(app):
         finally:
             if 'conn' in locals() and conn:
                 conn.close()
+
+    @app.route('/admin/api/buscar_docente', methods=['GET'])
+    @admin_requerido
+    def api_buscar_docente():
+        numero = request.args.get('numero', '').strip()
+        if not numero:
+            return jsonify({'ok': False, 'error': 'Número requerido'}), 400
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT numero_empleado, nombre_completo, correo_institucional, centro_universitario_regional FROM docentes WHERE numero_empleado = %s AND activo = 1 LIMIT 1',
+                    (numero,)
+                )
+                docente = cur.fetchone()
+            if docente:
+                return jsonify({'ok': True, 'docente': dict(docente)})
+            return jsonify({'ok': False, 'error': 'Docente no encontrado'}), 404
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()
+
+    @app.route('/admin/api/msg_tags', methods=['GET'])
+    @admin_requerido
+    def api_msg_tags():
+        from services.email_service import TAGS_DISPONIBLES
+        return jsonify({'ok': True, 'tags': [{'tag': k, 'desc': v} for k, v in TAGS_DISPONIBLES.items()]})
+
+    @app.route('/admin/api/msg_preview', methods=['POST'])
+    @admin_requerido
+    def api_msg_preview():
+        """Resuelve tags en el texto del mensaje usando datos reales de la edición."""
+        data = request.get_json(silent=True) or {}
+        mensaje = data.get('mensaje', '')
+        edicion_id = data.get('edicion_id', '').strip()
+        numero_empleado = data.get('numero_empleado', '').strip()
+
+        contexto = {
+            '{{nombre_docente}}': 'Docente de Ejemplo',
+            '{{nombre_accion}}': 'Acción Formativa',
+            '{{modalidad}}': 'Virtual',
+            '{{duracion_horas}}': '40',
+            '{{fecha_inicio}}': '01/07/2025',
+            '{{fecha_fin}}': '31/07/2025',
+            '{{periodo}}': '2025-1',
+            '{{enlace_acceso}}': 'https://campus.unah.edu.hn',
+            '{{direccion}}': 'IPSD – UNAH',
+        }
+
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                if edicion_id:
+                    cur.execute("""
+                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo,
+                               ca.nombre, ca.modalidad
+                        FROM ediciones_formativas ef
+                        JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
+                        WHERE ef.id = %s LIMIT 1
+                    """, (edicion_id,))
+                    ed = cur.fetchone()
+                    if ed:
+                        from datetime import date as _date
+                        fi = ed['fecha_inicio']
+                        fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10]
+                        contexto.update({
+                            '{{nombre_accion}}': ed['nombre'] or '',
+                            '{{modalidad}}': ed['modalidad'] or '',
+                            '{{fecha_inicio}}': fecha_str,
+                            '{{periodo}}': ed['periodo'] or '',
+                            '{{enlace_acceso}}': ed['enlace_acceso'] or 'N/D',
+                        })
+                if numero_empleado:
+                    cur.execute('SELECT nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
+                    doc = cur.fetchone()
+                    if doc:
+                        contexto['{{nombre_docente}}'] = doc['nombre_completo']
+        except Exception:
+            pass
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()
+
+        from services.email_service import resolver_tags
+        preview = resolver_tags(mensaje, contexto)
+        return jsonify({'ok': True, 'preview': preview})
+
