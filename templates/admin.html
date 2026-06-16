@@ -9914,15 +9914,15 @@
     </div>
 
     <!-- Tabs modernos: pill flotante -->
-    <div class="flex justify-center px-6 py-3 bg-surface-container-lowest dark:bg-surface-container border-b border-outline-variant/20">
-      <div class="inline-flex items-center bg-surface-container dark:bg-surface-container-high rounded-full p-1 gap-1 shadow-inner">
+    <div class="flex justify-center px-6 py-4 bg-surface-container-lowest dark:bg-surface-container border-b border-outline-variant/20">
+      <div class="inline-flex items-center bg-surface-variant/30 dark:bg-surface-variant/20 rounded-xl p-1 gap-1 relative border border-outline-variant/30">
         <button type="button" id="tab-redactar" onclick="switchMsgTab('redactar')"
-                class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 bg-primary text-white shadow-sm">
-          <span class="material-symbols-outlined" style="font-size:1rem;">edit_note</span> Redactar
+                class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white dark:bg-surface-container-high text-primary dark:text-primary-fixed shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-none outline-none ring-0">
+          <span class="material-symbols-outlined" style="font-size:1.1rem;">edit_note</span> Redactar
         </button>
         <button type="button" id="tab-preview" onclick="switchMsgTab('preview')"
-                class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 text-on-surface-variant hover:text-on-surface">
-          <span class="material-symbols-outlined" style="font-size:1rem;">visibility</span> Vista Previa
+                class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-on-surface-variant hover:text-on-surface bg-transparent border-none outline-none ring-0 hover:bg-surface-variant/40">
+          <span class="material-symbols-outlined" style="font-size:1.1rem;">visibility</span> Vista Previa
         </button>
       </div>
     </div>
@@ -10086,17 +10086,20 @@ function switchMsgTab(tab) {
   if (tab === 'redactar') {
     panelR.classList.remove('hidden');
     panelP.classList.add('hidden');
-    tabR.classList.add('bg-primary','text-white','shadow-sm');
-    tabR.classList.remove('text-on-surface-variant');
-    tabP.classList.remove('bg-primary','text-white','shadow-sm');
-    tabP.classList.add('text-on-surface-variant');
+    
+    // Style active tab
+    tabR.className = "flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white dark:bg-surface-container-high text-primary dark:text-primary-fixed shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-none outline-none ring-0";
+    // Style inactive tab
+    tabP.className = "flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-on-surface-variant hover:text-on-surface bg-transparent border-none outline-none ring-0 hover:bg-surface-variant/40";
   } else {
     panelP.classList.remove('hidden');
     panelR.classList.add('hidden');
-    tabP.classList.add('bg-primary','text-white','shadow-sm');
-    tabP.classList.remove('text-on-surface-variant');
-    tabR.classList.remove('bg-primary','text-white','shadow-sm');
-    tabR.classList.add('text-on-surface-variant');
+    
+    // Style active tab
+    tabP.className = "flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white dark:bg-surface-container-high text-primary dark:text-primary-fixed shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-none outline-none ring-0";
+    // Style inactive tab
+    tabR.className = "flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-on-surface-variant hover:text-on-surface bg-transparent border-none outline-none ring-0 hover:bg-surface-variant/40";
+    
     actualizarPreviewMsg();
   }
 }
@@ -10175,7 +10178,7 @@ function buscarDocenteMsg(valor) {
   const notfound  = document.getElementById('msg-docente-notfound');
   card.classList.add('hidden');
   notfound.classList.add('hidden');
-  if (valor.length < 7) return;
+  if (valor.length < 1) return;
   _docenteBuscarTimer = setTimeout(() => {
     fetch('/admin/api/buscar_docente?numero=' + encodeURIComponent(valor))
       .then(r => r.json())

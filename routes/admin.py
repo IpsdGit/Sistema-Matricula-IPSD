@@ -2229,7 +2229,7 @@ def register_admin_routes(app):
             if edicion_id:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo, ef.mensaje_bienvenida,
+                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo, ef.mensaje_bienvenida, ef.duracion_horas,
                                ca.nombre, ca.modalidad
                         FROM ediciones_formativas ef
                         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
@@ -2239,10 +2239,21 @@ def register_admin_routes(app):
                     if ed_data:
                         fi = ed_data['fecha_inicio']
                         fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10]
+                        
+                        # Get fecha_fin from sesiones
+                        cur.execute('SELECT MAX(fecha) as fecha_fin FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
+                        ses = cur.fetchone()
+                        fecha_fin_str = ''
+                        if ses and ses['fecha_fin']:
+                            ff = ses['fecha_fin']
+                            fecha_fin_str = ff.strftime('%d/%m/%Y') if hasattr(ff, 'strftime') else str(ff)[:10]
+
                         contexto_edicion_base = {
                             '{{nombre_accion}}': ed_data['nombre'] or '',
                             '{{modalidad}}': ed_data['modalidad'] or '',
+                            '{{duracion_horas}}': str(ed_data['duracion_horas']) if ed_data['duracion_horas'] else 'N/D',
                             '{{fecha_inicio}}': fecha_str,
+                            '{{fecha_fin}}': fecha_fin_str or 'N/D',
                             '{{periodo}}': ed_data['periodo'] or '',
                             '{{enlace_acceso}}': ed_data['enlace_acceso'] or 'N/D',
                             '{{direccion}}': 'IPSD – UNAH',
@@ -2387,7 +2398,7 @@ def register_admin_routes(app):
             with conn.cursor() as cur:
                 if edicion_id:
                     cur.execute("""
-                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo,
+                        SELECT ef.fecha_inicio, ef.enlace_acceso, ef.periodo, ef.duracion_horas,
                                ca.nombre, ca.modalidad
                         FROM ediciones_formativas ef
                         JOIN catalogo_acciones ca ON ca.id = ef.catalogo_id
@@ -2398,10 +2409,21 @@ def register_admin_routes(app):
                         from datetime import date as _date
                         fi = ed['fecha_inicio']
                         fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10]
+
+                        # Get fecha_fin from sesiones
+                        cur.execute('SELECT MAX(fecha) as fecha_fin FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
+                        ses = cur.fetchone()
+                        fecha_fin_str = ''
+                        if ses and ses['fecha_fin']:
+                            ff = ses['fecha_fin']
+                            fecha_fin_str = ff.strftime('%d/%m/%Y') if hasattr(ff, 'strftime') else str(ff)[:10]
+
                         contexto.update({
                             '{{nombre_accion}}': ed['nombre'] or '',
                             '{{modalidad}}': ed['modalidad'] or '',
+                            '{{duracion_horas}}': str(ed['duracion_horas']) if ed['duracion_horas'] else 'N/D',
                             '{{fecha_inicio}}': fecha_str,
+                            '{{fecha_fin}}': fecha_fin_str or 'N/D',
                             '{{periodo}}': ed['periodo'] or '',
                             '{{enlace_acceso}}': ed['enlace_acceso'] or 'N/D',
                         })
