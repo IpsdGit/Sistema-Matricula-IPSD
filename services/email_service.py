@@ -95,7 +95,6 @@ def construir_plantilla_html(nombre_docente, asunto, cuerpo_mensaje):
             <td style="background-color:#003087;background:linear-gradient(135deg,#003087 0%,#0052cc 60%,#0066ff 100%);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
               <p style="margin:0;color:rgba(255,255,255,0.75);font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:600;">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</p>
               <h1 style="margin:8px 0 4px;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Portal de Acciones Formativas UNAH</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.8);font-size:13px;">UNIVERSIDAD NACIONAL AUTÓNOMA DE HONDURAS</p>
               <div style="margin-top:16px;display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:6px 18px;">
                 <p style="margin:0;color:#ffffff;font-size:12px;font-weight:500;">✉ {asunto}</p>
               </div>

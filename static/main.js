@@ -1171,10 +1171,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!btn || !label) return;
 
     _detenerCuenta();
+    btn.disabled = false;
 
     if (estado.aprobado) {
       btn.className = 'ca-estado-aprobado';
       btn.onclick = null;
+      btn.disabled = true;
       label.textContent = '¡Conferencia aprobada! 🎉';
       _mostrarFeedback('ok', '¡Felicidades! Has cumplido el control de atención y tu matrícula ha sido aprobada.');
       return;

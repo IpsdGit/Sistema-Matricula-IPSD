@@ -2212,7 +2212,7 @@ def register_admin_routes(app):
         edicion_id = request.form.get('edicion_id', '').strip()
         asunto = request.form.get('asunto', '').strip()
         mensaje = request.form.get('mensaje', '').strip()
-        es_bienvenida = request.form.get('es_bienvenida') == 'true'
+        es_bienvenida = str(request.form.get('es_bienvenida', '')).lower() in ('true', '1', 'on', 'yes')
 
         if not asunto or not mensaje:
             return jsonify({'ok': False, 'error': 'El asunto y el mensaje son obligatorios.'}), 400
@@ -2247,7 +2247,7 @@ def register_admin_routes(app):
                     ed_data = cur.fetchone()
                     if ed_data:
                         fi = ed_data['fecha_inicio']
-                        fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10]
+                        fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10] if fi else 'N/D'
                         
                         # Get fecha_fin from sesiones
                         cur.execute('SELECT MAX(fecha) as fecha_fin FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
@@ -2315,6 +2315,8 @@ def register_admin_routes(app):
             conn.commit()
             
             if edicion_id:
+                if es_bienvenida and not destinatarios:
+                    return jsonify({'ok': True, 'mensaje': 'Mensaje de confirmación programado. Se enviará a los docentes cuando se matriculen.'})
                 return jsonify({'ok': True, 'mensaje': f'Mensaje enviado a {len(destinatarios)} participante(s).'})
             else:
                 if enviados_correctamente > 0:

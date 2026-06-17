@@ -140,6 +140,9 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
                     ef.privacidad,
                     ef.estado,
                     ef.mensaje_bienvenida,
+                    ef.duracion_horas,
+                    ef.enlace_acceso,
+                    ef.periodo,
                     ca.nombre,
                     ca.tipo_accion,
                     ca.modalidad
@@ -266,19 +269,44 @@ def process_matricula(numero_empleado, edicion_id, horario_elegido=None):
         # Check for welcome message
         mensaje_bienvenida = (edicion.get('mensaje_bienvenida') or '').strip()
         if mensaje_bienvenida:
-            cur.execute('SELECT correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
-            docente_info = cur.fetchone()
+            with conn.cursor() as cur:
+                cur.execute('SELECT correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
+                docente_info = cur.fetchone()
+                if docente_info:
+                    asunto = f"Bienvenido/a a {edicion['nombre']}"
+                    cur.execute(
+                        """
+                        INSERT INTO mensajes_personalizados (numero_empleado, asunto, mensaje) 
+                        VALUES (%s, %s, %s)
+                        """, (numero_empleado, asunto, mensaje_bienvenida)
+                    )
+            
             if docente_info:
-                asunto = f"Bienvenido/a a {edicion['nombre']}"
-                cur.execute(
-                    """
-                    INSERT INTO mensajes_personalizados (numero_empleado, asunto, mensaje) 
-                    VALUES (%s, %s, %s)
-                    """, (numero_empleado, asunto, mensaje_bienvenida)
-                )
                 try:
+                    with conn.cursor() as cur2:
+                        cur2.execute('SELECT MAX(fecha) as fecha_fin FROM sesiones_curso WHERE edicion_id = %s', (edicion_id,))
+                        ses = cur2.fetchone()
+                    fecha_fin_str = ''
+                    if ses and ses['fecha_fin']:
+                        ff = ses['fecha_fin']
+                        fecha_fin_str = ff.strftime('%d/%m/%Y') if hasattr(ff, 'strftime') else str(ff)[:10]
+
+                    fi = edicion['fecha_inicio']
+                    fecha_str = fi.strftime('%d/%m/%Y') if hasattr(fi, 'strftime') else str(fi)[:10] if fi else 'N/D'
+
                     from services.email_service import enviar_mensaje_docente
-                    enviar_mensaje_docente(docente_info['correo_institucional'], docente_info['nombre_completo'], asunto, mensaje_bienvenida)
+                    contexto_tags = {
+                        '{{nombre_docente}}': docente_info['nombre_completo'],
+                        '{{nombre_accion}}': edicion['nombre'] or '',
+                        '{{modalidad}}': edicion['modalidad'] or '',
+                        '{{duracion_horas}}': str(edicion['duracion_horas']) if edicion['duracion_horas'] else 'N/D',
+                        '{{fecha_inicio}}': fecha_str,
+                        '{{fecha_fin}}': fecha_fin_str or 'N/D',
+                        '{{periodo}}': edicion['periodo'] or '',
+                        '{{enlace_acceso}}': edicion['enlace_acceso'] or 'N/D',
+                        '{{direccion}}': 'IPSD – UNAH'
+                    }
+                    enviar_mensaje_docente(docente_info['correo_institucional'], docente_info['nombre_completo'], asunto, mensaje_bienvenida, contexto_tags)
                 except Exception as e:
                     print("Error enviando email de bienvenida:", e)
 
@@ -374,24 +402,7 @@ def process_cancelar_matricula(numero_empleado, edicion_id, matricula_id):
                     (numero_empleado, edicion_id),
                 )
 
-        # Check for welcome message
-        mensaje_bienvenida = (edicion.get('mensaje_bienvenida') or '').strip()
-        if mensaje_bienvenida:
-            cur.execute('SELECT correo_institucional, nombre_completo FROM docentes WHERE numero_empleado = %s LIMIT 1', (numero_empleado,))
-            docente_info = cur.fetchone()
-            if docente_info:
-                asunto = f"Bienvenido/a a {edicion['nombre']}"
-                cur.execute(
-                    """
-                    INSERT INTO mensajes_personalizados (numero_empleado, asunto, mensaje) 
-                    VALUES (%s, %s, %s)
-                    """, (numero_empleado, asunto, mensaje_bienvenida)
-                )
-                try:
-                    from services.email_service import enviar_mensaje_docente
-                    enviar_mensaje_docente(docente_info['correo_institucional'], docente_info['nombre_completo'], asunto, mensaje_bienvenida)
-                except Exception as e:
-                    print("Error enviando email de bienvenida:", e)
+
 
         conn.commit()
         conn.close()
